@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { analyzeAudioBuffer, type SongAudioAnalysis } from '../lib/audioAnalysis'
 import { getAudioDurationFromFile } from '../lib/getAudioDurationFromFile'
 import {
   deleteSongFromLibrary,
@@ -130,11 +131,29 @@ function CardHeader({
   )
 }
 
-function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
+function Stat({
+  label,
+  value,
+  sub,
+  valueTruncate = false,
+}: {
+  label: string
+  value: ReactNode
+  sub?: ReactNode
+  /** Single-line ellipsis — use for long titles in tight grid cells */
+  valueTruncate?: boolean
+}) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
-      <div className="mt-2 break-words text-2xl font-semibold tabular-nums text-slate-900">{value}</div>
+      <div
+        className={`mt-2 text-2xl font-semibold text-slate-900 tabular-nums ${
+          valueTruncate ? 'truncate whitespace-nowrap' : 'break-words'
+        }`}
+        title={typeof value === 'string' ? value : undefined}
+      >
+        {value}
+      </div>
       {sub ? <div className="mt-1 text-sm leading-snug text-slate-600">{sub}</div> : null}
     </div>
   )
@@ -303,10 +322,9 @@ function buildSections(duration: number): Section[] {
 
 function buildEvents(
   displayProps: DisplayProp[],
-  song: Song,
   complexity: number,
+  sections: Section[],
 ): TimelineEvent[] {
-  const sections = buildSections(song.duration)
   const events: TimelineEvent[] = []
   displayProps.forEach((prop, pIndex) => {
     sections.forEach((section, sIndex) => {
@@ -351,6 +369,58 @@ function buildEvents(
     })
   })
   return events
+}
+
+function AnalysisBeatStrip({ beatTimes, duration }: { beatTimes: number[]; duration: number }) {
+  const cap = 200
+  const beats = beatTimes.slice(0, cap)
+  const d = Math.max(duration, 0.001)
+  return (
+    <div className="mt-1">
+      <div className="mb-2 text-xs font-medium text-slate-600">
+        Beat grid ({beatTimes.length} beats · first {beats.length} shown)
+      </div>
+      <div className="relative h-8 w-full overflow-hidden rounded-xl bg-slate-100">
+        {beats.map((t, i) => (
+          <div
+            key={i}
+            className="absolute bottom-0 top-0 w-px bg-brand-green/90"
+            style={{ left: `${(t / d) * 100}%` }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function AnalysisBandRows({
+  bassSeries,
+  trebleSeries,
+  vocalSeries,
+}: Pick<SongAudioAnalysis, 'bassSeries' | 'trebleSeries' | 'vocalSeries'>) {
+  const rows: [string, number[]][] = [
+    ['Bass energy over time', bassSeries],
+    ['Treble energy over time', trebleSeries],
+    ['Vocal presence (estimate)', vocalSeries],
+  ]
+  return (
+    <div className="space-y-4">
+      {rows.map(([label, series]) => (
+        <div key={label}>
+          <div className="mb-1.5 text-xs font-medium text-slate-600">{label}</div>
+          <div className="flex h-12 w-full items-end gap-px rounded-xl bg-slate-100 p-1.5">
+            {series.map((v, i) => (
+              <div
+                key={i}
+                className="min-w-px flex-1 rounded-sm bg-brand-green/85"
+                style={{ height: `${Math.max(6, v * 100)}%` }}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function SongWorkspaceAudio({ song }: { song: Song }) {
@@ -472,6 +542,8 @@ export default function LightCanvasSequencerPrototype() {
   const [songUploadError, setSongUploadError] = useState<string | null>(null)
   const [songUploading, setSongUploading] = useState(false)
   const [songDeleteError, setSongDeleteError] = useState<string | null>(null)
+  const [songAnalyses, setSongAnalyses] = useState<Record<string, SongAudioAnalysis>>({})
+  const [rebuildAnalyzing, setRebuildAnalyzing] = useState(false)
 
   const [chatInput, setChatInput] = useState('')
   const [chat, setChat] = useState<ChatMessage[]>([
@@ -484,10 +556,22 @@ export default function LightCanvasSequencerPrototype() {
 
   const selectedSong =
     songs.find((s) => s.id === selectedSongId) ?? songs[0] ?? PLACEHOLDER_SONG
-  const sections = useMemo(() => buildSections(selectedSong.duration), [selectedSong])
+  const sections = useMemo((): Section[] => {
+    const stored = songAnalyses[selectedSong.id]?.sections
+    if (stored?.length) {
+      return stored.map((s) => ({
+        name: s.name,
+        start: s.start,
+        end: s.end,
+        energy: s.energy,
+        vocals: s.vocals,
+      }))
+    }
+    return buildSections(selectedSong.duration)
+  }, [selectedSong.id, selectedSong.duration, songAnalyses])
   const events = useMemo(
-    () => buildEvents(propsState, selectedSong, complexity),
-    [propsState, selectedSong, complexity],
+    () => buildEvents(propsState, complexity, sections),
+    [propsState, complexity, sections],
   )
   const selectedProp =
     propsState.length === 0
@@ -658,7 +742,7 @@ export default function LightCanvasSequencerPrototype() {
         ...prev,
         {
           ...song,
-          analysis: { beat: 51, bass: 46, treble: 57, vocals: 63, dynamics: 58 },
+          analysis: { beat: 0, bass: 0, treble: 0, vocals: 0, dynamics: 0 },
         },
       ])
       setSelectedSongId(song.id)
@@ -687,34 +771,89 @@ export default function LightCanvasSequencerPrototype() {
       return
     }
     setSongs((prev) => prev.filter((s) => s.id !== song.id))
+    setSongAnalyses((prev) => {
+      const next = { ...prev }
+      delete next[song.id]
+      return next
+    })
   }
 
   const runAi = () => {
     if (selectedSong.id === PLACEHOLDER_SONG.id) return
-    void updateSongStatus(selectedSong.id, { status: 'Ready' }).then(({ error }) => {
-      if (error) console.error(error)
-    })
-    setAnalysisProgress(100)
     const sid = selectedSong.id
-    setSongs((prev) =>
-      prev.map((s) =>
-        s.id === sid
-          ? {
-              ...s,
-              status: 'Ready',
-              analysis: { beat: 92, bass: 84, treble: 71, vocals: 94, dynamics: 88 },
-            }
-          : s,
-      ),
-    )
-    setChat((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        role: 'assistant',
-        text: 'Rebuilt the first-pass sequence. Finale intensity is higher, transitions are smoother, and the talking face now gets cleaner phrase blocks.',
-      },
-    ])
+    const hasFile = Boolean(selectedSong.storagePath && selectedSong.storageBucket)
+
+    const finishRebuild = (
+      analysisPatch: Song['analysis'],
+      bpmPatch: number | null | undefined,
+      assistantText: string,
+    ) => {
+      void updateSongStatus(sid, { status: 'Ready' }).then(({ error }) => {
+        if (error) console.error(error)
+      })
+      setAnalysisProgress(100)
+      setSongs((prev) =>
+        prev.map((s) =>
+          s.id === sid
+            ? {
+                ...s,
+                status: 'Ready',
+                ...(bpmPatch != null ? { bpm: bpmPatch } : {}),
+                analysis: analysisPatch,
+              }
+            : s,
+        ),
+      )
+      setChat((prev) => [
+        ...prev,
+        { id: Date.now(), role: 'assistant', text: assistantText },
+      ])
+    }
+
+    if (!hasFile) {
+      finishRebuild(
+        { beat: 92, bass: 84, treble: 71, vocals: 94, dynamics: 88 },
+        undefined,
+        'Rebuilt the first-pass sequence. Finale intensity is higher, transitions are smoother, and the talking face now gets cleaner phrase blocks.',
+      )
+      return
+    }
+
+    setRebuildAnalyzing(true)
+    setAnalysisProgress(40)
+    void (async () => {
+      try {
+        const url = await getSongAudioSignedUrl(selectedSong)
+        if (!url) throw new Error('No audio URL')
+        const res = await fetch(url)
+        if (!res.ok) throw new Error(`Audio fetch failed (${res.status})`)
+        const raw = await res.arrayBuffer()
+        const ctx = new AudioContext()
+        let decoded: AudioBuffer
+        try {
+          decoded = await ctx.decodeAudioData(raw.slice(0))
+        } finally {
+          void ctx.close()
+        }
+        setAnalysisProgress(75)
+        const result = analyzeAudioBuffer(decoded)
+        setSongAnalyses((prev) => ({ ...prev, [sid]: result }))
+        finishRebuild(
+          result.summary,
+          result.bpm,
+          'Analyzed your uploaded audio (tempo, beat grid, bass/treble/vocal bands, dynamics) and section boundaries from energy. Sequence draft updated from those signals.',
+        )
+      } catch (e) {
+        console.error('Audio analysis failed', e)
+        finishRebuild(
+          { beat: 55, bass: 50, treble: 50, vocals: 50, dynamics: 50 },
+          selectedSong.bpm,
+          'Audio analysis failed (decode or network). Applied a neutral fallback; try Rebuild again or confirm the file in Supabase Storage.',
+        )
+      } finally {
+        setRebuildAnalyzing(false)
+      }
+    })()
   }
 
   const applyCopilot = () => {
@@ -795,7 +934,7 @@ export default function LightCanvasSequencerPrototype() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900">
+    <div className="w-full bg-gradient-to-b from-slate-50 via-white to-slate-100 pb-6 text-slate-900">
       <div className="mx-auto max-w-7xl p-6 md:p-10">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -816,8 +955,9 @@ export default function LightCanvasSequencerPrototype() {
                 and export — with real uploads and account-backed display data where wired.
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-                <Button onClick={runAi}>
-                  <Sparkles className="h-4 w-4" /> Rebuild Sequence
+                <Button disabled={rebuildAnalyzing} onClick={runAi}>
+                  <Sparkles className="h-4 w-4" />{' '}
+                  {rebuildAnalyzing ? 'Analyzing…' : 'Rebuild Sequence'}
                 </Button>
                 <Button variant="secondary" onClick={() => setPlaying((p) => !p)}>
                   {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
@@ -839,7 +979,7 @@ export default function LightCanvasSequencerPrototype() {
         </motion.div>
 
         <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr] xl:items-start">
-          <div className="min-w-0 space-y-6">
+          <div className="min-w-0 w-full max-w-full space-y-6">
             <PillTabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
             <AnimatePresence mode="wait">
               {activeTab === 'setup' && (
@@ -848,7 +988,7 @@ export default function LightCanvasSequencerPrototype() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
-                  className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-start"
+                  className="grid w-full min-w-0 max-w-full gap-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-start"
                 >
                   <Card>
                     <CardHeader
@@ -1013,9 +1153,9 @@ export default function LightCanvasSequencerPrototype() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
-                  className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-start"
+                  className="flex w-full min-w-0 max-w-full flex-col gap-6"
                 >
-                  <Card>
+                  <Card className="w-full min-w-0">
                     <CardHeader
                       title="Song Library"
                       description="Per-song workspaces with fake ingest and analysis readiness."
@@ -1073,22 +1213,27 @@ export default function LightCanvasSequencerPrototype() {
                                 className="min-w-0 flex-1 p-4 text-left"
                                 onClick={() => setSelectedSongId(song.id)}
                               >
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0">
-                                    <div className="break-words font-medium leading-snug">{song.title}</div>
+                                <div className="flex min-w-0 items-center justify-between gap-3">
+                                  <div className="min-w-0 flex-1">
+                                    <div
+                                      className="truncate font-medium leading-snug text-slate-900"
+                                      title={song.title}
+                                    >
+                                      {song.title}
+                                    </div>
                                     <div className="mt-1 text-sm leading-relaxed text-slate-500">
                                       {song.originalFilename ? (
                                         <span className="line-clamp-2 block" title={song.originalFilename}>
                                           {song.originalFilename}
                                         </span>
                                       ) : null}
-                                      <span className="mt-0.5 block text-slate-500">
+                                      <span className="mt-0.5 block truncate text-slate-500" title={`${formatTime(song.duration)} · ${song.bpm != null ? `${song.bpm} BPM` : '— BPM'} · ${song.key}`}>
                                         {formatTime(song.duration)} ·{' '}
                                         {song.bpm != null ? `${song.bpm} BPM` : '— BPM'} · {song.key}
                                       </span>
                                     </div>
                                   </div>
-                                  <div className="shrink-0 rounded-full bg-brand-red px-3 py-1 text-xs text-white shadow-brand-red-soft">
+                                  <div className="shrink-0 rounded-full bg-brand-red px-3 py-1 text-xs whitespace-nowrap text-white shadow-brand-red-soft">
                                     {song.status}
                                   </div>
                                 </div>
@@ -1119,18 +1264,19 @@ export default function LightCanvasSequencerPrototype() {
                       </div>
                     </div>
                   </Card>
-                  <Card>
+                  <Card className="w-full min-w-0">
                     <CardHeader
                       title="Selected Song Workspace"
                       description="Deeper fake analysis metadata to show scope."
                       icon={AudioLines}
                     />
                     <div className="space-y-6 p-6">
-                      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <Stat
                           label="Track"
                           value={selectedSong.title.replace(/\.(mp3|wav|m4a)$/i, '')}
                           sub="Current workspace"
+                          valueTruncate
                         />
                         <Stat
                           label="Duration"
@@ -1169,15 +1315,56 @@ export default function LightCanvasSequencerPrototype() {
                           <SongWaveform song={selectedSong} />
                         </div>
                       </div>
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      {songAnalyses[selectedSong.id] ? (
+                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                          <div className="text-sm font-medium text-slate-900">
+                            Real audio analysis (Web Audio · last Rebuild)
+                          </div>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Tempo {songAnalyses[selectedSong.id].bpm} BPM · beat times, band envelopes,
+                            and sections derived from the decoded file.
+                          </p>
+                          <AnalysisBeatStrip
+                            beatTimes={songAnalyses[selectedSong.id].beatTimes}
+                            duration={selectedSong.duration}
+                          />
+                          <div className="mt-5">
+                            <AnalysisBandRows
+                              bassSeries={songAnalyses[selectedSong.id].bassSeries}
+                              trebleSeries={songAnalyses[selectedSong.id].trebleSeries}
+                              vocalSeries={songAnalyses[selectedSong.id].vocalSeries}
+                            />
+                          </div>
+                          <div className="mt-5">
+                            <div className="mb-2 text-xs font-medium text-slate-600">
+                              Sections (energy-based)
+                            </div>
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                              {songAnalyses[selectedSong.id].sections.map((s) => (
+                                <div
+                                  key={`${s.name}-${s.start}`}
+                                  className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm"
+                                >
+                                  <div className="font-medium text-slate-900">{s.name}</div>
+                                  <div className="mt-1 text-slate-600">
+                                    {formatTime(s.start)} – {formatTime(s.end)} · energy {s.energy}
+                                    {s.vocals ? ' · vocals est.' : ''}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+                      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                         {analysisItems.map(([title, metric, desc]) => (
                           <div
                             key={title}
-                            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                            className="flex min-h-full min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
                           >
                             <div className="font-medium text-slate-900">{title}</div>
-                            <div className="mt-1 text-sm font-medium text-slate-700">{metric}</div>
-                            <div className="mt-2 text-sm leading-relaxed text-slate-600">{desc}</div>
+                            <div className="mt-2 text-sm font-semibold text-slate-800">{metric}</div>
+                            <div className="mt-3 flex-1 text-sm leading-relaxed text-slate-600">{desc}</div>
                           </div>
                         ))}
                       </div>
@@ -1192,7 +1379,7 @@ export default function LightCanvasSequencerPrototype() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
-                  className="grid gap-6 lg:grid-cols-[1fr_1fr] lg:items-start"
+                  className="grid w-full min-w-0 max-w-full gap-6 lg:grid-cols-[1fr_1fr] lg:items-start"
                 >
                   <Card>
                     <CardHeader
@@ -1232,8 +1419,9 @@ export default function LightCanvasSequencerPrototype() {
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-3">
-                        <Button onClick={runAi}>
-                          <Sparkles className="h-4 w-4" /> Rebuild Full Sequence
+                        <Button disabled={rebuildAnalyzing} onClick={runAi}>
+                          <Sparkles className="h-4 w-4" />{' '}
+                          {rebuildAnalyzing ? 'Analyzing…' : 'Rebuild Full Sequence'}
                         </Button>
                         <Button variant="secondary">Re-analyze Audio</Button>
                         <Button variant="secondary">Re-map Props</Button>
@@ -1247,7 +1435,7 @@ export default function LightCanvasSequencerPrototype() {
                       icon={Mic2}
                     />
                     <div className="space-y-5 p-6">
-                      <div className="grid gap-4 md:grid-cols-3">
+                      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3">
                         <Stat
                           label="Assigned Prop"
                           value={propsState.find((p) => p.type === 'Talking Face')?.name ?? 'None'}
@@ -1258,7 +1446,12 @@ export default function LightCanvasSequencerPrototype() {
                           value={`${selectedSong.analysis.vocals}%`}
                           sub="Phrase detect"
                         />
-                        <Stat label="Mode" value="Phrase + Mouth" sub="Prototype logic" />
+                        <Stat
+                          label="Mode"
+                          value="Phrase + Mouth"
+                          sub="Prototype logic"
+                          valueTruncate
+                        />
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                         <div className="font-medium text-brand-red">Detected vocal phrase windows</div>
@@ -1297,7 +1490,7 @@ export default function LightCanvasSequencerPrototype() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
-                  className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr] lg:items-start"
+                  className="grid w-full min-w-0 max-w-full gap-6 lg:grid-cols-[1.08fr_0.92fr] lg:items-start"
                 >
                   <Card>
                     <CardHeader
@@ -1453,43 +1646,43 @@ export default function LightCanvasSequencerPrototype() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
-                  className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-start"
+                  className="grid w-full min-w-0 max-w-full grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start"
                 >
-                  <Card>
+                  <Card className="min-w-0">
                     <CardHeader
                       title="Export Sequence"
                       description="Fake but concrete handoff settings to show what the real output layer might include."
                       icon={Download}
                     />
-                    <div className="space-y-5 p-6">
-                      <div>
+                    <div className="min-w-0 space-y-5 p-6">
+                      <div className="min-w-0">
                         <div className="mb-2 text-sm font-medium text-slate-700">Export Format</div>
-                        <select className="w-full rounded-xl border border-slate-300 px-3 py-2">
+                        <select className="w-full min-w-0 rounded-xl border border-slate-300 px-3 py-2">
                           <option>FSEQ</option>
                           <option>xLights-compatible package</option>
                           <option>LOR-oriented channel map bundle</option>
                         </select>
                       </div>
-                      <div className="grid gap-3 text-sm text-slate-600">
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                      <div className="grid min-w-0 gap-3 text-sm leading-normal text-slate-600">
+                        <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 break-words">
                           Song: {selectedSong.title}
                         </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
                           Props mapped: {propsState.length}
                         </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
                           Controller capacity: {totalChannels} channels
                         </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
                           Talking face sync included: Yes
                         </div>
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
                           Timeline events in current draft: {events.length}
                         </div>
                       </div>
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-pretty text-sm leading-relaxed text-slate-600">
                         <div className="font-medium text-brand-green">Fake scope details</div>
-                        <div className="mt-2">
+                        <div className="mt-2 text-pretty leading-relaxed">
                           A real export layer would handle format translation, channel flattening,
                           effect serialization, controller compatibility checks, timing precision, and
                           playback package creation for FPP or xLights workflows.
@@ -1500,14 +1693,14 @@ export default function LightCanvasSequencerPrototype() {
                       </Button>
                     </div>
                   </Card>
-                  <Card>
+                  <Card className="min-w-0">
                     <CardHeader
                       title="Payload Preview"
                       description="A believable object-model preview of the prototype's exported data."
                       icon={Sparkles}
                     />
-                    <div className="p-6">
-                      <pre className="max-h-[520px] overflow-auto rounded-2xl border border-brand-green/30 bg-slate-950 p-4 text-xs leading-6 text-slate-100 shadow-[inset_0_0_0_1px_rgba(192,0,0,0.12)]">
+                    <div className="min-w-0 p-6">
+                      <pre className="max-h-[520px] min-w-0 overflow-auto rounded-2xl border border-brand-green/30 bg-slate-950 p-4 text-xs leading-6 text-slate-100 shadow-[inset_0_0_0_1px_rgba(192,0,0,0.12)]">
                         {exportPayload}
                       </pre>
                     </div>
