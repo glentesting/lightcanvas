@@ -314,3 +314,22 @@ export async function updateSongStatus(
 
   return { error: error ? new Error(error.message) : null }
 }
+
+/** Remove the song row and delete its Storage object when present. */
+export async function deleteSongFromLibrary(song: Song): Promise<{ error: Error | null }> {
+  if (!supabase) {
+    return { error: new Error('Supabase not configured') }
+  }
+
+  if (song.storageBucket && song.storagePath) {
+    const { error: stErr } = await supabase.storage
+      .from(song.storageBucket)
+      .remove([song.storagePath])
+    if (stErr) {
+      console.warn('deleteSongFromLibrary storage:', stErr.message)
+    }
+  }
+
+  const { error } = await supabase.from('songs').delete().eq('id', song.id)
+  return { error: error ? new Error(error.message) : null }
+}

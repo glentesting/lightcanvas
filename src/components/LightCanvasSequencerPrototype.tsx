@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../contexts/AuthContext'
 import { getAudioDurationFromFile } from '../lib/getAudioDurationFromFile'
 import {
+  deleteSongFromLibrary,
   getOrCreateDisplayProfile,
   getSongAudioSignedUrl,
   loadDisplayProps,
@@ -23,6 +24,7 @@ import { supabase } from '../lib/supabaseClient'
 import type { DisplayProp } from '../types/display'
 import type { Song } from '../types/song'
 import { LightCanvasWordmark } from './LightCanvasWordmark'
+import { SongWaveform } from './SongWaveform'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -466,6 +468,7 @@ export default function LightCanvasSequencerPrototype() {
   const songFileInputRef = useRef<HTMLInputElement>(null)
   const [songUploadError, setSongUploadError] = useState<string | null>(null)
   const [songUploading, setSongUploading] = useState(false)
+  const [songDeleteError, setSongDeleteError] = useState<string | null>(null)
 
   const [chatInput, setChatInput] = useState('')
   const [chat, setChat] = useState<ChatMessage[]>([
@@ -669,6 +672,18 @@ export default function LightCanvasSequencerPrototype() {
     ev?.stopPropagation()
     const url = await getSongAudioSignedUrl(song)
     if (url) window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  const handleDeleteSong = async (song: Song, ev: MouseEvent) => {
+    ev.stopPropagation()
+    if (!window.confirm(`Remove "${song.title}" from your library? This cannot be undone.`)) return
+    setSongDeleteError(null)
+    const { error } = await deleteSongFromLibrary(song)
+    if (error) {
+      setSongDeleteError(error.message)
+      return
+    }
+    setSongs((prev) => prev.filter((s) => s.id !== song.id))
   }
 
   const runAi = () => {
@@ -1043,6 +1058,11 @@ export default function LightCanvasSequencerPrototype() {
                             {songUploadError}
                           </div>
                         ) : null}
+                        {songDeleteError ? (
+                          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                            {songDeleteError}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="space-y-3">
                         {songs.length === 0 ? (
@@ -1082,8 +1102,8 @@ export default function LightCanvasSequencerPrototype() {
                                   </div>
                                 </div>
                               </button>
-                              {song.storagePath ? (
-                                <div className="flex items-center border-l border-slate-200 bg-white/80 px-1">
+                              <div className="flex items-center border-l border-slate-200 bg-white/80 px-1">
+                                {song.storagePath ? (
                                   <Button
                                     variant="ghost"
                                     className="shrink-0 px-3"
@@ -1092,8 +1112,16 @@ export default function LightCanvasSequencerPrototype() {
                                   >
                                     <Play className="h-4 w-4" />
                                   </Button>
-                                </div>
-                              ) : null}
+                                ) : null}
+                                <Button
+                                  variant="ghost"
+                                  className="shrink-0 px-3 text-brand-red hover:bg-red-50"
+                                  aria-label={`Delete ${song.title}`}
+                                  onClick={(e) => void handleDeleteSong(song, e)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                           ))
                         )}
@@ -1141,24 +1169,13 @@ export default function LightCanvasSequencerPrototype() {
                       ) : null}
                       <SongWorkspaceAudio song={selectedSong} />
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                        <div className="text-sm font-medium text-brand-green">
-                          Waveform / structure proxy
-                        </div>
+                        <div className="text-sm font-medium text-brand-green">Amplitude waveform</div>
                         <div className="mt-1 text-sm text-slate-500">
-                          This fake panel represents song parsing, phrase segmentation, section
-                          detection, and timing markers.
+                          Built from your uploaded file: the audio is fetched, decoded with the Web
+                          Audio API, and peaks are shown across the timeline.
                         </div>
-                        <div className="mt-4 flex h-32 items-end gap-1 rounded-2xl bg-white p-3 shadow-sm">
-                          {Array.from({ length: 48 }).map((_, i) => {
-                            const h = 18 + ((i * 17) % 78)
-                            return (
-                              <div
-                                key={i}
-                                className="flex-1 rounded-full bg-brand-green/80"
-                                style={{ height: `${h}%` }}
-                              />
-                            )
-                          })}
+                        <div className="mt-4">
+                          <SongWaveform song={selectedSong} />
                         </div>
                       </div>
                       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
