@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { LightCanvasWordmark } from '../components/LightCanvasWordmark'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function LoginPage() {
@@ -52,11 +53,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 via-white to-slate-100 px-4 py-12">
-      <div className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-8 shadow-xl">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-brand-green/[0.07] via-white to-brand-red/[0.06] px-4 py-12">
+      <div className="w-full max-w-md rounded-[28px] border border-slate-200 border-t-[3px] border-t-brand-green bg-white p-8 shadow-xl shadow-brand-soft">
         <div className="text-center">
-          <div className="text-sm uppercase tracking-[0.2em] text-slate-500">LightCanvas</div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
+          <div className="flex justify-center">
+            <LightCanvasWordmark className="text-3xl font-semibold tracking-tight md:text-4xl" />
+          </div>
+          <p className="mt-2 text-xs uppercase tracking-[0.2em] text-brand-red/90">Sequencer</p>
+          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-slate-900">
             {mode === 'signin' ? 'Sign in' : 'Create account'}
           </h1>
           <p className="mt-2 text-sm text-slate-600">
@@ -80,7 +84,7 @@ export default function LoginPage() {
           </div>
         ) : null}
 
-        <div className="mt-6 flex rounded-2xl bg-slate-200/70 p-1">
+        <div className="mt-6 flex rounded-2xl bg-gradient-to-r from-brand-green/15 via-slate-200/80 to-brand-red/15 p-1">
           <button
             type="button"
             onClick={() => {
@@ -89,7 +93,9 @@ export default function LoginPage() {
               setMessage(null)
             }}
             className={`flex-1 rounded-xl py-2 text-sm font-medium transition ${
-              mode === 'signin' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+              mode === 'signin'
+                ? 'bg-white text-brand-green shadow-sm ring-1 ring-brand-green/35'
+                : 'text-slate-600 hover:bg-white/70'
             }`}
           >
             Sign in
@@ -102,7 +108,9 @@ export default function LoginPage() {
               setMessage(null)
             }}
             className={`flex-1 rounded-xl py-2 text-sm font-medium transition ${
-              mode === 'signup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+              mode === 'signup'
+                ? 'bg-white text-brand-red shadow-sm ring-1 ring-brand-red/35'
+                : 'text-slate-600 hover:bg-white/70'
             }`}
           >
             Sign up
@@ -121,7 +129,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none ring-slate-400 focus:ring-2"
+              className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/25"
             />
           </div>
           <div>
@@ -136,7 +144,7 @@ export default function LoginPage() {
               minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none ring-slate-400 focus:ring-2"
+              className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/25"
             />
             {mode === 'signup' ? (
               <p className="mt-1 text-xs text-slate-500">At least 6 characters (match your Supabase policy).</p>
@@ -149,7 +157,7 @@ export default function LoginPage() {
             </div>
           ) : null}
           {message ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+            <div className="rounded-xl border border-brand-green/35 bg-brand-green/10 px-3 py-2 text-sm text-brand-green-dark">
               {message}
             </div>
           ) : null}
@@ -157,7 +165,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={submitting || !configured}
-            className="w-full rounded-2xl bg-slate-900 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-2xl bg-brand-green py-3 text-sm font-medium text-white shadow-brand-soft transition hover:bg-brand-green-dark disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
           </button>
@@ -170,7 +178,10 @@ export default function LoginPage() {
 
       {configured ? (
         <p className="mt-8 text-center text-sm text-slate-500">
-          <Link to="/" className="font-medium text-slate-700 underline-offset-2 hover:underline">
+          <Link
+            to="/"
+            className="font-medium text-brand-green underline-offset-2 hover:text-brand-green-dark hover:underline"
+          >
             Home
           </Link>{' '}
           (requires sign-in)

@@ -11,8 +11,8 @@ export function ProtectedRoute() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="text-sm text-slate-600">Loading…</div>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-brand-green/[0.08] via-white to-brand-red/[0.06]">
+        <div className="text-sm font-medium text-brand-green">Loading…</div>
       </div>
     )
   }

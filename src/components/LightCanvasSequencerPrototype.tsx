@@ -5,6 +5,19 @@ import {
   type MouseEventHandler,
   type ReactNode,
 } from 'react'
+import { useAuth } from '../contexts/AuthContext'
+import {
+  createSong,
+  getOrCreateDisplayProfile,
+  loadDisplayProps,
+  loadSongs,
+  persistDisplayProfile,
+  updateSongStatus,
+} from '../lib/phase1Repository'
+import { supabase } from '../lib/supabaseClient'
+import type { DisplayProp } from '../types/display'
+import type { Song } from '../types/song'
+import { LightCanvasWordmark } from './LightCanvasWordmark'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { LucideIcon } from 'lucide-react'
 import {
@@ -42,10 +55,10 @@ function Button({
 }) {
   const styles =
     variant === 'secondary'
-      ? 'bg-white text-slate-900 border border-slate-300 hover:bg-slate-50'
+      ? 'bg-white text-brand-green border-2 border-brand-green/35 hover:bg-brand-green/10'
       : variant === 'ghost'
-        ? 'bg-transparent text-slate-700 hover:bg-slate-100'
-        : 'bg-slate-900 text-white hover:opacity-90'
+        ? 'bg-transparent text-slate-700 hover:bg-brand-green/10'
+        : 'bg-brand-green text-white hover:bg-brand-green-dark shadow-brand-soft'
   return (
     <button
       type="button"
@@ -62,7 +75,7 @@ function Progress({ value }: { value: number }) {
   return (
     <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200">
       <div
-        className="h-full rounded-full bg-slate-900 transition-all duration-300"
+        className="h-full rounded-full bg-brand-green transition-all duration-300"
         style={{ width: `${value}%` }}
       />
     </div>
@@ -71,7 +84,9 @@ function Progress({ value }: { value: number }) {
 
 function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-[28px] border border-slate-200 bg-white shadow-xl ${className}`}>
+    <div
+      className={`rounded-[28px] border border-slate-200 border-t-[3px] border-t-brand-green bg-white shadow-xl shadow-brand-soft ${className}`}
+    >
       {children}
     </div>
   )
@@ -90,7 +105,7 @@ function CardHeader({
     <div className="border-b border-slate-100 px-6 py-5">
       <div className="flex items-start gap-3">
         {Icon ? (
-          <div className="rounded-2xl bg-slate-100 p-3">
+          <div className="rounded-2xl bg-brand-green/12 p-3 text-brand-green">
             <Icon className="h-5 w-5" />
           </div>
         ) : null}
@@ -108,7 +123,7 @@ function CardHeader({
 function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
+      <div className="text-xs uppercase tracking-[0.16em] text-brand-green">{label}</div>
       <div className="mt-2 text-2xl font-semibold text-slate-900">{value}</div>
       {sub ? <div className="mt-1 text-sm text-slate-600">{sub}</div> : null}
     </div>
@@ -125,14 +140,16 @@ function PillTabs<T extends string>({
   onChange: (v: T) => void
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-200/70 p-2 md:grid-cols-5">
+    <div className="grid grid-cols-2 gap-2 rounded-2xl bg-gradient-to-r from-brand-green/[0.12] via-slate-200/80 to-brand-red/[0.1] p-2 md:grid-cols-5">
       {tabs.map((tab) => (
         <button
           key={tab.value}
           type="button"
           onClick={() => onChange(tab.value)}
           className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
-            value === tab.value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:bg-slate-100'
+            value === tab.value
+              ? 'bg-white text-brand-green shadow-sm ring-1 ring-brand-green/35'
+              : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
           {tab.label}
@@ -159,7 +176,7 @@ function SliderRow({
     <div>
       <div className="mb-2 flex items-center justify-between text-sm">
         <span className="text-slate-600">{label}</span>
-        <span className="font-medium text-slate-900">{value}</span>
+        <span className="font-medium text-brand-green">{value}</span>
       </div>
       <input
         type="range"
@@ -207,36 +224,6 @@ const effectOptions = [
   'Ripple',
 ]
 
-interface DisplayProp {
-  id: number
-  name: string
-  type: string
-  controller: string
-  channels: number
-  start: number
-  priority: string
-  notes: string
-}
-
-interface SongAnalysis {
-  beat: number
-  bass: number
-  treble: number
-  vocals: number
-  dynamics: number
-}
-
-interface Song {
-  id: number
-  title: string
-  duration: number
-  bpm: number
-  key: string
-  energy: string
-  status: string
-  analysis: SongAnalysis
-}
-
 interface Section {
   name: string
   start: number
@@ -247,7 +234,7 @@ interface Section {
 
 interface TimelineEvent {
   id: string
-  propId: number
+  propId: string
   propName: string
   section: string
   start: number
@@ -264,71 +251,17 @@ interface ChatMessage {
   text: string
 }
 
-const initialProps: DisplayProp[] = [
-  {
-    id: 1,
-    name: 'Singing Santa Face',
-    type: 'Talking Face',
-    controller: 'Controller A',
-    channels: 8,
-    start: 1,
-    priority: 'Vocals',
-    notes: 'Primary vocal prop. Reserved for mouth cues and phrase emphasis.',
-  },
-  {
-    id: 2,
-    name: 'Front Yard Mega Tree',
-    type: 'Mega Tree',
-    controller: 'Controller B',
-    channels: 16,
-    start: 9,
-    priority: 'Chorus / Finale',
-    notes: 'High-energy visual anchor for choruses, lifts, and big endings.',
-  },
-  {
-    id: 3,
-    name: 'Ground Stakes',
-    type: 'Ground Stakes',
-    controller: 'Controller A',
-    channels: 8,
-    start: 25,
-    priority: 'Bass',
-    notes: 'Handles bass pulses, downbeats, and low-end movement.',
-  },
-  {
-    id: 4,
-    name: 'Roofline',
-    type: 'Roofline',
-    controller: 'Controller C',
-    channels: 12,
-    start: 33,
-    priority: 'Accent',
-    notes: 'Frames transitions and gives broad house outline movement.',
-  },
-]
-
-const initialSongs: Song[] = [
-  {
-    id: 1,
-    title: 'Carol of the Bells.mp3',
-    duration: 178,
-    bpm: 132,
-    key: 'E minor',
-    energy: 'High',
-    status: 'Ready',
-    analysis: { beat: 92, bass: 84, treble: 71, vocals: 94, dynamics: 88 },
-  },
-  {
-    id: 2,
-    title: 'Jingle Bell Rock.mp3',
-    duration: 131,
-    bpm: 118,
-    key: 'G major',
-    energy: 'Medium',
-    status: 'Uploaded',
-    analysis: { beat: 56, bass: 49, treble: 64, vocals: 67, dynamics: 53 },
-  },
-]
+/** Used when the user has no songs yet so timeline math still runs. */
+const PLACEHOLDER_SONG: Song = {
+  id: '__none__',
+  title: 'No songs yet',
+  duration: 180,
+  bpm: 120,
+  key: '—',
+  energy: '—',
+  status: '—',
+  analysis: { beat: 0, bass: 0, treble: 0, vocals: 0, dynamics: 0 },
+}
 
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60)
@@ -424,7 +357,7 @@ function LightPreview({ playing }: { playing: boolean }) {
           <div
             className={`mx-auto h-20 w-20 rounded-full border-4 ${
               playing && tick % 2 === 0
-                ? 'border-emerald-300 bg-emerald-200/30'
+                ? 'border-brand-green bg-brand-green/25 shadow-brand-soft'
                 : 'border-slate-700 bg-slate-800'
             }`}
           />
@@ -438,7 +371,7 @@ function LightPreview({ playing }: { playing: boolean }) {
               return (
                 <div
                   key={i}
-                  className="w-3 rounded-t-full bg-emerald-300 shadow-[0_0_18px_rgba(110,231,183,0.45)] transition-all duration-150"
+                  className="w-3 rounded-t-full bg-brand-green shadow-[0_0_18px_rgba(112,173,71,0.5)] transition-all duration-150"
                   style={{ height }}
                 />
               )
@@ -453,7 +386,7 @@ function LightPreview({ playing }: { playing: boolean }) {
                 key={i}
                 className={`h-4 rounded-full transition-all duration-150 ${
                   playing && (tick + i) % 2 === 0
-                    ? 'bg-cyan-300 shadow-[0_0_16px_rgba(103,232,249,0.5)]'
+                    ? 'bg-brand-red shadow-brand-red-soft'
                     : 'bg-slate-700'
                 }`}
               />
@@ -462,8 +395,8 @@ function LightPreview({ playing }: { playing: boolean }) {
           <div className="text-center text-xs text-slate-400">Ground Stakes</div>
         </div>
       </div>
-      <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-900/80 p-3">
-        <div className="mb-2 text-left text-xs uppercase tracking-[0.16em] text-slate-500">
+      <div className="mt-5 rounded-2xl border border-brand-green/25 bg-slate-900/85 p-3 ring-1 ring-brand-red/20">
+        <div className="mb-2 text-left text-xs uppercase tracking-[0.16em] text-brand-green/90">
           Playback preview
         </div>
         <div className="flex h-14 items-end gap-1 overflow-hidden rounded-xl bg-slate-950 p-2">
@@ -484,16 +417,19 @@ function LightPreview({ playing }: { playing: boolean }) {
 }
 
 export default function LightCanvasSequencerPrototype() {
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<TabValue>('setup')
   const [controllers, setControllers] = useState(3)
   const [channelsPerController, setChannelsPerController] = useState(16)
-  const [propsState, setPropsState] = useState<DisplayProp[]>(initialProps)
-  const [songs, setSongs] = useState<Song[]>(initialSongs)
-  const [selectedSongId, setSelectedSongId] = useState(1)
+  const [propsState, setPropsState] = useState<DisplayProp[]>([])
+  const [profileId, setProfileId] = useState<string | null>(null)
+  const [displayConfigReady, setDisplayConfigReady] = useState(false)
+  const [songs, setSongs] = useState<Song[]>([])
+  const [selectedSongId, setSelectedSongId] = useState<string | null>(null)
   const [analysisProgress, setAnalysisProgress] = useState(91)
   const [playing, setPlaying] = useState(false)
   const [complexity, setComplexity] = useState(62)
-  const [selectedPropId, setSelectedPropId] = useState(1)
+  const [selectedPropId, setSelectedPropId] = useState<string | null>(null)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [newPropName, setNewPropName] = useState('')
   const [newPropType, setNewPropType] = useState('Smart Pixel')
@@ -507,19 +443,107 @@ export default function LightCanvasSequencerPrototype() {
     },
   ])
 
-  const selectedSong = songs.find((s) => s.id === selectedSongId) ?? songs[0]
+  const selectedSong =
+    songs.find((s) => s.id === selectedSongId) ?? songs[0] ?? PLACEHOLDER_SONG
   const sections = useMemo(() => buildSections(selectedSong.duration), [selectedSong])
   const events = useMemo(
     () => buildEvents(propsState, selectedSong, complexity),
     [propsState, selectedSong, complexity],
   )
-  const selectedProp = propsState.find((p) => p.id === selectedPropId) ?? propsState[0]
+  const selectedProp =
+    propsState.length === 0
+      ? undefined
+      : (propsState.find((p) => p.id === selectedPropId) ?? propsState[0])
   const propEvents = events.filter((e) => e.propId === selectedProp?.id)
   const selectedEvent =
     events.find((e) => e.id === selectedEventId) ?? propEvents[0] ?? null
   const totalChannels = controllers * channelsPerController
   const usedChannels = propsState.reduce((sum, p) => sum + p.channels, 0)
   const remainingChannels = totalChannels - usedChannels
+
+  useEffect(() => {
+    const uid = user?.id
+    if (!uid || !supabase) {
+      setDisplayConfigReady(true)
+      setProfileId(null)
+      setPropsState([])
+      setSongs([])
+      return
+    }
+
+    let cancelled = false
+    setDisplayConfigReady(false)
+    setProfileId(null)
+
+    void (async () => {
+      try {
+        const profile = await getOrCreateDisplayProfile(uid)
+        if (cancelled) return
+        setProfileId(profile.id)
+        setControllers(profile.controllers)
+        setChannelsPerController(profile.channels_per_controller)
+
+        const props = await loadDisplayProps(profile.id)
+        if (cancelled) return
+        setPropsState(props)
+
+        const songList = await loadSongs(uid)
+        if (cancelled) return
+        setSongs(songList)
+      } catch (err) {
+        console.error('Failed to load workspace from Supabase', err)
+      } finally {
+        if (!cancelled) setDisplayConfigReady(true)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    if (propsState.length === 0) {
+      setSelectedPropId(null)
+      return
+    }
+    setSelectedPropId((cur) =>
+      cur != null && propsState.some((p) => p.id === cur) ? cur : propsState[0].id,
+    )
+  }, [propsState])
+
+  useEffect(() => {
+    if (songs.length === 0) {
+      setSelectedSongId(null)
+      return
+    }
+    setSelectedSongId((cur) =>
+      cur != null && songs.some((s) => s.id === cur) ? cur : songs[0].id,
+    )
+  }, [songs])
+
+  useEffect(() => {
+    if (!user?.id || !supabase || !displayConfigReady || !profileId) return
+
+    const handle = window.setTimeout(() => {
+      void persistDisplayProfile(profileId, {
+        controllers,
+        channels_per_controller: channelsPerController,
+        props: propsState,
+      }).then(({ error }) => {
+        if (error) console.error('Failed to save display profile', error)
+      })
+    }, 400)
+
+    return () => window.clearTimeout(handle)
+  }, [
+    user?.id,
+    displayConfigReady,
+    profileId,
+    controllers,
+    channelsPerController,
+    propsState,
+  ])
 
   useEffect(() => {
     if (propEvents.length === 0) return
@@ -536,7 +560,7 @@ export default function LightCanvasSequencerPrototype() {
       : 1
     const controllerIndex = (propsState.length % Math.max(1, controllers)) + 1
     const created: DisplayProp = {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       name: newPropName,
       type: newPropType,
       controller: `Controller ${String.fromCharCode(64 + controllerIndex)}`,
@@ -552,37 +576,44 @@ export default function LightCanvasSequencerPrototype() {
     setNewPropChannels(8)
   }
 
-  const removeProp = (id: number) => {
+  const removeProp = (id: string) => {
     const remaining = propsState.filter((p) => p.id !== id)
     setPropsState(remaining)
-    if (remaining.length) setSelectedPropId(remaining[0].id)
+    if (remaining.length === 0) setSelectedPropId(null)
+    else if (selectedPropId === id || !remaining.some((p) => p.id === selectedPropId))
+      setSelectedPropId(remaining[0].id)
   }
 
-  const addSong = () => {
-    const id = Date.now()
-    setSongs((prev) => [
-      ...prev,
-      {
-        id,
-        title: `New Upload ${prev.length + 1}.mp3`,
-        duration: 187,
-        bpm: 124,
-        key: 'A minor',
-        energy: 'Medium-High',
-        status: 'Uploaded',
-        analysis: { beat: 51, bass: 46, treble: 57, vocals: 63, dynamics: 58 },
-      },
-    ])
-    setSelectedSongId(id)
+  const addSong = async () => {
+    const uid = user?.id
+    if (!uid || !supabase) return
+    const nextIndex = songs.length + 1
+    const { song, error } = await createSong(uid, {
+      title: `New Upload ${nextIndex}.mp3`,
+      duration_seconds: 187,
+      bpm: 124,
+      status: 'Uploaded',
+    })
+    if (error || !song) {
+      console.error(error)
+      return
+    }
+    setSongs((prev) => [...prev, { ...song, analysis: { beat: 51, bass: 46, treble: 57, vocals: 63, dynamics: 58 } }])
+    setSelectedSongId(song.id)
     setAnalysisProgress(26)
     setActiveTab('songs')
   }
 
   const runAi = () => {
+    if (selectedSong.id === PLACEHOLDER_SONG.id) return
+    void updateSongStatus(selectedSong.id, { status: 'Ready' }).then(({ error }) => {
+      if (error) console.error(error)
+    })
     setAnalysisProgress(100)
+    const sid = selectedSong.id
     setSongs((prev) =>
       prev.map((s) =>
-        s.id === selectedSongId
+        s.id === sid
           ? {
               ...s,
               status: 'Ready',
@@ -679,18 +710,19 @@ export default function LightCanvasSequencerPrototype() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900">
+    <div className="min-h-screen bg-gradient-to-b from-brand-green/[0.06] via-white to-brand-red/[0.05] text-slate-900">
       <div className="mx-auto max-w-7xl px-6 py-10">
         <div className="mb-8 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <Card className="p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <div className="text-sm uppercase tracking-[0.2em] text-slate-500">
+                <div className="text-sm uppercase tracking-[0.2em] text-brand-red/90">
                   Full Sequencing Prototype
                 </div>
-                <h1 className="mt-2 text-4xl font-semibold tracking-tight md:text-5xl">
-                  LightCanvas
-                </h1>
+                <LightCanvasWordmark
+                  as="h1"
+                  className="mt-2 text-4xl font-semibold tracking-tight md:text-5xl"
+                />
                 <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 md:text-lg">
                   An in-depth playable prototype of the LightCanvas facefront sequencing UI. This
                   version is for exploring scope, controls, fake data depth, sequencing behavior, and
@@ -718,18 +750,18 @@ export default function LightCanvasSequencerPrototype() {
               </div>
             </div>
           </Card>
-          <Card className="p-6">
-            <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Prototype Intent</div>
-            <div className="mt-3 text-xl font-semibold">What this version is for</div>
+          <Card className="border-t-brand-red p-6 shadow-brand-red-soft">
+            <div className="text-xs uppercase tracking-[0.18em] text-brand-green">Prototype Intent</div>
+            <div className="mt-3 text-xl font-semibold text-slate-900">What this version is for</div>
             <div className="mt-4 space-y-3 text-sm leading-7 text-slate-600">
-              <div className="rounded-2xl bg-slate-50 p-4">
+              <div className="rounded-2xl border-l-4 border-brand-green bg-slate-50 p-4">
                 Explore a fuller product surface, not just a guided story demo.
               </div>
-              <div className="rounded-2xl bg-slate-50 p-4">
+              <div className="rounded-2xl border-l-4 border-brand-red bg-slate-50 p-4">
                 Show fake but believable sequence data, song analysis, prop mapping, and export
                 structure.
               </div>
-              <div className="rounded-2xl bg-slate-50 p-4">
+              <div className="rounded-2xl border-l-4 border-brand-green bg-slate-50 p-4">
                 Play with deeper controls so the scope of the real app becomes obvious.
               </div>
             </div>
@@ -787,7 +819,7 @@ export default function LightCanvasSequencerPrototype() {
                               Remaining channels: {remainingChannels}
                             </div>
                           </div>
-                          <div className="rounded-full bg-slate-900 px-3 py-1 text-xs text-white">
+                          <div className="rounded-full bg-brand-green px-3 py-1 text-xs text-white shadow-brand-soft">
                             {usedChannels}/{totalChannels}
                           </div>
                         </div>
@@ -830,7 +862,7 @@ export default function LightCanvasSequencerPrototype() {
                         </div>
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600">
-                        <div className="font-medium text-slate-900">Fake scope details</div>
+                        <div className="font-medium text-brand-green">Fake scope details</div>
                         <div className="mt-2">
                           This area demonstrates what the real app would eventually handle: controller
                           families, channel banks, prop grouping, recommended output assignments,
@@ -846,50 +878,60 @@ export default function LightCanvasSequencerPrototype() {
                       icon={Settings2}
                     />
                     <div className="max-h-[650px] space-y-3 overflow-auto p-6">
-                      {propsState.map((prop) => (
-                        <button
-                          key={prop.id}
-                          type="button"
-                          onClick={() => setSelectedPropId(prop.id)}
-                          className={`w-full rounded-2xl border p-4 text-left transition ${
-                            selectedPropId === prop.id
-                              ? 'border-slate-900 bg-slate-50'
-                              : 'border-slate-200 bg-white hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="text-base font-semibold">{prop.name}</div>
-                              <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
-                                <span className="rounded-full border border-slate-200 px-2 py-1">
-                                  {prop.type}
-                                </span>
-                                <span className="rounded-full border border-slate-200 px-2 py-1">
-                                  {prop.controller}
-                                </span>
-                                <span className="rounded-full border border-slate-200 px-2 py-1">
-                                  Channels {prop.start}-{prop.start + prop.channels - 1}
-                                </span>
-                                <span className="rounded-full border border-slate-200 px-2 py-1">
-                                  Priority: {prop.priority}
-                                </span>
+                      {propsState.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-brand-green/35 bg-brand-green/5 p-8 text-center text-sm leading-6 text-slate-600">
+                          <p className="font-medium text-brand-green">No props yet</p>
+                          <p className="mt-2">
+                            Add props using the form on the left. Your list is saved to your account
+                            automatically.
+                          </p>
+                        </div>
+                      ) : (
+                        propsState.map((prop) => (
+                          <button
+                            key={prop.id}
+                            type="button"
+                            onClick={() => setSelectedPropId(prop.id)}
+                            className={`w-full rounded-2xl border p-4 text-left transition ${
+                              selectedPropId === prop.id
+                                ? 'border-brand-green bg-brand-green/5 ring-1 ring-brand-green/25'
+                                : 'border-slate-200 bg-white hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="text-base font-semibold">{prop.name}</div>
+                                <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
+                                  <span className="rounded-full border border-slate-200 px-2 py-1">
+                                    {prop.type}
+                                  </span>
+                                  <span className="rounded-full border border-slate-200 px-2 py-1">
+                                    {prop.controller}
+                                  </span>
+                                  <span className="rounded-full border border-slate-200 px-2 py-1">
+                                    Channels {prop.start}-{prop.start + prop.channels - 1}
+                                  </span>
+                                  <span className="rounded-full border border-slate-200 px-2 py-1">
+                                    Priority: {prop.priority}
+                                  </span>
+                                </div>
                               </div>
+                              <Button
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  removeProp(prop.id)
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
-                            <Button
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                removeProp(prop.id)
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm leading-6 text-slate-600">
-                            {prop.notes}
-                          </div>
-                        </button>
-                      ))}
+                            <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm leading-6 text-slate-600">
+                              {prop.notes}
+                            </div>
+                          </button>
+                        ))
+                      )}
                     </div>
                   </Card>
                 </motion.div>
@@ -917,34 +959,41 @@ export default function LightCanvasSequencerPrototype() {
                           Adds a new fake song object with partial analysis.
                         </div>
                         <div className="mt-4">
-                          <Button onClick={addSong}>Mock Upload Song</Button>
+                          <Button onClick={() => void addSong()}>Mock Upload Song</Button>
                         </div>
                       </div>
                       <div className="space-y-3">
-                        {songs.map((song) => (
-                          <button
-                            key={song.id}
-                            type="button"
-                            onClick={() => setSelectedSongId(song.id)}
-                            className={`w-full rounded-2xl border p-4 text-left transition ${
-                              selectedSongId === song.id
-                                ? 'border-slate-900 bg-slate-50'
-                                : 'border-slate-200 bg-white hover:bg-slate-50'
-                            }`}
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="font-medium">{song.title}</div>
-                                <div className="mt-1 text-sm text-slate-500">
-                                  {formatTime(song.duration)} · {song.bpm} BPM · {song.key}
+                        {songs.length === 0 ? (
+                          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-600">
+                            No songs in your library yet. Use Mock Upload to add one — it will be
+                            saved to your account.
+                          </div>
+                        ) : (
+                          songs.map((song) => (
+                            <button
+                              key={song.id}
+                              type="button"
+                              onClick={() => setSelectedSongId(song.id)}
+                              className={`w-full rounded-2xl border p-4 text-left transition ${
+                                selectedSongId === song.id
+                                  ? 'border-brand-green bg-brand-green/5 ring-1 ring-brand-green/25'
+                                  : 'border-slate-200 bg-white hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <div className="font-medium">{song.title}</div>
+                                  <div className="mt-1 text-sm text-slate-500">
+                                    {formatTime(song.duration)} · {song.bpm} BPM · {song.key}
+                                  </div>
+                                </div>
+                                <div className="rounded-full bg-brand-red px-3 py-1 text-xs text-white shadow-brand-red-soft">
+                                  {song.status}
                                 </div>
                               </div>
-                              <div className="rounded-full bg-slate-900 px-3 py-1 text-xs text-white">
-                                {song.status}
-                              </div>
-                            </div>
-                          </button>
-                        ))}
+                            </button>
+                          ))
+                        )}
                       </div>
                     </div>
                   </Card>
@@ -970,7 +1019,7 @@ export default function LightCanvasSequencerPrototype() {
                         <Stat label="Energy" value={selectedSong.energy} sub="Overall feel" />
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                        <div className="text-sm font-medium text-slate-900">
+                        <div className="text-sm font-medium text-brand-green">
                           Waveform / structure proxy
                         </div>
                         <div className="mt-1 text-sm text-slate-500">
@@ -983,7 +1032,7 @@ export default function LightCanvasSequencerPrototype() {
                             return (
                               <div
                                 key={i}
-                                className="flex-1 rounded-full bg-slate-900/85"
+                                className="flex-1 rounded-full bg-brand-green/80"
                                 style={{ height: `${h}%` }}
                               />
                             )
@@ -993,7 +1042,7 @@ export default function LightCanvasSequencerPrototype() {
                       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                         {analysisItems.map(([title, metric, desc]) => (
                           <div key={title} className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <div className="font-medium text-slate-900">{title}</div>
+                            <div className="font-medium text-brand-green">{title}</div>
                             <div className="mt-1 text-sm font-medium text-slate-700">{metric}</div>
                             <div className="mt-2 text-sm leading-6 text-slate-500">{desc}</div>
                           </div>
@@ -1027,7 +1076,7 @@ export default function LightCanvasSequencerPrototype() {
                               Beat, bass, treble, vocals, phrasing, dynamic range, transition shaping.
                             </div>
                           </div>
-                          <div className="rounded-full bg-slate-900 px-3 py-1 text-xs text-white">
+                          <div className="rounded-full bg-brand-green px-3 py-1 text-xs text-white shadow-brand-soft">
                             {analysisProgress}%
                           </div>
                         </div>
@@ -1041,7 +1090,7 @@ export default function LightCanvasSequencerPrototype() {
                       <SliderRow label="Transition smoothness" value={61} onChange={() => {}} />
                       <SliderRow label="Finale escalation" value={90} onChange={() => {}} />
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600">
-                        <div className="font-medium text-slate-900">Fake scope details</div>
+                        <div className="font-medium text-brand-green">Fake scope details</div>
                         <div className="mt-2">
                           In a real build, this panel would let the user choose between sequencing
                           styles, phrase density, effect families, safety rails for beginners, more
@@ -1079,7 +1128,7 @@ export default function LightCanvasSequencerPrototype() {
                         <Stat label="Mode" value="Phrase + Mouth" sub="Prototype logic" />
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                        <div className="font-medium text-slate-900">Detected vocal phrase windows</div>
+                        <div className="font-medium text-brand-red">Detected vocal phrase windows</div>
                         <div className="mt-4 space-y-3">
                           {sections
                             .filter((s) => s.vocals)
@@ -1097,7 +1146,7 @@ export default function LightCanvasSequencerPrototype() {
                         </div>
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600">
-                        <div className="font-medium text-slate-900">Fake scope details</div>
+                        <div className="font-medium text-brand-green">Fake scope details</div>
                         <div className="mt-2">
                           The real version would support phoneme approximation, face presets, hold
                           states between phrases, alternate mouth maps, and phrase cleanup rules for
@@ -1125,21 +1174,29 @@ export default function LightCanvasSequencerPrototype() {
                     />
                     <div className="space-y-5 p-6">
                       <div className="flex flex-wrap gap-2">
-                        {propsState.map((prop) => (
-                          <Button
-                            key={prop.id}
-                            onClick={() => setSelectedPropId(prop.id)}
-                            variant={selectedPropId === prop.id ? 'primary' : 'secondary'}
-                          >
-                            {prop.name}
-                          </Button>
-                        ))}
+                        {propsState.length === 0 ? (
+                          <p className="text-sm text-slate-600">
+                            Add at least one prop in{' '}
+                            <span className="font-medium text-brand-green">Display Setup</span> to edit
+                            timelines.
+                          </p>
+                        ) : (
+                          propsState.map((prop) => (
+                            <Button
+                              key={prop.id}
+                              onClick={() => setSelectedPropId(prop.id)}
+                              variant={selectedPropId === prop.id ? 'primary' : 'secondary'}
+                            >
+                              {prop.name}
+                            </Button>
+                          ))
+                        )}
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <div className="mb-3 text-xs uppercase tracking-[0.16em] text-slate-500">
                           Section map
                         </div>
-                        <div className="relative h-14 overflow-hidden rounded-xl bg-white shadow-sm">
+                        <div className="relative h-14 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-brand-green/15">
                           {sections.map((section) => {
                             const left = `${(section.start / selectedSong.duration) * 100}%`
                             const width = `${((section.end - section.start) / selectedSong.duration) * 100}%`
@@ -1157,6 +1214,11 @@ export default function LightCanvasSequencerPrototype() {
                         </div>
                       </div>
                       <div className="space-y-3">
+                        {propsState.length === 0 ? (
+                          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-600">
+                            No timeline blocks until you add props to your display.
+                          </div>
+                        ) : null}
                         {propEvents.map((event) => {
                           const left = `${(event.start / selectedSong.duration) * 100}%`
                           const width = `${Math.max(5, ((event.end - event.start) / selectedSong.duration) * 100)}%`
@@ -1166,12 +1228,14 @@ export default function LightCanvasSequencerPrototype() {
                               type="button"
                               onClick={() => setSelectedEventId(event.id)}
                               className={`relative flex h-14 w-full items-center rounded-2xl border bg-white px-3 text-left shadow-sm ${
-                                selectedEventId === event.id ? 'border-slate-900' : 'border-slate-200'
+                                selectedEventId === event.id
+                                  ? 'border-brand-green ring-1 ring-brand-green/30'
+                                  : 'border-slate-200'
                               }`}
                             >
                               <div className="absolute left-3 right-3 top-1/2 h-4 -translate-y-1/2 rounded-full bg-slate-100" />
                               <div
-                                className="absolute top-1/2 h-4 -translate-y-1/2 rounded-full bg-slate-900/85"
+                                className="absolute top-1/2 h-4 -translate-y-1/2 rounded-full bg-gradient-to-r from-brand-green to-brand-green-dark/90"
                                 style={{
                                   left: `calc(${left} + 12px)`,
                                   width: `calc(${width} - 8px)`,
@@ -1236,7 +1300,7 @@ export default function LightCanvasSequencerPrototype() {
                             </select>
                           </div>
                           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600">
-                            <div className="font-medium text-slate-900">Block note</div>
+                            <div className="font-medium text-brand-green">Block note</div>
                             <div className="mt-2">{selectedEvent.note}</div>
                           </div>
                         </>
@@ -1291,7 +1355,7 @@ export default function LightCanvasSequencerPrototype() {
                         </div>
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600">
-                        <div className="font-medium text-slate-900">Fake scope details</div>
+                        <div className="font-medium text-brand-green">Fake scope details</div>
                         <div className="mt-2">
                           A real export layer would handle format translation, channel flattening,
                           effect serialization, controller compatibility checks, timing precision, and
@@ -1310,7 +1374,7 @@ export default function LightCanvasSequencerPrototype() {
                       icon={Sparkles}
                     />
                     <div className="p-6">
-                      <pre className="max-h-[520px] overflow-auto rounded-2xl bg-slate-950 p-4 text-xs leading-6 text-slate-100">
+                      <pre className="max-h-[520px] overflow-auto rounded-2xl border border-brand-green/30 bg-slate-950 p-4 text-xs leading-6 text-slate-100 shadow-[inset_0_0_0_1px_rgba(192,0,0,0.12)]">
                         {exportPayload}
                       </pre>
                     </div>
@@ -1330,16 +1394,16 @@ export default function LightCanvasSequencerPrototype() {
               <div className="space-y-4 p-6">
                 <LightPreview playing={playing} />
                 <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-1">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                    <span className="font-medium text-slate-900">Talking face:</span> reserved for
+                  <div className="rounded-2xl border border-slate-200 border-l-4 border-l-brand-green bg-slate-50 p-4 text-sm text-slate-600">
+                    <span className="font-medium text-brand-green">Talking face:</span> reserved for
                     vocal phrases and highlighted lyrical moments.
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                    <span className="font-medium text-slate-900">Mega tree:</span> receives denser
+                  <div className="rounded-2xl border border-slate-200 border-l-4 border-l-brand-red bg-slate-50 p-4 text-sm text-slate-600">
+                    <span className="font-medium text-brand-red">Mega tree:</span> receives denser
                     patterns in high-energy sections and finale lifts.
                   </div>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                    <span className="font-medium text-slate-900">Ground stakes:</span> represent
+                  <div className="rounded-2xl border border-slate-200 border-l-4 border-l-brand-green bg-slate-50 p-4 text-sm text-slate-600">
+                    <span className="font-medium text-brand-green">Ground stakes:</span> represent
                     low-end pulsing and beat-driven movement.
                   </div>
                 </div>
@@ -1369,8 +1433,8 @@ export default function LightCanvasSequencerPrototype() {
                       key={msg.id}
                       className={`rounded-2xl p-3 text-sm leading-6 ${
                         msg.role === 'assistant'
-                          ? 'border border-slate-200 bg-white text-slate-700'
-                          : 'bg-slate-900 text-white'
+                          ? 'border border-slate-200 border-l-4 border-l-brand-green bg-white text-slate-700'
+                          : 'bg-brand-red text-white shadow-brand-red-soft'
                       }`}
                     >
                       <div className="mb-1 text-[11px] uppercase tracking-[0.16em] opacity-70">
@@ -1384,7 +1448,7 @@ export default function LightCanvasSequencerPrototype() {
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Tell the copilot what to change..."
-                  className="min-h-[110px] w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none"
+                  className="min-h-[110px] w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/25"
                 />
                 <Button className="w-full" onClick={applyCopilot}>
                   <Bot className="h-4 w-4" /> Apply Copilot Change
