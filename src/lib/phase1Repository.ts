@@ -2,6 +2,8 @@ import type { DisplayProp } from '../types/display'
 import type { Song } from '../types/song'
 import { supabase } from './supabaseClient'
 
+export const SONG_AUDIO_BUCKET = 'song-audio'
+
 type DisplayPropRow = {
   id: string
   display_profile_id: string
@@ -22,6 +24,9 @@ type SongRow = {
   duration_seconds: number
   bpm: number | null
   status: string
+  storage_bucket?: string | null
+  storage_path?: string | null
+  original_filename?: string | null
 }
 
 export function rowToDisplayProp(row: DisplayPropRow): DisplayProp {
@@ -42,11 +47,14 @@ export function rowToSong(row: SongRow): Song {
     id: row.id,
     title: row.title,
     duration: row.duration_seconds,
-    bpm: row.bpm ?? 120,
+    bpm: row.bpm,
     key: '—',
     energy: '—',
     status: row.status,
     analysis: { beat: 0, bass: 0, treble: 0, vocals: 0, dynamics: 0 },
+    storageBucket: row.storage_bucket ?? null,
+    storagePath: row.storage_path ?? null,
+    originalFilename: row.original_filename ?? null,
   }
 }
 
@@ -206,7 +214,7 @@ export async function createSong(
       user_id: userId,
       title: input.title,
       duration_seconds: input.duration_seconds ?? 0,
-      bpm: input.bpm ?? 124,
+      bpm: input.bpm ?? null,
       status: input.status ?? 'Uploaded',
     })
     .select('*')
@@ -214,6 +222,84 @@ export async function createSong(
 
   if (error) return { song: null, error: new Error(error.message) }
   return { song: rowToSong(data as SongRow), error: null }
+}
+
+function extensionForUpload(file: File): string {
+  const match = file.name.match(/\.([a-zA-Z0-9]+)$/)
+  if (match) return match[1].toLowerCase()
+  if (file.type.includes('wav')) return 'wav'
+  return 'mp3'
+}
+
+/**
+ * Upload audio to Storage and insert a songs row (path: `{userId}/{songId}.{ext}`).
+ */
+export async function uploadSongFromFile(
+  userId: string,
+  file: File,
+  durationSeconds: number,
+): Promise<{ song: Song | null; error: Error | null }> {
+  if (!supabase) {
+    return { song: null, error: new Error('Supabase not configured') }
+  }
+
+  const songId = crypto.randomUUID()
+  const ext = extensionForUpload(file)
+  const storagePath = `${userId}/${songId}.${ext}`
+  const titleBase = file.name.replace(/\.[^/.]+$/, '').trim() || file.name
+  const contentType = file.type || (ext === 'wav' ? 'audio/wav' : 'audio/mpeg')
+
+  const { error: upErr } = await supabase.storage
+    .from(SONG_AUDIO_BUCKET)
+    .upload(storagePath, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType,
+    })
+
+  if (upErr) {
+    return { song: null, error: new Error(upErr.message) }
+  }
+
+  const { data, error: insErr } = await supabase
+    .from('songs')
+    .insert({
+      id: songId,
+      user_id: userId,
+      title: titleBase,
+      original_filename: file.name,
+      duration_seconds: Math.max(0, Math.round(durationSeconds)),
+      bpm: null,
+      status: 'Uploaded',
+      storage_bucket: SONG_AUDIO_BUCKET,
+      storage_path: storagePath,
+    })
+    .select('*')
+    .single()
+
+  if (insErr) {
+    await supabase.storage.from(SONG_AUDIO_BUCKET).remove([storagePath])
+    return { song: null, error: new Error(insErr.message) }
+  }
+
+  return { song: rowToSong(data as SongRow), error: null }
+}
+
+export async function getSongAudioSignedUrl(
+  song: Pick<Song, 'storageBucket' | 'storagePath'>,
+  expiresIn = 3600,
+): Promise<string | null> {
+  if (!supabase || !song.storagePath || !song.storageBucket) return null
+
+  const { data, error } = await supabase.storage
+    .from(song.storageBucket)
+    .createSignedUrl(song.storagePath, expiresIn)
+
+  if (error || !data?.signedUrl) {
+    console.error('getSongAudioSignedUrl', error)
+    return null
+  }
+  return data.signedUrl
 }
 
 export async function updateSongStatus(

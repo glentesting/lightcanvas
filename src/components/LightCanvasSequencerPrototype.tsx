@@ -1,18 +1,23 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
+  type ChangeEvent,
+  type MouseEvent,
   type MouseEventHandler,
   type ReactNode,
 } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { getAudioDurationFromFile } from '../lib/getAudioDurationFromFile'
 import {
-  createSong,
   getOrCreateDisplayProfile,
+  getSongAudioSignedUrl,
   loadDisplayProps,
   loadSongs,
   persistDisplayProfile,
   updateSongStatus,
+  uploadSongFromFile,
 } from '../lib/phase1Repository'
 import { supabase } from '../lib/supabaseClient'
 import type { DisplayProp } from '../types/display'
@@ -343,6 +348,30 @@ function buildEvents(
   return events
 }
 
+function SongWorkspaceAudio({ song }: { song: Song }) {
+  const [src, setSrc] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!song.storagePath) {
+      setSrc(null)
+      return
+    }
+    let cancelled = false
+    void getSongAudioSignedUrl(song).then((url) => {
+      if (!cancelled) setSrc(url)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [song.id, song.storagePath, song.storageBucket])
+
+  if (!song.storagePath) return null
+  if (!src) {
+    return <p className="text-sm text-slate-500">Preparing audio preview…</p>
+  }
+  return <audio controls className="mt-3 w-full max-w-xl rounded-xl" src={src} />
+}
+
 function LightPreview({ playing }: { playing: boolean }) {
   const [tick, setTick] = useState(0)
   useEffect(() => {
@@ -434,6 +463,10 @@ export default function LightCanvasSequencerPrototype() {
   const [newPropName, setNewPropName] = useState('')
   const [newPropType, setNewPropType] = useState('Smart Pixel')
   const [newPropChannels, setNewPropChannels] = useState(8)
+  const songFileInputRef = useRef<HTMLInputElement>(null)
+  const [songUploadError, setSongUploadError] = useState<string | null>(null)
+  const [songUploading, setSongUploading] = useState(false)
+
   const [chatInput, setChatInput] = useState('')
   const [chat, setChat] = useState<ChatMessage[]>([
     {
@@ -584,24 +617,58 @@ export default function LightCanvasSequencerPrototype() {
       setSelectedPropId(remaining[0].id)
   }
 
-  const addSong = async () => {
+  const triggerSongFilePicker = () => {
+    setSongUploadError(null)
+    songFileInputRef.current?.click()
+  }
+
+  const handleSongFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
     const uid = user?.id
-    if (!uid || !supabase) return
-    const nextIndex = songs.length + 1
-    const { song, error } = await createSong(uid, {
-      title: `New Upload ${nextIndex}.mp3`,
-      duration_seconds: 187,
-      bpm: 124,
-      status: 'Uploaded',
-    })
-    if (error || !song) {
-      console.error(error)
+    if (!file || !uid || !supabase) return
+
+    const name = file.name.toLowerCase()
+    const looksAudio =
+      file.type.startsWith('audio/') ||
+      name.endsWith('.mp3') ||
+      name.endsWith('.wav') ||
+      name.endsWith('.m4a')
+    if (!looksAudio) {
+      setSongUploadError('Please choose an audio file (MP3, WAV, or M4A).')
       return
     }
-    setSongs((prev) => [...prev, { ...song, analysis: { beat: 51, bass: 46, treble: 57, vocals: 63, dynamics: 58 } }])
-    setSelectedSongId(song.id)
-    setAnalysisProgress(26)
-    setActiveTab('songs')
+
+    setSongUploading(true)
+    setSongUploadError(null)
+    try {
+      const duration = await getAudioDurationFromFile(file)
+      const { song, error } = await uploadSongFromFile(uid, file, duration)
+      if (error || !song) {
+        setSongUploadError(error?.message ?? 'Upload failed.')
+        return
+      }
+      setSongs((prev) => [
+        ...prev,
+        {
+          ...song,
+          analysis: { beat: 51, bass: 46, treble: 57, vocals: 63, dynamics: 58 },
+        },
+      ])
+      setSelectedSongId(song.id)
+      setAnalysisProgress(26)
+      setActiveTab('songs')
+    } catch (err) {
+      setSongUploadError(err instanceof Error ? err.message : 'Could not read that file.')
+    } finally {
+      setSongUploading(false)
+    }
+  }
+
+  const openSongAudioInNewTab = async (song: Song, ev?: MouseEvent) => {
+    ev?.stopPropagation()
+    const url = await getSongAudioSignedUrl(song)
+    if (url) window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   const runAi = () => {
@@ -743,7 +810,7 @@ export default function LightCanvasSequencerPrototype() {
                 <Stat label="Props" value={propsState.length} sub={`${usedChannels}/${totalChannels} channels used`} />
                 <Stat
                   label="Song"
-                  value={selectedSong.bpm}
+                  value={selectedSong.bpm != null ? selectedSong.bpm : '—'}
                   sub={`${selectedSong.key} · ${formatTime(selectedSong.duration)}`}
                 />
                 <Stat label="AI Readiness" value={`${analysisProgress}%`} sub={selectedSong.status} />
@@ -952,46 +1019,82 @@ export default function LightCanvasSequencerPrototype() {
                       icon={Music4}
                     />
                     <div className="space-y-4 p-6">
-                      <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-                        <Upload className="mx-auto h-8 w-8 text-slate-600" />
-                        <div className="mt-3 font-medium">Simulated MP3 upload</div>
-                        <div className="mt-1 text-sm text-slate-500">
-                          Adds a new fake song object with partial analysis.
+                      <input
+                        ref={songFileInputRef}
+                        type="file"
+                        accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,audio/*"
+                        className="hidden"
+                        onChange={(e) => void handleSongFileChange(e)}
+                      />
+                      <div className="rounded-2xl border-2 border-dashed border-brand-green/35 bg-brand-green/5 p-6 text-center">
+                        <Upload className="mx-auto h-8 w-8 text-brand-green" />
+                        <div className="mt-3 font-medium text-slate-900">Upload a song</div>
+                        <div className="mt-1 text-sm text-slate-600">
+                          Choose an MP3 or other audio file from your computer. It is stored in your
+                          Supabase bucket and linked from your library.
                         </div>
                         <div className="mt-4">
-                          <Button onClick={() => void addSong()}>Mock Upload Song</Button>
+                          <Button disabled={songUploading} onClick={triggerSongFilePicker}>
+                            {songUploading ? 'Uploading…' : 'Choose audio file'}
+                          </Button>
                         </div>
+                        {songUploadError ? (
+                          <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                            {songUploadError}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="space-y-3">
                         {songs.length === 0 ? (
                           <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-600">
-                            No songs in your library yet. Use Mock Upload to add one — it will be
+                            No songs in your library yet. Upload an audio file above — it will be
                             saved to your account.
                           </div>
                         ) : (
                           songs.map((song) => (
-                            <button
+                            <div
                               key={song.id}
-                              type="button"
-                              onClick={() => setSelectedSongId(song.id)}
-                              className={`w-full rounded-2xl border p-4 text-left transition ${
+                              className={`flex items-stretch overflow-hidden rounded-2xl border transition ${
                                 selectedSongId === song.id
                                   ? 'border-brand-green bg-brand-green/5 ring-1 ring-brand-green/25'
                                   : 'border-slate-200 bg-white hover:bg-slate-50'
                               }`}
                             >
-                              <div className="flex items-start justify-between gap-3">
-                                <div>
-                                  <div className="font-medium">{song.title}</div>
-                                  <div className="mt-1 text-sm text-slate-500">
-                                    {formatTime(song.duration)} · {song.bpm} BPM · {song.key}
+                              <button
+                                type="button"
+                                className="min-w-0 flex-1 p-4 text-left"
+                                onClick={() => setSelectedSongId(song.id)}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <div className="font-medium">{song.title}</div>
+                                    <div className="mt-1 truncate text-sm text-slate-500">
+                                      {song.originalFilename ? (
+                                        <span title={song.originalFilename}>{song.originalFilename}</span>
+                                      ) : null}
+                                      {song.originalFilename ? ' · ' : null}
+                                      {formatTime(song.duration)} ·{' '}
+                                      {song.bpm != null ? `${song.bpm} BPM` : '— BPM'} · {song.key}
+                                    </div>
+                                  </div>
+                                  <div className="shrink-0 rounded-full bg-brand-red px-3 py-1 text-xs text-white shadow-brand-red-soft">
+                                    {song.status}
                                   </div>
                                 </div>
-                                <div className="rounded-full bg-brand-red px-3 py-1 text-xs text-white shadow-brand-red-soft">
-                                  {song.status}
+                              </button>
+                              {song.storagePath ? (
+                                <div className="flex items-center border-l border-slate-200 bg-white/80 px-1">
+                                  <Button
+                                    variant="ghost"
+                                    className="shrink-0 px-3"
+                                    aria-label="Open audio in new tab"
+                                    onClick={(e) => void openSongAudioInNewTab(song, e)}
+                                  >
+                                    <Play className="h-4 w-4" />
+                                  </Button>
                                 </div>
-                              </div>
-                            </button>
+                              ) : null}
+                            </div>
                           ))
                         )}
                       </div>
@@ -1007,7 +1110,7 @@ export default function LightCanvasSequencerPrototype() {
                       <div className="grid gap-4 md:grid-cols-4">
                         <Stat
                           label="Track"
-                          value={selectedSong.title.replace('.mp3', '')}
+                          value={selectedSong.title.replace(/\.(mp3|wav|m4a)$/i, '')}
                           sub="Current workspace"
                         />
                         <Stat
@@ -1015,9 +1118,28 @@ export default function LightCanvasSequencerPrototype() {
                           value={formatTime(selectedSong.duration)}
                           sub="Sequence length"
                         />
-                        <Stat label="Tempo" value={selectedSong.bpm} sub={selectedSong.key} />
+                        <Stat
+                          label="Tempo"
+                          value={selectedSong.bpm != null ? selectedSong.bpm : '—'}
+                          sub={selectedSong.key}
+                        />
                         <Stat label="Energy" value={selectedSong.energy} sub="Overall feel" />
                       </div>
+                      {selectedSong.originalFilename ? (
+                        <p className="text-sm text-slate-600">
+                          <span className="font-medium text-brand-green">Original file:</span>{' '}
+                          {selectedSong.originalFilename}
+                        </p>
+                      ) : null}
+                      {selectedSong.storagePath && selectedSong.storageBucket ? (
+                        <p className="break-all text-xs text-slate-500">
+                          Storage:{' '}
+                          <code className="rounded bg-slate-100 px-1 py-0.5">
+                            {selectedSong.storageBucket}/{selectedSong.storagePath}
+                          </code>
+                        </p>
+                      ) : null}
+                      <SongWorkspaceAudio song={selectedSong} />
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                         <div className="text-sm font-medium text-brand-green">
                           Waveform / structure proxy
