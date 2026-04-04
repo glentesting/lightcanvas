@@ -28,11 +28,14 @@ import { SongWaveform } from './SongWaveform'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { LucideIcon } from 'lucide-react'
 import {
+  ArrowRight,
   AudioLines,
   Bot,
   Cable,
+  CheckCircle2,
   Download,
   Lightbulb,
+  MessageSquare,
   Mic2,
   Music4,
   Pause,
@@ -92,7 +95,7 @@ function Progress({ value }: { value: number }) {
 function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded-[28px] border border-slate-200 border-t-[3px] border-t-brand-green bg-white shadow-xl shadow-brand-soft ${className}`}
+      className={`rounded-[26px] border border-slate-200 bg-white shadow-lg shadow-slate-200/60 ${className}`}
     >
       {children}
     </div>
@@ -109,17 +112,17 @@ function CardHeader({
   icon?: LucideIcon
 }) {
   return (
-    <div className="border-b border-slate-100 px-6 py-5">
+    <div className="border-b border-slate-100 px-6 pb-5 pt-6">
       <div className="flex items-start gap-3">
         {Icon ? (
-          <div className="rounded-2xl bg-brand-green/12 p-3 text-brand-green">
+          <div className="mt-0.5 shrink-0 rounded-xl bg-slate-100 p-2.5 text-slate-700">
             <Icon className="h-5 w-5" />
           </div>
         ) : null}
-        <div>
-          <div className="text-xl font-semibold text-slate-900">{title}</div>
+        <div className="min-w-0 flex-1">
+          <div className="text-lg font-semibold leading-snug text-slate-900 md:text-xl">{title}</div>
           {description ? (
-            <div className="mt-1 text-sm leading-6 text-slate-500">{description}</div>
+            <div className="mt-1.5 text-sm leading-relaxed text-slate-600">{description}</div>
           ) : null}
         </div>
       </div>
@@ -129,10 +132,10 @@ function CardHeader({
 
 function Stat({ label, value, sub }: { label: string; value: ReactNode; sub?: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <div className="text-xs uppercase tracking-[0.16em] text-brand-green">{label}</div>
-      <div className="mt-2 text-2xl font-semibold text-slate-900">{value}</div>
-      {sub ? <div className="mt-1 text-sm text-slate-600">{sub}</div> : null}
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
+      <div className="mt-2 break-words text-2xl font-semibold tabular-nums text-slate-900">{value}</div>
+      {sub ? <div className="mt-1 text-sm leading-snug text-slate-600">{sub}</div> : null}
     </div>
   )
 }
@@ -147,16 +150,16 @@ function PillTabs<T extends string>({
   onChange: (v: T) => void
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2 rounded-2xl bg-gradient-to-r from-brand-green/[0.12] via-slate-200/80 to-brand-red/[0.1] p-2 md:grid-cols-5">
+    <div className="grid h-auto w-full grid-cols-2 gap-2 rounded-2xl bg-slate-200/70 p-2 md:grid-cols-5">
       {tabs.map((tab) => (
         <button
           key={tab.value}
           type="button"
           onClick={() => onChange(tab.value)}
-          className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
+          className={`rounded-xl px-3 py-2.5 text-sm font-medium transition ${
             value === tab.value
-              ? 'bg-white text-brand-green shadow-sm ring-1 ring-brand-green/35'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/80'
+              : 'text-slate-600 hover:bg-slate-100/90'
           }`}
         >
           {tab.label}
@@ -792,66 +795,51 @@ export default function LightCanvasSequencerPrototype() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-brand-green/[0.06] via-white to-brand-red/[0.05] text-slate-900">
-      <div className="mx-auto max-w-7xl px-6 py-10">
-        <div className="mb-8 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <Card className="p-8">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="text-sm uppercase tracking-[0.2em] text-brand-red/90">
-                  Full Sequencing Prototype
-                </div>
-                <LightCanvasWordmark
-                  as="h1"
-                  className="mt-2 text-4xl font-semibold tracking-tight md:text-5xl"
-                />
-                <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600 md:text-lg">
-                  An in-depth playable prototype of the LightCanvas facefront sequencing UI. This
-                  version is for exploring scope, controls, fake data depth, sequencing behavior, and
-                  how each major section would work in a fuller product.
-                </p>
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <Button onClick={runAi}>
-                    <Sparkles className="h-4 w-4" /> Rebuild Sequence
-                  </Button>
-                  <Button variant="secondary" onClick={() => setPlaying((p) => !p)}>
-                    {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                    {playing ? 'Pause Preview' : 'Play Preview'}
-                  </Button>
-                </div>
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 text-slate-900">
+      <div className="mx-auto max-w-7xl p-6 md:p-10">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 overflow-hidden rounded-[28px] border border-slate-200 bg-white/90 shadow-xl shadow-slate-300/40 backdrop-blur-sm"
+        >
+          <div className="grid gap-8 p-8 md:grid-cols-[1.2fr_0.8fr] md:gap-10 md:p-10">
+            <div className="min-w-0">
+              <div className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                Full sequencing prototype
               </div>
-              <div className="grid min-w-[260px] grid-cols-2 gap-3">
-                <Stat label="Controllers" value={controllers} sub={`${channelsPerController} channels each`} />
-                <Stat label="Props" value={propsState.length} sub={`${usedChannels}/${totalChannels} channels used`} />
-                <Stat
-                  label="Song"
-                  value={selectedSong.bpm != null ? selectedSong.bpm : '—'}
-                  sub={`${selectedSong.key} · ${formatTime(selectedSong.duration)}`}
-                />
-                <Stat label="AI Readiness" value={`${analysisProgress}%`} sub={selectedSong.status} />
+              <LightCanvasWordmark
+                as="h1"
+                className="mt-4 text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl"
+              />
+              <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600 md:text-lg">
+                Playable LightCanvas workspace: display setup, song library, AI sequencing, timeline,
+                and export — with real uploads and account-backed display data where wired.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Button onClick={runAi}>
+                  <Sparkles className="h-4 w-4" /> Rebuild Sequence
+                </Button>
+                <Button variant="secondary" onClick={() => setPlaying((p) => !p)}>
+                  {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  {playing ? 'Pause' : 'Preview'}
+                </Button>
               </div>
             </div>
-          </Card>
-          <Card className="border-t-brand-red p-6 shadow-brand-red-soft">
-            <div className="text-xs uppercase tracking-[0.18em] text-brand-green">Prototype Intent</div>
-            <div className="mt-3 text-xl font-semibold text-slate-900">What this version is for</div>
-            <div className="mt-4 space-y-3 text-sm leading-7 text-slate-600">
-              <div className="rounded-2xl border-l-4 border-brand-green bg-slate-50 p-4">
-                Explore a fuller product surface, not just a guided story demo.
-              </div>
-              <div className="rounded-2xl border-l-4 border-brand-red bg-slate-50 p-4">
-                Show fake but believable sequence data, song analysis, prop mapping, and export
-                structure.
-              </div>
-              <div className="rounded-2xl border-l-4 border-brand-green bg-slate-50 p-4">
-                Play with deeper controls so the scope of the real app becomes obvious.
-              </div>
+            <div className="grid min-w-0 grid-cols-2 gap-3 sm:gap-4">
+              <Stat label="Controllers" value={controllers} sub={`${channelsPerController} ch each`} />
+              <Stat label="Props mapped" value={propsState.length} sub={`${usedChannels}/${totalChannels} ch used`} />
+              <Stat
+                label="Song"
+                value={selectedSong.bpm != null ? selectedSong.bpm : '—'}
+                sub={`${selectedSong.key} · ${formatTime(selectedSong.duration)}`}
+              />
+              <Stat label="AI readiness" value={`${analysisProgress}%`} sub={selectedSong.status} />
             </div>
-          </Card>
-        </div>
+          </div>
+        </motion.div>
 
-        <div className="grid gap-6 xl:grid-cols-[1.32fr_0.68fr]">
-          <div className="space-y-6">
+        <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr] xl:items-start">
+          <div className="min-w-0 space-y-6">
             <PillTabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
             <AnimatePresence mode="wait">
               {activeTab === 'setup' && (
@@ -860,7 +848,7 @@ export default function LightCanvasSequencerPrototype() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
-                  className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]"
+                  className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-start"
                 >
                   <Card>
                     <CardHeader
@@ -959,7 +947,7 @@ export default function LightCanvasSequencerPrototype() {
                       description="Believable fake detail for what LightCanvas would recommend per prop."
                       icon={Settings2}
                     />
-                    <div className="max-h-[650px] space-y-3 overflow-auto p-6">
+                    <div className="h-[min(520px,65vh)] space-y-3 overflow-y-auto p-6 pr-4">
                       {propsState.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-brand-green/35 bg-brand-green/5 p-8 text-center text-sm leading-6 text-slate-600">
                           <p className="font-medium text-brand-green">No props yet</p>
@@ -1025,7 +1013,7 @@ export default function LightCanvasSequencerPrototype() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
-                  className="grid gap-6 lg:grid-cols-[0.86fr_1.14fr]"
+                  className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-start"
                 >
                   <Card>
                     <CardHeader
@@ -1087,14 +1075,17 @@ export default function LightCanvasSequencerPrototype() {
                               >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="min-w-0">
-                                    <div className="font-medium">{song.title}</div>
-                                    <div className="mt-1 truncate text-sm text-slate-500">
+                                    <div className="break-words font-medium leading-snug">{song.title}</div>
+                                    <div className="mt-1 text-sm leading-relaxed text-slate-500">
                                       {song.originalFilename ? (
-                                        <span title={song.originalFilename}>{song.originalFilename}</span>
+                                        <span className="line-clamp-2 block" title={song.originalFilename}>
+                                          {song.originalFilename}
+                                        </span>
                                       ) : null}
-                                      {song.originalFilename ? ' · ' : null}
-                                      {formatTime(song.duration)} ·{' '}
-                                      {song.bpm != null ? `${song.bpm} BPM` : '— BPM'} · {song.key}
+                                      <span className="mt-0.5 block text-slate-500">
+                                        {formatTime(song.duration)} ·{' '}
+                                        {song.bpm != null ? `${song.bpm} BPM` : '— BPM'} · {song.key}
+                                      </span>
                                     </div>
                                   </div>
                                   <div className="shrink-0 rounded-full bg-brand-red px-3 py-1 text-xs text-white shadow-brand-red-soft">
@@ -1135,7 +1126,7 @@ export default function LightCanvasSequencerPrototype() {
                       icon={AudioLines}
                     />
                     <div className="space-y-6 p-6">
-                      <div className="grid gap-4 md:grid-cols-4">
+                      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                         <Stat
                           label="Track"
                           value={selectedSong.title.replace(/\.(mp3|wav|m4a)$/i, '')}
@@ -1178,12 +1169,15 @@ export default function LightCanvasSequencerPrototype() {
                           <SongWaveform song={selectedSong} />
                         </div>
                       </div>
-                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      <div className="grid gap-4 sm:grid-cols-2">
                         {analysisItems.map(([title, metric, desc]) => (
-                          <div key={title} className="rounded-2xl border border-slate-200 bg-white p-4">
-                            <div className="font-medium text-brand-green">{title}</div>
+                          <div
+                            key={title}
+                            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                          >
+                            <div className="font-medium text-slate-900">{title}</div>
                             <div className="mt-1 text-sm font-medium text-slate-700">{metric}</div>
-                            <div className="mt-2 text-sm leading-6 text-slate-500">{desc}</div>
+                            <div className="mt-2 text-sm leading-relaxed text-slate-600">{desc}</div>
                           </div>
                         ))}
                       </div>
@@ -1198,7 +1192,7 @@ export default function LightCanvasSequencerPrototype() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
-                  className="grid gap-6 lg:grid-cols-[1fr_1fr]"
+                  className="grid gap-6 lg:grid-cols-[1fr_1fr] lg:items-start"
                 >
                   <Card>
                     <CardHeader
@@ -1303,7 +1297,7 @@ export default function LightCanvasSequencerPrototype() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
-                  className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr]"
+                  className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr] lg:items-start"
                 >
                   <Card>
                     <CardHeader
@@ -1459,7 +1453,7 @@ export default function LightCanvasSequencerPrototype() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
-                  className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]"
+                  className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-start"
                 >
                   <Card>
                     <CardHeader
@@ -1523,77 +1517,105 @@ export default function LightCanvasSequencerPrototype() {
             </AnimatePresence>
           </div>
 
-          <div className="space-y-6">
-            <Card>
-              <CardHeader
-                title="Live Show Preview"
-                description="A reactive fake visual playback window for the current sequence."
-                icon={Volume2}
-              />
-              <div className="space-y-4 p-6">
-                <LightPreview playing={playing} />
-                <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-1">
-                  <div className="rounded-2xl border border-slate-200 border-l-4 border-l-brand-green bg-slate-50 p-4 text-sm text-slate-600">
-                    <span className="font-medium text-brand-green">Talking face:</span> reserved for
-                    vocal phrases and highlighted lyrical moments.
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 border-l-4 border-l-brand-red bg-slate-50 p-4 text-sm text-slate-600">
-                    <span className="font-medium text-brand-red">Mega tree:</span> receives denser
-                    patterns in high-energy sections and finale lifts.
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 border-l-4 border-l-brand-green bg-slate-50 p-4 text-sm text-slate-600">
-                    <span className="font-medium text-brand-green">Ground stakes:</span> represent
-                    low-end pulsing and beat-driven movement.
-                  </div>
-                </div>
-              </div>
-            </Card>
-            <Card>
-              <CardHeader
-                title="AI Copilot"
-                description="A fake conversational layer for making quick sequence changes."
-                icon={Bot}
-              />
-              <div className="space-y-4 p-6">
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="secondary" onClick={() => setChatInput('Make the finale bigger')}>
-                    Bigger finale
-                  </Button>
-                  <Button variant="secondary" onClick={() => setChatInput('Increase bass pulses')}>
-                    More bass
-                  </Button>
-                  <Button variant="secondary" onClick={() => setChatInput('Make the face sync cleaner')}>
-                    Cleaner face sync
-                  </Button>
-                </div>
-                <div className="max-h-[360px] space-y-3 overflow-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                  {chat.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={`rounded-2xl p-3 text-sm leading-6 ${
-                        msg.role === 'assistant'
-                          ? 'border border-slate-200 border-l-4 border-l-brand-green bg-white text-slate-700'
-                          : 'bg-brand-red text-white shadow-brand-red-soft'
-                      }`}
-                    >
-                      <div className="mb-1 text-[11px] uppercase tracking-[0.16em] opacity-70">
-                        {msg.role}
-                      </div>
-                      {msg.text}
-                    </div>
-                  ))}
-                </div>
-                <textarea
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Tell the copilot what to change..."
-                  className="min-h-[110px] w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-brand-green focus:ring-2 focus:ring-brand-green/25"
+          <div className="min-w-0 space-y-6">
+            <div className="xl:sticky xl:top-6 xl:space-y-6">
+              <Card>
+                <CardHeader
+                  title="Live show preview"
+                  description="Reactive visual playback for the current sequence draft."
+                  icon={Volume2}
                 />
-                <Button className="w-full" onClick={applyCopilot}>
-                  <Bot className="h-4 w-4" /> Apply Copilot Change
-                </Button>
-              </div>
-            </Card>
+                <div className="space-y-4 px-6 pb-6 pt-4">
+                  <LightPreview playing={playing} />
+                  <div className="space-y-3">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-600">
+                      <span className="font-medium text-slate-800">Talking face:</span> reserved for
+                      vocal phrases and highlighted lyrical moments.
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-600">
+                      <span className="font-medium text-slate-800">Mega tree:</span> denser patterns
+                      in high-energy sections and finale lifts.
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-600">
+                      <span className="font-medium text-slate-800">Ground stakes:</span> low-end
+                      pulsing and beat-driven movement.
+                    </div>
+                  </div>
+                </div>
+              </Card>
+              <Card>
+                <CardHeader
+                  title="AI Copilot"
+                  description="Conversational layer for quick sequence tweaks (prototype)."
+                  icon={Bot}
+                />
+                <div className="space-y-4 px-6 pb-6 pt-4">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <Button
+                      variant="secondary"
+                      className="text-xs sm:text-sm"
+                      onClick={() => setChatInput('Make the finale bigger')}
+                    >
+                      Bigger finale
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="text-xs sm:text-sm"
+                      onClick={() => setChatInput('Make the face sync cleaner')}
+                    >
+                      Cleaner face
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="text-xs sm:text-sm"
+                      onClick={() => setChatInput('Increase bass pulses')}
+                    >
+                      More bass
+                    </Button>
+                  </div>
+                  <div className="h-[min(420px,50vh)] space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    {chat.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`rounded-2xl p-3 text-sm leading-relaxed ${
+                          msg.role === 'assistant'
+                            ? 'border border-slate-200 bg-white text-slate-700 shadow-sm'
+                            : 'bg-slate-900 text-white'
+                        }`}
+                      >
+                        <div className="mb-1 flex items-center gap-2 text-[11px] uppercase tracking-wide opacity-70">
+                          {msg.role === 'assistant' ? (
+                            <Bot className="h-3.5 w-3.5 shrink-0" />
+                          ) : (
+                            <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                          )}
+                          {msg.role}
+                        </div>
+                        {msg.text}
+                      </div>
+                    ))}
+                  </div>
+                  <textarea
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Tell the copilot what to change..."
+                    className="min-h-[110px] w-full resize-y rounded-2xl border border-slate-300 px-4 py-3 text-sm leading-relaxed outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                  />
+                  <Button className="w-full" onClick={applyCopilot}>
+                    <ArrowRight className="h-4 w-4" /> Apply Copilot change
+                  </Button>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
+                      <p className="text-sm leading-relaxed text-slate-600">
+                        Interactive prototype demo. Not yet: true phoneme mouth mapping or real
+                        FSEQ/LOR export.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
