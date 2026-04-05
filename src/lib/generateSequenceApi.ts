@@ -83,10 +83,25 @@ export async function requestClaudeSequence(params: {
     }),
   })
 
-  const data = (await res.json()) as { error?: string; events?: ClaudeSequenceEvent[] }
+  const data = (await res.json()) as {
+    error?: string
+    events?: ClaudeSequenceEvent[]
+    anthropicStatus?: number
+    anthropicBody?: unknown
+  }
 
   if (!res.ok) {
-    throw new Error(data.error || `Sequence API failed (${res.status})`)
+    const detail =
+      data.anthropicBody !== undefined
+        ? ` ${JSON.stringify(data.anthropicBody).slice(0, 2000)}`
+        : ''
+    console.error('[LightCanvas] generate-sequence error response', {
+      status: res.status,
+      error: data.error,
+      anthropicStatus: data.anthropicStatus,
+      anthropicBody: data.anthropicBody,
+    })
+    throw new Error((data.error || `Sequence API failed (${res.status})`) + detail)
   }
   if (!data.events?.length) {
     throw new Error(data.error || 'No events returned')

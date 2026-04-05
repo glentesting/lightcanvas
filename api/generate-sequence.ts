@@ -135,7 +135,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Server misconfiguration: ANTHROPIC_API_KEY is not set' })
   }
 
-  const model = process.env.CLAUDE_MODEL?.trim() || 'claude-3-5-sonnet-20241022'
+  const model = process.env.CLAUDE_MODEL?.trim() || 'claude-sonnet-4-5'
 
   let body: SequenceRequestPayload
   try {
@@ -175,24 +175,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     })
 
-    const anthropicJson = (await anthropicRes.json()) as {
-      error?: { message?: string }
+    const rawBody = await anthropicRes.text()
+    let anthropicJson: {
+      error?: { type?: string; message?: string }
       content?: Array<{ type: string; text?: string }>
+    } | null = null
+    try {
+      anthropicJson = rawBody ? (JSON.parse(rawBody) as typeof anthropicJson) : null
+    } catch {
+      anthropicJson = null
     }
 
     if (!anthropicRes.ok) {
-      const msg = anthropicJson.error?.message || anthropicRes.statusText
-      return res.status(502).json({ error: `Anthropic API error: ${msg}` })
+      const errPayload = anthropicJson ?? { parseError: 'Response was not JSON', rawBody }
+      console.error('[generate-sequence] Anthropic API error', {
+        status: anthropicRes.status,
+        statusText: anthropicRes.statusText,
+        model,
+        body: errPayload,
+      })
+      const msg =
+        anthropicJson?.error?.message ||
+        (typeof rawBody === 'string' && rawBody.length > 0 ? rawBody.slice(0, 500) : anthropicRes.statusText)
+      return res.status(502).json({
+        error: `Anthropic API error (${anthropicRes.status}): ${msg}`,
+        anthropicStatus: anthropicRes.status,
+        anthropicBody: errPayload,
+      })
+    }
+
+    if (!anthropicJson) {
+      console.error('[generate-sequence] Anthropic success status but invalid JSON', { rawBody: rawBody.slice(0, 2000) })
+      return res.status(502).json({
+        error: 'Anthropic returned non-JSON success body',
+        anthropicBody: { rawBody: rawBody.slice(0, 4000) },
+      })
     }
 
     const block = anthropicJson.content?.find((c) => c.type === 'text')
     textContent = block?.text ?? ''
     if (!textContent) {
-      return res.status(502).json({ error: 'Empty response from Claude' })
+      console.error('[generate-sequence] Empty Claude text block', { anthropicJson })
+      return res.status(502).json({
+        error: 'Empty response from Claude (no text content block)',
+        anthropicBody: anthropicJson,
+      })
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Request failed'
-    return res.status(502).json({ error: msg })
+    console.error('[generate-sequence] Fetch/network error', e)
+    return res.status(502).json({ error: msg, anthropicBody: null })
   }
 
   let rawEvents: unknown
