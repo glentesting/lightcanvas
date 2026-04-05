@@ -56,7 +56,7 @@ import {
   Volume2,
   Wand2,
 } from 'lucide-react'
-
+import { HousePreviewScene } from './HousePreviewScene'
 function Button({
   children,
   onClick,
@@ -1256,8 +1256,9 @@ export default function LightCanvasSequencerPrototype() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
-                  className="grid w-full min-w-0 max-w-full gap-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-start"
+                  className="space-y-6"
                 >
+                <div className="grid w-full min-w-0 max-w-full gap-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
                   <Card>
                     <CardHeader
                       title="Guided Display Setup"
@@ -1412,6 +1413,14 @@ export default function LightCanvasSequencerPrototype() {
                       )}
                     </div>
                   </Card>
+                  </div>
+
+                  <HousePreviewScene
+  props={props}
+  selectedPropId={selectedPropId}
+  onSelectProp={setSelectedPropId}
+/>
+
                 </motion.div>
               )}
 
