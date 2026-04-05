@@ -1,3 +1,22 @@
+# LightCanvas
+
+React + Vite app with Supabase auth, song library, audio analysis, and Claude-powered sequence generation via a Vercel serverless function.
+
+## Environment variables
+
+| Variable | Required | Where |
+|----------|----------|--------|
+| `VITE_SUPABASE_URL` | Yes (app) | Client |
+| `VITE_SUPABASE_ANON_KEY` | Yes (app) | Client |
+| `ANTHROPIC_API_KEY` | Yes (sequence generation) | **Server only** — set in Vercel project env for `api/generate-sequence` |
+| `CLAUDE_MODEL` | No | Server — optional Anthropic model id |
+| `VITE_GENERATE_SEQUENCE_URL` | No | Client — full URL to `/api/generate-sequence` if not same-origin |
+| `VITE_API_PROXY_TARGET` | No | Local dev — proxy target for `/api` (default `http://127.0.0.1:3000`; use `vercel dev`) |
+
+Copy `.env.example` to `.env` and fill in values. **Do not** prefix `ANTHROPIC_API_KEY` with `VITE_` (it must not be exposed to the browser).
+
+---
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

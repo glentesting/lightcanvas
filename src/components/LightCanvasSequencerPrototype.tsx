@@ -14,6 +14,7 @@ import {
   minimalSongAudioAnalysisFromPersisted,
   type SongAudioAnalysis,
 } from '../lib/audioAnalysis'
+import { mapClaudeEventsToTimeline, requestClaudeSequence } from '../lib/generateSequenceApi'
 import { getAudioDurationFromFile } from '../lib/getAudioDurationFromFile'
 import {
   deleteSongFromLibrary,
@@ -376,6 +377,32 @@ function buildEvents(
   return events
 }
 
+function resolveSectionsForSequence(
+  song: Song,
+  analyses: Record<string, SongAudioAnalysis>,
+): Section[] {
+  const fromAnalysis = analyses[song.id]?.sections
+  if (fromAnalysis?.length) {
+    return fromAnalysis.map((s) => ({
+      name: s.name,
+      start: s.start,
+      end: s.end,
+      energy: s.energy,
+      vocals: s.vocals,
+    }))
+  }
+  if (song.persistedSections?.length) {
+    return song.persistedSections.map((s) => ({
+      name: s.name,
+      start: s.start,
+      end: s.end,
+      energy: s.energy,
+      vocals: s.vocals,
+    }))
+  }
+  return buildSections(song.duration)
+}
+
 function AnalysisBeatStrip({ beatTimes, duration }: { beatTimes: number[]; duration: number }) {
   const cap = 200
   const beats = beatTimes.slice(0, cap)
@@ -585,6 +612,10 @@ export default function LightCanvasSequencerPrototype() {
   const [songDeleteError, setSongDeleteError] = useState<string | null>(null)
   const [songAnalyses, setSongAnalyses] = useState<Record<string, SongAudioAnalysis>>({})
   const [rebuildAnalyzing, setRebuildAnalyzing] = useState(false)
+  const [rebuildPhase, setRebuildPhase] = useState<'idle' | 'decode' | 'sequence'>('idle')
+  const [sequenceEventsBySong, setSequenceEventsBySong] = useState<Record<string, TimelineEvent[]>>(
+    {},
+  )
 
   const [chatInput, setChatInput] = useState('')
   const [chat, setChat] = useState<ChatMessage[]>([
@@ -610,10 +641,15 @@ export default function LightCanvasSequencerPrototype() {
     }
     return buildSections(selectedSong.duration)
   }, [selectedSong.id, selectedSong.duration, songAnalyses])
-  const events = useMemo(
+  const formulaEvents = useMemo(
     () => buildEvents(propsState, complexity, sections),
     [propsState, complexity, sections],
   )
+  const claudeEventsForSong = sequenceEventsBySong[selectedSong.id]
+  const events = useMemo((): TimelineEvent[] => {
+    if (claudeEventsForSong?.length) return claudeEventsForSong
+    return formulaEvents
+  }, [claudeEventsForSong, formulaEvents])
   const selectedProp =
     propsState.length === 0
       ? undefined
@@ -845,16 +881,33 @@ export default function LightCanvasSequencerPrototype() {
       delete next[song.id]
       return next
     })
+    setSequenceEventsBySong((prev) => {
+      const next = { ...prev }
+      delete next[song.id]
+      return next
+    })
   }
 
   const runAi = () => {
-    if (selectedSong.id === PLACEHOLDER_SONG.id) return
-    const sid = selectedSong.id
-    const hasFile = Boolean(selectedSong.storagePath && selectedSong.storageBucket)
-
-    if (hasFile && selectedSong.analysisSaved) {
+    if (selectedSong.id === PLACEHOLDER_SONG.id) {
+      console.log('[LightCanvas] runAi: skipped (placeholder song — add a song to the library)')
       return
     }
+    const sid = selectedSong.id
+    const hasFile = Boolean(selectedSong.storagePath && selectedSong.storageBucket)
+    const hasPersistedOrRuntimeAnalysis =
+      Boolean(selectedSong.analysisSaved) || Boolean(songAnalyses[sid]?.sections?.length)
+
+    console.log('[LightCanvas] runAi: entry', {
+      songId: sid,
+      hasFile,
+      storagePath: selectedSong.storagePath ?? null,
+      storageBucket: selectedSong.storageBucket ?? null,
+      analysisSaved: Boolean(selectedSong.analysisSaved),
+      songAnalysesHasSections: Boolean(songAnalyses[sid]?.sections?.length),
+      hasPersistedOrRuntimeAnalysis,
+      propsCount: propsState.length,
+    })
 
     const finishRebuild = (
       analysisPatch: Song['analysis'],
@@ -913,7 +966,79 @@ export default function LightCanvasSequencerPrototype() {
       ])
     }
 
+    const runClaudeForSong = async (
+      analysis: Song['analysis'],
+      bpm: number,
+      sectionList: Section[],
+      durationSeconds: number,
+    ) => {
+      if (propsState.length === 0) {
+        console.warn(
+          '[LightCanvas] runClaudeForSong: skipped — no display props (Claude API not called). Add props in Display Setup.',
+        )
+        setChat((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            role: 'assistant',
+            text: 'Add at least one display prop in Display Setup before generating a sequence with Claude.',
+          },
+        ])
+        return
+      }
+      console.log('[LightCanvas] runClaudeForSong: calling requestClaudeSequence', {
+        songId: sid,
+        bpm,
+        sectionCount: sectionList.length,
+        propsCount: propsState.length,
+      })
+      setRebuildPhase('sequence')
+      try {
+        const raw = await requestClaudeSequence({
+          songDurationSeconds: durationSeconds,
+          analysis,
+          bpm,
+          sections: sectionList,
+          props: propsState,
+        })
+        const mapped = mapClaudeEventsToTimeline(raw, propsState) as TimelineEvent[]
+        setSequenceEventsBySong((prev) => ({ ...prev, [sid]: mapped }))
+        setChat((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            role: 'assistant',
+            text: `Claude generated ${mapped.length} timeline events from your analysis and display props.`,
+          },
+        ])
+      } catch (e) {
+        console.error('Claude sequence failed', e)
+        setSequenceEventsBySong((prev) => {
+          const next = { ...prev }
+          delete next[sid]
+          return next
+        })
+        const msg = e instanceof Error ? e.message : 'Unknown error'
+        setChat((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            role: 'assistant',
+            text: `Sequence generation failed (${msg}). Timeline is using the built-in draft until you try again.`,
+          },
+        ])
+      }
+    }
+
     if (!hasFile) {
+      console.log(
+        '[LightCanvas] runAi: branch = no uploaded audio file — fake rebuild only (Claude not used; needs storagePath + storageBucket)',
+      )
+      setSequenceEventsBySong((prev) => {
+        const next = { ...prev }
+        delete next[sid]
+        return next
+      })
       finishRebuild(
         { beat: 92, bass: 84, treble: 71, vocals: 94, dynamics: 88 },
         undefined,
@@ -922,7 +1047,30 @@ export default function LightCanvasSequencerPrototype() {
       return
     }
 
+    if (hasPersistedOrRuntimeAnalysis) {
+      console.log(
+        '[LightCanvas] runAi: branch = existing analysis (saved or in-memory) — Claude only, no audio decode',
+      )
+      setRebuildAnalyzing(true)
+      setRebuildPhase('sequence')
+      void (async () => {
+        try {
+          const sectionList = resolveSectionsForSequence(selectedSong, songAnalyses)
+          const bpm = selectedSong.bpm ?? songAnalyses[sid]?.bpm ?? 120
+          await runClaudeForSong(selectedSong.analysis, bpm, sectionList, selectedSong.duration)
+        } finally {
+          setRebuildAnalyzing(false)
+          setRebuildPhase('idle')
+        }
+      })()
+      return
+    }
+
+    console.log(
+      '[LightCanvas] runAi: branch = first-time analysis — will decode audio, persist analysis, then call Claude',
+    )
     setRebuildAnalyzing(true)
+    setRebuildPhase('decode')
     setAnalysisProgress(40)
     void (async () => {
       try {
@@ -948,12 +1096,21 @@ export default function LightCanvasSequencerPrototype() {
           energy: sec.energy,
           vocals: sec.vocals,
         }))
+        const sectionList: Section[] = result.sections.map((s) => ({
+          name: s.name,
+          start: s.start,
+          end: s.end,
+          energy: s.energy,
+          vocals: s.vocals,
+        }))
         finishRebuild(
           result.summary,
           result.bpm,
           'Analyzed your uploaded audio (tempo, beat grid, bass/treble/vocal bands, dynamics) and section boundaries from energy. Sequence draft updated from those signals.',
           { persistAnalysis: true, persistedSections },
         )
+        setRebuildPhase('sequence')
+        await runClaudeForSong(result.summary, result.bpm, sectionList, selectedSong.duration)
       } catch (e) {
         console.error('Audio analysis failed', e)
         finishRebuild(
@@ -963,6 +1120,7 @@ export default function LightCanvasSequencerPrototype() {
         )
       } finally {
         setRebuildAnalyzing(false)
+        setRebuildPhase('idle')
       }
     })()
   }
@@ -1068,7 +1226,11 @@ export default function LightCanvasSequencerPrototype() {
               <div className="mt-6 flex flex-wrap gap-3">
                 <Button disabled={rebuildAnalyzing} onClick={runAi}>
                   <Sparkles className="h-4 w-4" />{' '}
-                  {rebuildAnalyzing ? 'Analyzing…' : 'Rebuild Sequence'}
+                  {rebuildAnalyzing
+                    ? rebuildPhase === 'sequence'
+                      ? 'Generating sequence…'
+                      : 'Analyzing…'
+                    : 'Rebuild Sequence'}
                 </Button>
               </div>
             </div>
@@ -1522,7 +1684,11 @@ export default function LightCanvasSequencerPrototype() {
                       <div className="flex flex-wrap gap-3">
                         <Button disabled={rebuildAnalyzing} onClick={runAi}>
                           <Sparkles className="h-4 w-4" />{' '}
-                          {rebuildAnalyzing ? 'Analyzing…' : 'Rebuild Full Sequence'}
+                          {rebuildAnalyzing
+                            ? rebuildPhase === 'sequence'
+                              ? 'Generating sequence…'
+                              : 'Analyzing…'
+                            : 'Rebuild Full Sequence'}
                         </Button>
                         <Button variant="secondary">Re-analyze Audio</Button>
                         <Button variant="secondary">Re-map Props</Button>
