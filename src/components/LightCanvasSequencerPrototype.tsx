@@ -1415,10 +1415,10 @@ export default function LightCanvasSequencerPrototype() {
                   </Card>
                   </div>
 
-                  <HousePreviewScene
-  props={props}
+                 <HousePreviewScene
+  props={propsState}
   selectedPropId={selectedPropId}
-  onSelectProp={setSelectedPropId}
+  onSelectProp={(id) => setSelectedPropId(String(id))}
 />
 
                 </motion.div>
