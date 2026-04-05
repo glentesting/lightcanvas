@@ -447,6 +447,42 @@ function SongWorkspaceAudio({ song }: { song: Song }) {
   return <audio controls className="mt-3 w-full max-w-xl rounded-xl" src={src} />
 }
 
+/** Inline player for Song Library rows — same signed URL as workspace preview, no new tab. */
+function SongLibraryInlineAudio({ song }: { song: Song }) {
+  const [src, setSrc] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!song.storagePath) {
+      setSrc(null)
+      return
+    }
+    let cancelled = false
+    void getSongAudioSignedUrl(song).then((url) => {
+      if (!cancelled) setSrc(url ?? null)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [song.id, song.storagePath, song.storageBucket])
+
+  if (!song.storagePath) return null
+  if (!src) {
+    return (
+      <span className="block px-1 text-center text-xs text-slate-500 whitespace-nowrap">
+        Loading…
+      </span>
+    )
+  }
+  return (
+    <audio
+      controls
+      preload="metadata"
+      className="w-full min-w-[180px] max-w-[min(280px,50vw)]"
+      src={src}
+    />
+  )
+}
+
 function LightPreview({ playing }: { playing: boolean }) {
   const [tick, setTick] = useState(0)
   useEffect(() => {
@@ -755,12 +791,6 @@ export default function LightCanvasSequencerPrototype() {
     }
   }
 
-  const openSongAudioInNewTab = async (song: Song, ev?: MouseEvent) => {
-    ev?.stopPropagation()
-    const url = await getSongAudioSignedUrl(song)
-    if (url) window.open(url, '_blank', 'noopener,noreferrer')
-  }
-
   const handleDeleteSong = async (song: Song, ev: MouseEvent) => {
     ev.stopPropagation()
     if (!window.confirm(`Remove "${song.title}" from your library? This cannot be undone.`)) return
@@ -978,8 +1008,7 @@ export default function LightCanvasSequencerPrototype() {
           </div>
         </motion.div>
 
-        <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr] xl:items-start">
-          <div className="min-w-0 w-full max-w-full space-y-6">
+        <div className="min-w-0 w-full max-w-full space-y-6">
             <PillTabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
             <AnimatePresence mode="wait">
               {activeTab === 'setup' && (
@@ -1238,20 +1267,15 @@ export default function LightCanvasSequencerPrototype() {
                                   </div>
                                 </div>
                               </button>
-                              <div className="flex items-center border-l border-slate-200 bg-white/80 px-1">
+                              <div className="flex min-w-0 max-w-full flex-col items-stretch justify-center gap-2 border-l border-slate-200 bg-white/80 px-2 py-2 sm:min-w-[200px] sm:max-w-[min(320px,42vw)]">
                                 {song.storagePath ? (
-                                  <Button
-                                    variant="ghost"
-                                    className="shrink-0 px-3"
-                                    aria-label="Open audio in new tab"
-                                    onClick={(e) => void openSongAudioInNewTab(song, e)}
-                                  >
-                                    <Play className="h-4 w-4" />
-                                  </Button>
+                                  <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
+                                    <SongLibraryInlineAudio song={song} />
+                                  </div>
                                 ) : null}
                                 <Button
                                   variant="ghost"
-                                  className="shrink-0 px-3 text-brand-red hover:bg-red-50"
+                                  className="shrink-0 self-end px-3 text-brand-red hover:bg-red-50"
                                   aria-label={`Delete ${song.title}`}
                                   onClick={(e) => void handleDeleteSong(song, e)}
                                 >
@@ -1708,11 +1732,9 @@ export default function LightCanvasSequencerPrototype() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
 
-          <div className="min-w-0 space-y-6">
-            <div className="xl:sticky xl:top-6 xl:space-y-6">
-              <Card>
+            <div className="grid w-full min-w-0 gap-6 lg:grid-cols-2 lg:items-start">
+              <Card className="min-w-0">
                 <CardHeader
                   title="Live show preview"
                   description="Reactive visual playback for the current sequence draft."
@@ -1736,13 +1758,13 @@ export default function LightCanvasSequencerPrototype() {
                   </div>
                 </div>
               </Card>
-              <Card>
+              <Card className="min-w-0">
                 <CardHeader
                   title="AI Copilot"
                   description="Conversational layer for quick sequence tweaks (prototype)."
                   icon={Bot}
                 />
-                <div className="space-y-4 px-6 pb-6 pt-4">
+                <div className="space-y-3 px-6 pb-5 pt-3">
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <Button
                       variant="secondary"
@@ -1766,21 +1788,21 @@ export default function LightCanvasSequencerPrototype() {
                       More bass
                     </Button>
                   </div>
-                  <div className="h-[min(420px,50vh)] space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="h-[200px] space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2">
                     {chat.map((msg) => (
                       <div
                         key={msg.id}
-                        className={`rounded-2xl p-3 text-sm leading-relaxed ${
+                        className={`rounded-lg p-2 text-xs leading-relaxed ${
                           msg.role === 'assistant'
                             ? 'border border-slate-200 bg-white text-slate-700 shadow-sm'
                             : 'bg-slate-900 text-white'
                         }`}
                       >
-                        <div className="mb-1 flex items-center gap-2 text-[11px] uppercase tracking-wide opacity-70">
+                        <div className="mb-0.5 flex items-center gap-1.5 text-[10px] uppercase tracking-wide opacity-70">
                           {msg.role === 'assistant' ? (
-                            <Bot className="h-3.5 w-3.5 shrink-0" />
+                            <Bot className="h-3 w-3 shrink-0" />
                           ) : (
-                            <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                            <MessageSquare className="h-3 w-3 shrink-0" />
                           )}
                           {msg.role}
                         </div>
@@ -1792,15 +1814,15 @@ export default function LightCanvasSequencerPrototype() {
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     placeholder="Tell the copilot what to change..."
-                    className="min-h-[110px] w-full resize-y rounded-2xl border border-slate-300 px-4 py-3 text-sm leading-relaxed outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                    className="min-h-[72px] w-full resize-y rounded-xl border border-slate-300 px-3 py-2 text-sm leading-relaxed outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                   />
                   <Button className="w-full" onClick={applyCopilot}>
                     <ArrowRight className="h-4 w-4" /> Apply Copilot change
                   </Button>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
-                      <p className="text-sm leading-relaxed text-slate-600">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+                      <p className="text-xs leading-relaxed text-slate-600">
                         Interactive prototype demo. Not yet: true phoneme mouth mapping or real
                         FSEQ/LOR export.
                       </p>
@@ -1809,7 +1831,6 @@ export default function LightCanvasSequencerPrototype() {
                 </div>
               </Card>
             </div>
-          </div>
         </div>
       </div>
     </div>
