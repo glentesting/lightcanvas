@@ -1,5 +1,6 @@
+import type { AnalyzedSection } from './audioAnalysis'
 import type { DisplayProp } from '../types/display'
-import type { Song } from '../types/song'
+import type { Song, SongSectionSnapshot } from '../types/song'
 import { supabase } from './supabaseClient'
 
 export const SONG_AUDIO_BUCKET = 'song-audio'
@@ -27,6 +28,43 @@ type SongRow = {
   storage_bucket?: string | null
   storage_path?: string | null
   original_filename?: string | null
+  beat_confidence?: number | null
+  bass_strength?: number | null
+  treble_strength?: number | null
+  vocal_confidence?: number | null
+  dynamics?: number | null
+  detected_bpm?: number | null
+  sections?: unknown | null
+}
+
+function parseSectionsJson(raw: unknown): SongSectionSnapshot[] {
+  if (raw == null || !Array.isArray(raw)) return []
+  const out: SongSectionSnapshot[] = []
+  for (const item of raw) {
+    if (!item || typeof item !== 'object') continue
+    const o = item as Record<string, unknown>
+    if (typeof o.name !== 'string') continue
+    const start = typeof o.start === 'number' ? o.start : Number(o.start)
+    const end = typeof o.end === 'number' ? o.end : Number(o.end)
+    const energy = typeof o.energy === 'number' ? o.energy : Number(o.energy)
+    if (!Number.isFinite(start) || !Number.isFinite(end) || !Number.isFinite(energy)) continue
+    out.push({
+      name: o.name,
+      start,
+      end,
+      energy,
+      vocals: Boolean(o.vocals),
+    })
+  }
+  return out
+}
+
+function clampPct(n: number): number {
+  return Math.min(100, Math.max(0, Math.round(n)))
+}
+
+function clampBpm(n: number): number {
+  return Math.min(999, Math.max(1, Math.round(n)))
 }
 
 export function rowToDisplayProp(row: DisplayPropRow): DisplayProp {
@@ -43,15 +81,33 @@ export function rowToDisplayProp(row: DisplayPropRow): DisplayProp {
 }
 
 export function rowToSong(row: SongRow): Song {
+  const analysisSaved = row.beat_confidence != null
+  const persistedSections = parseSectionsJson(row.sections)
+  const analysis = analysisSaved
+    ? {
+        beat: clampPct(row.beat_confidence!),
+        bass: clampPct(row.bass_strength ?? 0),
+        treble: clampPct(row.treble_strength ?? 0),
+        vocals: clampPct(row.vocal_confidence ?? 0),
+        dynamics: clampPct(row.dynamics ?? 0),
+      }
+    : { beat: 0, bass: 0, treble: 0, vocals: 0, dynamics: 0 }
+
+  const bpmFromAnalysis =
+    row.detected_bpm != null ? clampBpm(row.detected_bpm) : row.bpm
+
   return {
     id: row.id,
     title: row.title,
     duration: row.duration_seconds,
-    bpm: row.bpm,
+    bpm: bpmFromAnalysis,
     key: '—',
     energy: '—',
     status: row.status,
-    analysis: { beat: 0, bass: 0, treble: 0, vocals: 0, dynamics: 0 },
+    analysis,
+    analysisSaved: analysisSaved || undefined,
+    persistedSections:
+      analysisSaved && persistedSections.length > 0 ? persistedSections : undefined,
     storageBucket: row.storage_bucket ?? null,
     storagePath: row.storage_path ?? null,
     originalFilename: row.original_filename ?? null,
@@ -311,6 +367,41 @@ export async function updateSongStatus(
   }
 
   const { error } = await supabase.from('songs').update(patch).eq('id', songId)
+
+  return { error: error ? new Error(error.message) : null }
+}
+
+/** Persist successful audio analysis to the song row (summary, sections, BPM, status). */
+export async function persistSongAudioAnalysis(
+  songId: string,
+  payload: {
+    beat_confidence: number
+    bass_strength: number
+    treble_strength: number
+    vocal_confidence: number
+    dynamics: number
+    detected_bpm: number
+    sections: AnalyzedSection[]
+  },
+): Promise<{ error: Error | null }> {
+  if (!supabase) {
+    return { error: new Error('Supabase not configured') }
+  }
+
+  const { error } = await supabase
+    .from('songs')
+    .update({
+      status: 'Ready',
+      bpm: clampBpm(payload.detected_bpm),
+      beat_confidence: clampPct(payload.beat_confidence),
+      bass_strength: clampPct(payload.bass_strength),
+      treble_strength: clampPct(payload.treble_strength),
+      vocal_confidence: clampPct(payload.vocal_confidence),
+      dynamics: clampPct(payload.dynamics),
+      detected_bpm: clampBpm(payload.detected_bpm),
+      sections: payload.sections,
+    })
+    .eq('id', songId)
 
   return { error: error ? new Error(error.message) : null }
 }

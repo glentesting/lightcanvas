@@ -389,3 +389,27 @@ export function analyzeAudioBuffer(buffer: AudioBuffer): SongAudioAnalysis {
     summary,
   }
 }
+
+const PERSIST_FLAT_SERIES_LEN = 200
+
+/**
+ * Reconstruct a {@link SongAudioAnalysis} from DB-persisted summary + sections only.
+ * Beat grid is empty; band series are flat lines derived from summary (for stable UI).
+ */
+export function minimalSongAudioAnalysisFromPersisted(
+  summary: SongAnalysis,
+  bpm: number,
+  sections: AnalyzedSection[],
+): SongAudioAnalysis {
+  const flat = (pct: number) =>
+    Array.from({ length: PERSIST_FLAT_SERIES_LEN }, () => Math.min(1, Math.max(0, pct / 100)))
+  return {
+    bpm,
+    beatTimes: [],
+    bassSeries: flat(summary.bass),
+    trebleSeries: flat(summary.treble),
+    vocalSeries: flat(summary.vocals),
+    sections,
+    summary,
+  }
+}

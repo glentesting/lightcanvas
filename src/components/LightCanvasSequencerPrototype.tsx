@@ -9,7 +9,11 @@ import {
   type ReactNode,
 } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { analyzeAudioBuffer, type SongAudioAnalysis } from '../lib/audioAnalysis'
+import {
+  analyzeAudioBuffer,
+  minimalSongAudioAnalysisFromPersisted,
+  type SongAudioAnalysis,
+} from '../lib/audioAnalysis'
 import { getAudioDurationFromFile } from '../lib/getAudioDurationFromFile'
 import {
   deleteSongFromLibrary,
@@ -18,12 +22,13 @@ import {
   loadDisplayProps,
   loadSongs,
   persistDisplayProfile,
+  persistSongAudioAnalysis,
   updateSongStatus,
   uploadSongFromFile,
 } from '../lib/phase1Repository'
 import { supabase } from '../lib/supabaseClient'
 import type { DisplayProp } from '../types/display'
-import type { Song } from '../types/song'
+import type { Song, SongSectionSnapshot } from '../types/song'
 import { LightCanvasWordmark } from './LightCanvasWordmark'
 import { SongWaveform } from './SongWaveform'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -681,6 +686,40 @@ export default function LightCanvasSequencerPrototype() {
     )
   }, [songs])
 
+  /** Hydrate in-memory analysis from Supabase when a row has saved metrics (skip replacing a fresh decode). */
+  useEffect(() => {
+    setSongAnalyses((prev) => {
+      const next = { ...prev }
+      for (const s of songs) {
+        if (!s.analysisSaved) continue
+        const existing = next[s.id]
+        if (existing && existing.beatTimes.length > 0) continue
+        const sectionSource: SongSectionSnapshot[] = s.persistedSections?.length
+          ? s.persistedSections
+          : buildSections(s.duration)
+        const sectionsForAnalysis = sectionSource.map((sec) => ({
+          name: sec.name,
+          start: sec.start,
+          end: sec.end,
+          energy: sec.energy,
+          vocals: sec.vocals,
+        }))
+        const bpmVal = s.bpm ?? 120
+        next[s.id] = minimalSongAudioAnalysisFromPersisted(s.analysis, bpmVal, sectionsForAnalysis)
+      }
+      return next
+    })
+  }, [songs])
+
+  useEffect(() => {
+    if (selectedSong.id === PLACEHOLDER_SONG.id) {
+      setAnalysisProgress(91)
+      return
+    }
+    if (selectedSong.analysisSaved) setAnalysisProgress(100)
+    else setAnalysisProgress(26)
+  }, [selectedSong.id, selectedSong.analysisSaved])
+
   useEffect(() => {
     if (!user?.id || !supabase || !displayConfigReady || !profileId) return
 
@@ -813,14 +852,42 @@ export default function LightCanvasSequencerPrototype() {
     const sid = selectedSong.id
     const hasFile = Boolean(selectedSong.storagePath && selectedSong.storageBucket)
 
+    if (hasFile && selectedSong.analysisSaved) {
+      return
+    }
+
     const finishRebuild = (
       analysisPatch: Song['analysis'],
       bpmPatch: number | null | undefined,
       assistantText: string,
+      opts?: {
+        persistAnalysis?: boolean
+        persistedSections?: SongSectionSnapshot[]
+      },
     ) => {
-      void updateSongStatus(sid, { status: 'Ready' }).then(({ error }) => {
-        if (error) console.error(error)
-      })
+      if (opts?.persistAnalysis) {
+        void persistSongAudioAnalysis(sid, {
+          beat_confidence: analysisPatch.beat,
+          bass_strength: analysisPatch.bass,
+          treble_strength: analysisPatch.treble,
+          vocal_confidence: analysisPatch.vocals,
+          dynamics: analysisPatch.dynamics,
+          detected_bpm: bpmPatch ?? 120,
+          sections: (opts.persistedSections ?? []).map((sec) => ({
+            name: sec.name,
+            start: sec.start,
+            end: sec.end,
+            energy: sec.energy,
+            vocals: sec.vocals,
+          })),
+        }).then(({ error }) => {
+          if (error) console.error('persistSongAudioAnalysis', error)
+        })
+      } else {
+        void updateSongStatus(sid, { status: 'Ready' }).then(({ error }) => {
+          if (error) console.error(error)
+        })
+      }
       setAnalysisProgress(100)
       setSongs((prev) =>
         prev.map((s) =>
@@ -830,6 +897,12 @@ export default function LightCanvasSequencerPrototype() {
                 status: 'Ready',
                 ...(bpmPatch != null ? { bpm: bpmPatch } : {}),
                 analysis: analysisPatch,
+                ...(opts?.persistAnalysis
+                  ? {
+                      analysisSaved: true,
+                      persistedSections: opts.persistedSections,
+                    }
+                  : {}),
               }
             : s,
         ),
@@ -868,10 +941,18 @@ export default function LightCanvasSequencerPrototype() {
         setAnalysisProgress(75)
         const result = analyzeAudioBuffer(decoded)
         setSongAnalyses((prev) => ({ ...prev, [sid]: result }))
+        const persistedSections: SongSectionSnapshot[] = result.sections.map((sec) => ({
+          name: sec.name,
+          start: sec.start,
+          end: sec.end,
+          energy: sec.energy,
+          vocals: sec.vocals,
+        }))
         finishRebuild(
           result.summary,
           result.bpm,
           'Analyzed your uploaded audio (tempo, beat grid, bass/treble/vocal bands, dynamics) and section boundaries from energy. Sequence draft updated from those signals.',
+          { persistAnalysis: true, persistedSections },
         )
       } catch (e) {
         console.error('Audio analysis failed', e)
@@ -988,10 +1069,6 @@ export default function LightCanvasSequencerPrototype() {
                 <Button disabled={rebuildAnalyzing} onClick={runAi}>
                   <Sparkles className="h-4 w-4" />{' '}
                   {rebuildAnalyzing ? 'Analyzing…' : 'Rebuild Sequence'}
-                </Button>
-                <Button variant="secondary" onClick={() => setPlaying((p) => !p)}>
-                  {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  {playing ? 'Pause' : 'Preview'}
                 </Button>
               </div>
             </div>
@@ -1741,6 +1818,10 @@ export default function LightCanvasSequencerPrototype() {
                   icon={Volume2}
                 />
                 <div className="space-y-4 px-6 pb-6 pt-4">
+                  <Button variant="secondary" onClick={() => setPlaying((p) => !p)}>
+                    {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                    {playing ? 'Pause' : 'Preview'}
+                  </Button>
                   <LightPreview playing={playing} />
                   <div className="space-y-3">
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-600">
