@@ -3,6 +3,7 @@ import { Download } from 'lucide-react'
 import type { DisplayProp } from '../../../types/display'
 import type { Song } from '../../../types/song'
 import type { TimelineEvent } from '../types'
+import { downloadFseq } from '../../../lib/exportFseq'
 import { Button } from '../shared/Button'
 
 export interface ExportWorkspaceProps {
@@ -18,6 +19,8 @@ const sectionLabel = 'mb-3 block text-xs font-medium uppercase tracking-[0.14em]
 export function ExportWorkspace({
   selectedSong, propsState, totalChannels, events, exportPayload,
 }: ExportWorkspaceProps) {
+  const hasEvents = events.length > 0
+
   const items = [
     ['Song', selectedSong.title],
     ['Props mapped', String(propsState.length)],
@@ -34,18 +37,6 @@ export function ExportWorkspace({
         {/* Left: Export settings */}
         <div className="space-y-5">
           <section>
-            <h2 className={sectionLabel}>Export Settings</h2>
-            <div>
-              <div className="mb-1 text-xs text-slate-500">Format</div>
-              <select className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm text-slate-900">
-                <option>FSEQ</option>
-                <option>xLights-compatible package</option>
-                <option>LOR-oriented channel map bundle</option>
-              </select>
-            </div>
-          </section>
-
-          <section>
             <h2 className={sectionLabel}>Export Summary</h2>
             <div className="space-y-0">
               {items.map(([label, value]) => (
@@ -57,9 +48,20 @@ export function ExportWorkspace({
             </div>
           </section>
 
-          <Button>
-            <Download className="h-4 w-4" /> Export Sequence
-          </Button>
+          <section className="space-y-3">
+            <h2 className={sectionLabel}>Download</h2>
+            <div>
+              <Button
+                disabled={!hasEvents}
+                onClick={() => downloadFseq(events, propsState, selectedSong.title, selectedSong.duration)}
+              >
+                <Download className="h-4 w-4" /> Download FSEQ
+              </Button>
+              <p className="mt-1.5 text-xs text-slate-500">
+                FSEQ v2 — compatible with xLights and Falcon Player (FPP)
+              </p>
+            </div>
+          </section>
         </div>
 
         {/* Right: Payload preview */}
