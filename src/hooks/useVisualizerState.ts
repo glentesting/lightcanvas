@@ -1,8 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { DisplayProp } from '../types/display'
 
-export type HouseType = 'two-story' | 'ranch' | 'craftsman'
-
 export type PlacementTool =
   | 'roofline'
   | 'arch'
@@ -35,33 +33,26 @@ export const TOOLS: ToolDef[] = [
 export interface UseVisualizerStateOptions {
   props: DisplayProp[]
   selectedPropId: string | null
-  houseType: HouseType
   photoUrl: string | null
   onSelectProp: (id: string | null) => void
   onPlaceProp: (type: string, x: number, y: number, houseType: string) => void
   onRemoveProp: (id: string) => void
   onMoveProp: (id: string, x: number, y: number) => void
   onUpdatePropColor: (id: string, color: string) => void
-  onHouseTypeChange: (id: HouseType) => void
 }
 
 export function useVisualizerState(opts: UseVisualizerStateOptions) {
   const [activeTool, setActiveTool] = useState<PlacementTool | null>(null)
   const [dragId, setDragId] = useState<string | null>(null)
 
-  const visibleProps = useMemo(
-    () => opts.props.filter((p) => !p.houseType || p.houseType === opts.houseType),
-    [opts.props, opts.houseType],
-  )
-
   const placedProps = useMemo(
-    () => visibleProps.filter((p) => p.canvasX != null && p.canvasY != null),
-    [visibleProps],
+    () => opts.props.filter((p) => p.canvasX != null && p.canvasY != null),
+    [opts.props],
   )
 
   const selectedProp = useMemo(
-    () => visibleProps.find((p) => p.id === opts.selectedPropId) ?? null,
-    [visibleProps, opts.selectedPropId],
+    () => opts.props.find((p) => p.id === opts.selectedPropId) ?? null,
+    [opts.props, opts.selectedPropId],
   )
 
   const handleCanvasClick = useCallback(
@@ -69,7 +60,8 @@ export function useVisualizerState(opts: UseVisualizerStateOptions) {
       if (!activeTool || activeTool === 'eraser') return
       const toolDef = TOOLS.find((t) => t.id === activeTool)
       if (!toolDef) return
-      opts.onPlaceProp(toolDef.propType, canvasX, canvasY, opts.houseType)
+      // Pass empty string for houseType — no longer used for filtering
+      opts.onPlaceProp(toolDef.propType, canvasX, canvasY, '')
     },
     [activeTool, opts],
   )
@@ -101,7 +93,6 @@ export function useVisualizerState(opts: UseVisualizerStateOptions) {
     dragId,
     startDrag,
     endDrag,
-    visibleProps,
     placedProps,
     selectedProp,
     handleCanvasClick,

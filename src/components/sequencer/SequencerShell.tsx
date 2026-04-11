@@ -210,8 +210,6 @@ export function SequencerShell({
                 quickAddProp={quickAddProp}
                 updatePropColor={updatePropColor}
                 moveProp={moveProp}
-                houseType={displayHouseType}
-                onHouseTypeChange={setDisplayHouseType}
                 photoUrl={photoUrl}
                 onPhotoReady={onPhotoReady}
               />

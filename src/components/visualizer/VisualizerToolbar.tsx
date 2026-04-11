@@ -1,12 +1,6 @@
-import type { HouseType, PlacementTool } from '../../hooks/useVisualizerState'
+import type { PlacementTool } from '../../hooks/useVisualizerState'
 import { TOOLS } from '../../hooks/useVisualizerState'
 import type { DisplayProp } from '../../types/display'
-
-const HOUSE_OPTIONS: { id: HouseType; label: string }[] = [
-  { id: 'two-story', label: 'Two-Story' },
-  { id: 'ranch', label: 'Ranch' },
-  { id: 'craftsman', label: 'Craftsman' },
-]
 
 export const COLOR_PRESETS = [
   { label: 'Warm White', color: '#ffe8c0' },
@@ -20,8 +14,6 @@ export const COLOR_PRESETS = [
 ]
 
 interface VisualizerToolbarProps {
-  houseType: HouseType
-  onHouseTypeChange: (id: HouseType) => void
   activeTool: PlacementTool | null
   onToolChange: (tool: PlacementTool | null) => void
   selectedProp: DisplayProp | null
@@ -30,8 +22,6 @@ interface VisualizerToolbarProps {
 }
 
 export function VisualizerToolbar({
-  houseType,
-  onHouseTypeChange,
   activeTool,
   onToolChange,
   selectedProp,
@@ -40,32 +30,46 @@ export function VisualizerToolbar({
 }: VisualizerToolbarProps) {
   return (
     <div className="bg-zinc-950 px-4 py-3">
-      {/* Row 1: House style + upload + color picker */}
+      {/* Tools row: Your House + prop tools + color picker */}
       <div className="flex flex-wrap items-center gap-2 py-1">
-        <span className="mr-1 text-xs font-medium uppercase tracking-wider text-zinc-400">House</span>
-        {HOUSE_OPTIONS.map((h) => (
+        <span className="mr-1 text-xs font-medium uppercase tracking-wider text-zinc-400">Tools</span>
+
+        {/* Upload Photo — first in the row */}
+        <button
+          type="button"
+          title="Upload a photo of your house"
+          onClick={onUploadPhoto}
+          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-zinc-100"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+          </svg>
+          Your House
+        </button>
+
+        <span className="mx-1 h-4 border-l border-zinc-700" />
+
+        {/* Prop placement tools */}
+        {TOOLS.map((tool) => (
           <button
-            key={h.id}
+            key={tool.id}
             type="button"
-            onClick={() => onHouseTypeChange(h.id)}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-              houseType === h.id
-                ? 'bg-zinc-700 text-zinc-100'
+            title={tool.label}
+            onClick={() => onToolChange(activeTool === tool.id ? null : tool.id)}
+            className={`rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${
+              activeTool === tool.id
+                ? tool.id === 'eraser'
+                  ? 'bg-brand-red text-white'
+                  : 'bg-brand-green text-white'
                 : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
             }`}
           >
-            {h.label}
+            {tool.label}
           </button>
         ))}
 
-        <button
-          type="button"
-          onClick={onUploadPhoto}
-          className="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-zinc-100"
-        >
-          Upload Photo
-        </button>
-
+        {/* Color picker when prop selected */}
         {selectedProp && onUpdateColor && (
           <div className="ml-2 flex items-center gap-2 border-l border-zinc-700 pl-3">
             <span className="text-xs font-medium text-zinc-400">Color:</span>
@@ -85,28 +89,6 @@ export function VisualizerToolbar({
             ))}
           </div>
         )}
-      </div>
-
-      {/* Row 2: Prop tools */}
-      <div className="mt-1 flex flex-wrap items-center gap-2 border-t border-zinc-800/70 pt-2">
-        <span className="mr-1 text-xs font-medium uppercase tracking-wider text-zinc-400">Tools</span>
-        {TOOLS.map((tool) => (
-          <button
-            key={tool.id}
-            type="button"
-            title={tool.label}
-            onClick={() => onToolChange(activeTool === tool.id ? null : tool.id)}
-            className={`rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${
-              activeTool === tool.id
-                ? tool.id === 'eraser'
-                  ? 'bg-brand-red text-white'
-                  : 'bg-brand-green text-white'
-                : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'
-            }`}
-          >
-            {tool.label}
-          </button>
-        ))}
       </div>
 
       {/* Status bar */}

@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { Plus, Trash2 } from 'lucide-react'
 import type { DisplayProp } from '../../../types/display'
-import { useVisualizerState, type HouseType } from '../../../hooks/useVisualizerState'
+import { useVisualizerState } from '../../../hooks/useVisualizerState'
 import { VisualizerStage } from '../../visualizer/VisualizerStage'
 import { propTypes } from '../types'
 
@@ -27,8 +27,6 @@ export interface DisplaySetupWorkspaceProps {
   quickAddProp: (type: string, x: number, y: number, houseType: string, opts?: { angle?: number; length?: number }) => void
   updatePropColor: (id: string, color: string) => void
   moveProp: (id: string, x: number, y: number) => void
-  houseType: HouseType
-  onHouseTypeChange: (id: HouseType) => void
   photoUrl: string | null
   onPhotoReady: (url: string) => void
 }
@@ -45,7 +43,6 @@ export function DisplaySetupWorkspace({
   newPropName, setNewPropName, newPropType, setNewPropType,
   newPropChannels, setNewPropChannels,
   addProp, removeProp, quickAddProp, updatePropColor, moveProp,
-  houseType, onHouseTypeChange,
   photoUrl, onPhotoReady,
 }: DisplaySetupWorkspaceProps) {
   const capacityPct = Math.min(100, (usedChannels / Math.max(1, totalChannels)) * 100)
@@ -53,14 +50,12 @@ export function DisplaySetupWorkspace({
   const viz = useVisualizerState({
     props: propsState,
     selectedPropId,
-    houseType,
     photoUrl,
     onSelectProp: setSelectedPropId,
     onPlaceProp: quickAddProp,
     onRemoveProp: removeProp,
     onMoveProp: moveProp,
     onUpdatePropColor: updatePropColor,
-    onHouseTypeChange,
   })
 
   return (
@@ -71,8 +66,6 @@ export function DisplaySetupWorkspace({
         activeTool={viz.activeTool}
         selectedProp={viz.selectedProp}
         photoUrl={photoUrl}
-        houseType={houseType}
-        onHouseTypeChange={onHouseTypeChange}
         onToolChange={viz.setActiveTool}
         onCanvasClick={viz.handleCanvasClick}
         onPropClick={viz.handlePropClick}

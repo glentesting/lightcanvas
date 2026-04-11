@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { DisplayProp } from '../../types/display'
-import type { HouseType, PlacementTool } from '../../hooks/useVisualizerState'
+import type { PlacementTool } from '../../hooks/useVisualizerState'
 import { VisualizerCanvas, type VisualizerCanvasHandle } from './VisualizerCanvas'
 import { VisualizerToolbar } from './VisualizerToolbar'
 import { UploadPhotoFlow } from './UploadPhotoFlow'
@@ -11,8 +11,6 @@ interface VisualizerStageProps {
   activeTool: PlacementTool | null
   selectedProp: DisplayProp | null
   photoUrl: string | null
-  houseType: HouseType
-  onHouseTypeChange: (id: HouseType) => void
   onToolChange: (tool: PlacementTool | null) => void
   onCanvasClick: (normX: number, normY: number) => void
   onPropClick: (id: string) => void
@@ -27,8 +25,6 @@ export function VisualizerStage({
   activeTool,
   selectedProp,
   photoUrl,
-  houseType,
-  onHouseTypeChange,
   onToolChange,
   onCanvasClick,
   onPropClick,
@@ -42,8 +38,6 @@ export function VisualizerStage({
   return (
     <div className="w-full overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
       <VisualizerToolbar
-        houseType={houseType}
-        onHouseTypeChange={onHouseTypeChange}
         activeTool={activeTool}
         onToolChange={onToolChange}
         selectedProp={selectedProp}
