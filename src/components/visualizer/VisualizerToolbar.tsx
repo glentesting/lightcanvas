@@ -1,5 +1,4 @@
-import type { PlacementTool } from '../../hooks/useVisualizerState'
-import { TOOLS } from '../../hooks/useVisualizerState'
+import type { PlacementTool, ToolDef } from '../../hooks/useVisualizerState'
 import type { DisplayProp } from '../../types/display'
 
 function hexToHue(hex: string): number {
@@ -18,6 +17,7 @@ function hexToHue(hex: string): number {
 }
 
 interface VisualizerToolbarProps {
+  tools: ToolDef[]
   activeTool: PlacementTool | null
   onToolChange: (tool: PlacementTool | null) => void
   selectedProp: DisplayProp | null
@@ -28,6 +28,7 @@ interface VisualizerToolbarProps {
 }
 
 export function VisualizerToolbar({
+  tools,
   activeTool,
   onToolChange,
   selectedProp,
@@ -59,12 +60,12 @@ export function VisualizerToolbar({
         <span className="mx-1 h-4 border-l border-zinc-700" />
 
         {/* Prop placement tools */}
-        {TOOLS.map((tool) => (
+        {tools.map((tool) => (
           <button
             key={tool.id}
             type="button"
             title={tool.label}
-            onClick={() => onToolChange(activeTool === tool.id ? null : tool.id)}
+            onClick={() => onToolChange(activeTool === tool.id ? null : tool.id as PlacementTool)}
             className={`rounded-lg px-2.5 py-1.5 text-sm font-medium transition ${
               activeTool === tool.id
                 ? tool.id === 'eraser'
@@ -124,7 +125,7 @@ export function VisualizerToolbar({
         <div className="flex items-center gap-2 border-t border-zinc-700 pt-2 text-xs text-zinc-400">
           {activeTool && (
             <span>
-              Tool: <strong className="text-zinc-100">{TOOLS.find((t) => t.id === activeTool)?.label}</strong>
+              Tool: <strong className="text-zinc-100">{tools.find((t) => t.id === activeTool)?.label}</strong>
               {activeTool === 'eraser' ? ' — click prop to remove' : ' — click to place'}
             </span>
           )}

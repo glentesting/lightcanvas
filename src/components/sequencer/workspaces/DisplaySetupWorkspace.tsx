@@ -75,6 +75,7 @@ export function DisplaySetupWorkspace({
       <VisualizerStage
         props={viz.placedProps}
         selectedPropId={selectedPropId}
+        tools={viz.tools}
         activeTool={viz.activeTool}
         selectedProp={viz.selectedProp}
         photoUrl={photoUrl}

@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { DisplayProp } from '../types/display'
+import type { HolidayId } from '../holidays'
+import { CHRISTMAS_TOOLS, HALLOWEEN_TOOLS, SHARED_TOOLS } from '../holidays'
 
 export type PlacementTool =
   | 'roofline'
@@ -17,31 +19,24 @@ export type PlacementTool =
   | 'eraser'
 
 export interface ToolDef {
-  id: PlacementTool
+  id: string
   label: string
   propType: string
+  defaultColor?: string
 }
 
-export const TOOLS: ToolDef[] = [
-  { id: 'roofline', label: 'Roofline', propType: 'Roofline' },
-  { id: 'arch', label: 'Arch', propType: 'Arches' },
-  { id: 'mini-tree', label: 'Mini Tree', propType: 'Mini Tree' },
-  { id: 'mega-tree', label: 'Mega Tree', propType: 'Mega Tree' },
-  { id: 'face', label: 'Face', propType: 'Talking Face' },
-  { id: 'stake', label: 'Stake', propType: 'Ground Stakes' },
-  { id: 'matrix', label: 'Matrix', propType: 'Matrix' },
-  { id: 'custom', label: '+ Custom', propType: 'Smart Pixel' },
-  { id: 'pumpkin', label: 'Pumpkin', propType: 'Pumpkin Face' },
-  { id: 'ghost', label: 'Ghost', propType: 'Ghost' },
-  { id: 'skull', label: 'Skull', propType: 'Skull' },
-  { id: 'gravestone', label: 'Gravestone', propType: 'Gravestone' },
-  { id: 'eraser', label: 'Eraser', propType: '' },
-]
+const ERASER_TOOL: ToolDef = { id: 'eraser', label: 'Eraser', propType: '' }
+
+export function getToolsForHoliday(holiday: HolidayId): ToolDef[] {
+  const holidayTools = holiday === 'halloween' ? HALLOWEEN_TOOLS : CHRISTMAS_TOOLS
+  return [...holidayTools, ...SHARED_TOOLS, ERASER_TOOL]
+}
 
 export interface UseVisualizerStateOptions {
   props: DisplayProp[]
   selectedPropId: string | null
   photoUrl: string | null
+  selectedHoliday?: HolidayId
   onSelectProp: (id: string | null) => void
   onPlaceProp: (type: string, x: number, y: number, houseType: string) => void
   onRemoveProp: (id: string) => void
@@ -51,6 +46,8 @@ export interface UseVisualizerStateOptions {
 }
 
 export function useVisualizerState(opts: UseVisualizerStateOptions) {
+  const holiday = opts.selectedHoliday ?? 'christmas'
+  const tools = useMemo(() => getToolsForHoliday(holiday), [holiday])
   const [activeTool, setActiveTool] = useState<PlacementTool | null>(null)
   const [dragId, setDragId] = useState<string | null>(null)
 
@@ -67,12 +64,11 @@ export function useVisualizerState(opts: UseVisualizerStateOptions) {
   const handleCanvasClick = useCallback(
     (canvasX: number, canvasY: number) => {
       if (!activeTool || activeTool === 'eraser') return
-      const toolDef = TOOLS.find((t) => t.id === activeTool)
+      const toolDef = tools.find((t) => t.id === activeTool)
       if (!toolDef) return
-      // Pass empty string for houseType — no longer used for filtering
       opts.onPlaceProp(toolDef.propType, canvasX, canvasY, '')
     },
-    [activeTool, opts],
+    [activeTool, tools, opts],
   )
 
   const handlePropClick = useCallback(
@@ -110,6 +106,7 @@ export function useVisualizerState(opts: UseVisualizerStateOptions) {
   return {
     activeTool,
     setActiveTool,
+    tools,
     dragId,
     startDrag,
     endDrag,

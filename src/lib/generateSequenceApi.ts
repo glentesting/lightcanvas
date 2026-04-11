@@ -1,3 +1,6 @@
+// TODO: Pass selectedHoliday to the server so it can swap between
+// CHRISTMAS_SYSTEM_PROMPT and HALLOWEEN_SYSTEM_PROMPT from src/holidays/
+// The prompts live in src/holidays/{christmas,halloween}/prompts.ts
 import type { DisplayProp } from '../types/display'
 import type { SongAnalysis } from '../types/song'
 

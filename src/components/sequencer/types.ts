@@ -38,19 +38,12 @@ export const sequencerTabs: { value: TabValue; label: string }[] = [
   { value: 'export', label: 'Export' },
 ]
 
-export const propTypes = [
-  'Talking Face',
-  'Mega Tree',
-  'Ground Stakes',
-  'Roofline',
-  'Matrix',
-  'Arches',
-  'Smart Pixel',
-  'AC Traditional',
-  'Pumpkin Face',
-  'Ghost',
-  'Skull',
-  'Gravestone',
+import { CHRISTMAS_PROP_TYPES, HALLOWEEN_PROP_TYPES, SHARED_PROP_TYPES } from '../../holidays'
+
+export const propTypes: string[] = [
+  ...CHRISTMAS_PROP_TYPES,
+  ...HALLOWEEN_PROP_TYPES,
+  ...SHARED_PROP_TYPES,
 ]
 
 export const effectOptions = [

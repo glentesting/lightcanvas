@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { DisplayProp } from '../../types/display'
-import type { PlacementTool } from '../../hooks/useVisualizerState'
+import type { PlacementTool, ToolDef } from '../../hooks/useVisualizerState'
 import { VisualizerCanvas, type VisualizerCanvasHandle } from './VisualizerCanvas'
 import { VisualizerToolbar } from './VisualizerToolbar'
 import { UploadPhotoFlow } from './UploadPhotoFlow'
@@ -8,6 +8,7 @@ import { UploadPhotoFlow } from './UploadPhotoFlow'
 interface VisualizerStageProps {
   props: DisplayProp[]
   selectedPropId: string | null
+  tools: ToolDef[]
   activeTool: PlacementTool | null
   selectedProp: DisplayProp | null
   photoUrl: string | null
@@ -27,6 +28,7 @@ interface VisualizerStageProps {
 export function VisualizerStage({
   props,
   selectedPropId,
+  tools,
   activeTool,
   selectedProp,
   photoUrl,
@@ -49,6 +51,7 @@ export function VisualizerStage({
   return (
     <div className="w-full overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
       <VisualizerToolbar
+        tools={tools}
         activeTool={activeTool}
         onToolChange={onToolChange}
         selectedProp={selectedProp}
