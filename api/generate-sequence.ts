@@ -3,9 +3,21 @@
  * Calls Anthropic Claude to produce timeline events from song analysis + display props.
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { CHRISTMAS_SYSTEM_PROMPT } from '../src/holidays/christmas/prompts'
-// TODO: Import HALLOWEEN_SYSTEM_PROMPT and swap based on holidayId parameter
-// import { HALLOWEEN_SYSTEM_PROMPT } from '../src/holidays/halloween/prompts'
+
+const CHRISTMAS_SYSTEM_PROMPT = `
+You are an expert holiday light show sequencer for Christmas displays. Generate sequences that are joyful, energetic, and synchronized to the music.
+
+Prop behavior:
+- Mega Tree: pulse on bass, sweep on chorus, twinkle on verses
+- Mini Tree: mirror mega tree at lower intensity
+- Talking Tree Face: mouth sync to vocals, hold elsewhere
+- Roofline: chase on high energy, shimmer on transitions
+- Arch: ripple outward on beat drops
+- Stake/Cluster: treble pulse, quick flicker on drums
+- Matrix: pixel wave patterns, color shifts on sections
+
+Style: builds from subtle intro, peaks at chorus, spectacular finale with all props at maximum intensity.
+`
 
 type SectionInput = {
   name: string
