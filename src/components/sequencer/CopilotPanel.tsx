@@ -63,31 +63,33 @@ export function CopilotPanel({
   const canvasRef = useRef<VisualizerCanvasHandle>(null)
 
   useEffect(() => {
-    if (!playing) return
-    const activeEvents = sequenceEvents.filter(
-      e => e.start <= previewTime && e.end > previewTime,
-    )
-    const beatStrength = activeEvents.some(
-      e => ['Pulse', 'Chase', 'Sweep'].includes(e.effect),
-    ) ? 0.8 : 0.3
-    const bassStrength = activeEvents.some(
-      e => ['Pulse', 'Sweep'].includes(e.effect),
-    ) ? 0.7 : 0.2
-    const trebleStrength = activeEvents.some(
-      e => ['Twinkle', 'Shimmer'].includes(e.effect),
-    ) ? 0.7 : 0.2
-    const vocalConfidence = activeEvents.some(
-      e => e.effect === 'Mouth Sync',
-    ) ? 0.9 : 0.1
+    if (!playing) {
+      canvasRef.current?.triggerFrame({
+        beatStrength: 0,
+        bassStrength: 0,
+        trebleStrength: 0,
+        vocalConfidence: 0,
+        timestamp: 0,
+      })
+      return
+    }
+    const interval = setInterval(() => {
+      const activeEvents = sequenceEvents.filter(
+        e => e.start <= previewTime && e.end > previewTime,
+      )
+      const hasEffect = (effects: string[]) =>
+        activeEvents.some(e => effects.includes(e.effect))
 
-    canvasRef.current?.triggerFrame({
-      beatStrength,
-      bassStrength,
-      trebleStrength,
-      vocalConfidence,
-      timestamp: previewTime,
-    })
-  }, [previewTime, playing, sequenceEvents])
+      canvasRef.current?.triggerFrame({
+        beatStrength: hasEffect(['Pulse', 'Chase', 'Sweep', 'Color Pop']) ? 0.85 : 0.2,
+        bassStrength: hasEffect(['Pulse', 'Sweep', 'Fan']) ? 0.75 : 0.15,
+        trebleStrength: hasEffect(['Twinkle', 'Shimmer', 'Ripple']) ? 0.75 : 0.15,
+        vocalConfidence: hasEffect(['Mouth Sync']) ? 0.95 : 0.05,
+        timestamp: previewTime,
+      })
+    }, 50)
+    return () => clearInterval(interval)
+  }, [playing, previewTime, sequenceEvents])
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-8">
@@ -125,11 +127,11 @@ export function CopilotPanel({
           </div>
           <div className="grid gap-5 lg:grid-cols-4">
             <div className="min-w-0 lg:col-span-3">
-              <div className="min-h-[220px] overflow-hidden rounded-2xl">
+              <div className="relative w-full overflow-hidden rounded-2xl" style={{ aspectRatio: '16/9' }}>
                 <VisualizerCanvas
                   ref={canvasRef}
                   photoUrl={photoUrl}
-                  nightOpacity={0.6}
+                  nightOpacity={0.55}
                   props={propsState}
                   selectedPropId={null}
                   activeTool={null}

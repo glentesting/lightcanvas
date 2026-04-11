@@ -151,7 +151,7 @@ export function AISequencingWorkspace({
                 </p>
               </div>
             ) : (
-              <ul className="max-h-[240px] space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 text-sm">
+              <ul className="max-h-[min(60vh,500px)] space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 text-sm">
                 {propsState.map((p) => (
                   <li
                     key={p.id}
