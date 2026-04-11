@@ -1,4 +1,4 @@
-import type { Dispatch, SetStateAction } from 'react'
+import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react'
 import {
   ArrowRight,
   Bot,
@@ -11,6 +11,7 @@ import {
 import type { DisplayProp } from '../../types/display'
 import type { Song } from '../../types/song'
 import type { ChatMessage, TimelineEvent } from './types'
+import { VisualizerCanvas, type VisualizerCanvasHandle } from '../visualizer/VisualizerCanvas'
 import { formatTime } from './utils'
 import { Button } from './shared/Button'
 import { Card } from './shared/Card'
@@ -41,6 +42,7 @@ export interface CopilotPanelProps {
   selectedSong: Song
   previewTime: number
   sequenceEvents: TimelineEvent[]
+  photoUrl: string | null
 }
 
 export function CopilotPanel({
@@ -55,8 +57,37 @@ export function CopilotPanel({
   selectedSong,
   previewTime,
   sequenceEvents,
+  photoUrl,
 }: CopilotPanelProps) {
   const duration = Math.max(0.001, selectedSong.duration)
+  const canvasRef = useRef<VisualizerCanvasHandle>(null)
+
+  useEffect(() => {
+    if (!playing) return
+    const activeEvents = sequenceEvents.filter(
+      e => e.start <= previewTime && e.end > previewTime,
+    )
+    const beatStrength = activeEvents.some(
+      e => ['Pulse', 'Chase', 'Sweep'].includes(e.effect),
+    ) ? 0.8 : 0.3
+    const bassStrength = activeEvents.some(
+      e => ['Pulse', 'Sweep'].includes(e.effect),
+    ) ? 0.7 : 0.2
+    const trebleStrength = activeEvents.some(
+      e => ['Twinkle', 'Shimmer'].includes(e.effect),
+    ) ? 0.7 : 0.2
+    const vocalConfidence = activeEvents.some(
+      e => e.effect === 'Mouth Sync',
+    ) ? 0.9 : 0.1
+
+    canvasRef.current?.triggerFrame({
+      beatStrength,
+      bassStrength,
+      trebleStrength,
+      vocalConfidence,
+      timestamp: previewTime,
+    })
+  }, [previewTime, playing, sequenceEvents])
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-8">
@@ -94,8 +125,20 @@ export function CopilotPanel({
           </div>
           <div className="grid gap-5 lg:grid-cols-4">
             <div className="min-w-0 lg:col-span-3">
-              <div className="flex min-h-[200px] items-center justify-center rounded-2xl" style={{ backgroundColor: '#0a0e1a' }}>
-                <p className="text-sm text-slate-500">Live preview plays when a sequence is running.</p>
+              <div className="min-h-[220px] overflow-hidden rounded-2xl">
+                <VisualizerCanvas
+                  ref={canvasRef}
+                  photoUrl={photoUrl}
+                  nightOpacity={0.6}
+                  props={propsState}
+                  selectedPropId={null}
+                  activeTool={null}
+                  onCanvasClick={() => {}}
+                  onPropClick={() => {}}
+                  onPropDrag={() => {}}
+                  onPropResize={() => {}}
+                  onViewChange={() => {}}
+                />
               </div>
             </div>
             <div className="min-w-0 space-y-2 rounded-xl border border-slate-200/90 bg-slate-50/90 p-4 text-xs leading-snug text-slate-600 lg:col-span-1">

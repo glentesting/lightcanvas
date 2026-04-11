@@ -346,6 +346,7 @@ export function SequencerShell({
                 selectedSong={selectedSong}
                 previewTime={previewTime}
                 sequenceEvents={sequenceEventsForPreview}
+                photoUrl={photoUrl}
               />
             )}
           </>
