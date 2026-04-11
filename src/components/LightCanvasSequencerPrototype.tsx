@@ -34,6 +34,7 @@ import {
   type HousePhotoRow,
   type UserPlan,
 } from '../lib/phase1Repository'
+import { canAddSong, canAddController, canRunAiAnalysis } from '../lib/planGating'
 import { supabase } from '../lib/supabaseClient'
 import type { DisplayProp } from '../types/display'
 import type { Song, SongSectionSnapshot } from '../types/song'
@@ -379,6 +380,7 @@ export default function LightCanvasSequencerPrototype() {
     subscriptionStatus: null, currentPeriodEnd: null,
     sequenceCreditsRemaining: 0, sequenceCreditsTotal: 0,
   })
+  const [analysesRunToday, setAnalysesRunToday] = useState(0)
   const [rebuildAnalyzing, setRebuildAnalyzing] = useState(false)
   const [rebuildPhase, setRebuildPhase] = useState<'idle' | 'decode' | 'sequence'>('idle')
   const [sequenceEventsBySong, setSequenceEventsBySong] = useState<Record<string, TimelineEvent[]>>(
@@ -574,6 +576,7 @@ export default function LightCanvasSequencerPrototype() {
     let cancelled = false
     setDisplayConfigReady(false)
     setProfileId(null)
+    setLoadError(null)
 
     void (async () => {
       try {
@@ -590,15 +593,27 @@ export default function LightCanvasSequencerPrototype() {
         if (cancelled) return
         setHousePhotos(photos)
 
-        const songList = await loadSongs(uid)
+        let songList: Song[] = []
+        try {
+          songList = await loadSongs(uid)
+        } catch (songErr) {
+          console.error('Failed to load songs', songErr)
+        }
         if (cancelled) return
         setSongs(songList)
 
-        await ensureUserPlanExists(uid)
-        const plan = await loadUserPlan(uid)
-        if (!cancelled) setUserPlan(plan)
+        try {
+          await ensureUserPlanExists(uid)
+          const plan = await loadUserPlan(uid)
+          if (!cancelled) setUserPlan(plan)
+        } catch (planErr) {
+          console.error('Failed to load user plan', planErr)
+        }
       } catch (err) {
         console.error('Failed to load workspace from Supabase', err)
+        if (!cancelled) {
+          setLoadError('Couldn\u2019t load your profile. Check your connection and refresh.')
+        }
       } finally {
         if (!cancelled) setDisplayConfigReady(true)
       }
@@ -848,6 +863,12 @@ export default function LightCanvasSequencerPrototype() {
     const uid = user?.id
     if (!file || !uid || !supabase) return
 
+    const songGating = canAddSong(songs.length, userPlan.plan)
+    if (!songGating.allowed) {
+      setSongUploadError(songGating.reason)
+      return
+    }
+
     const name = file.name.toLowerCase()
     const looksAudio =
       file.type.startsWith('audio/') ||
@@ -902,6 +923,11 @@ export default function LightCanvasSequencerPrototype() {
   }, [activeTab, selectedSongId])
 
   const runAudioAnalysis = useCallback(async () => {
+    const analysisGating = canRunAiAnalysis(analysesRunToday, userPlan.plan)
+    if (!analysisGating.allowed) {
+      setSongUploadError(analysisGating.reason)
+      return
+    }
     const song = songs.find((s) => s.id === selectedSongId) ?? selectedSong
     if (song.id === PLACEHOLDER_SONG.id) return
     if (!song.storagePath || !song.storageBucket) {
@@ -1359,6 +1385,24 @@ export default function LightCanvasSequencerPrototype() {
     ],
   ]
 
+  if (loadError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f4f5f8] p-8">
+        <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-8 text-center shadow-lg">
+          <h2 className="text-lg font-semibold text-slate-900">Something went wrong</h2>
+          <p className="mt-2 text-sm text-slate-600">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-brand-green px-5 py-2.5 text-sm font-medium text-white transition hover:bg-brand-green-dark"
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <SequencerShell
       activeTab={activeTab}
@@ -1376,7 +1420,16 @@ export default function LightCanvasSequencerPrototype() {
       analysisProgress={analysisProgress}
       signOut={signOut}
       userEmail={user?.email}
-      setControllers={setControllers}
+      setControllers={(n: number) => {
+        if (n > controllers) {
+          const check = canAddController(controllers, userPlan.plan)
+          if (!check.allowed) {
+            console.log('[LightCanvas] controller gating:', check.reason)
+            return
+          }
+        }
+        setControllers(n)
+      }}
       setChannelsPerController={setChannelsPerController}
       propsState={propsState}
       selectedPropId={selectedPropId}

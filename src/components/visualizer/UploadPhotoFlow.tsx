@@ -39,20 +39,24 @@ export function UploadPhotoFlow({ open, onClose, onPhotoReady, userId, profileId
     if (!open || !supabase) return
     pollRef.current = setInterval(async () => {
       if (!supabase) return
-      const { data } = await supabase.storage
-        .from('house-photos')
-        .list('', { search: token, limit: 1 })
-      if (data && data.length > 0) {
-        const file = data[0]
-        const { data: urlData } = supabase.storage
+      try {
+        const { data } = await supabase.storage
           .from('house-photos')
-          .getPublicUrl(file.name)
-        if (urlData?.publicUrl) {
-          setDone(true)
-          onPhotoReady(urlData.publicUrl)
-          if (userId) void saveHousePhoto(userId, profileId, file.name, urlData.publicUrl, file.name)
-          if (pollRef.current) clearInterval(pollRef.current)
+          .list('', { search: token, limit: 1 })
+        if (data && data.length > 0) {
+          const file = data[0]
+          const { data: urlData } = supabase.storage
+            .from('house-photos')
+            .getPublicUrl(file.name)
+          if (urlData?.publicUrl) {
+            setDone(true)
+            onPhotoReady(urlData.publicUrl)
+            if (userId) void saveHousePhoto(userId, profileId, file.name, urlData.publicUrl, file.name)
+            if (pollRef.current) clearInterval(pollRef.current)
+          }
         }
+      } catch (err) {
+        console.error('Photo poll failed', err)
       }
     }, 2000)
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
