@@ -333,6 +333,229 @@ function drawMatrix(ctx: CanvasRenderingContext2D, x: number, y: number, color: 
   ctx.restore()
 }
 
+function drawPumpkin(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
+  const c = color ?? '#ff6600'
+  const glow = anim.glowIntensity
+  ctx.save()
+  ctx.globalAlpha = selected ? 1.0 : 0.92
+  ctx.shadowBlur = 16 * glow
+  ctx.shadowColor = c
+
+  // Stem
+  ctx.strokeStyle = '#22aa22'
+  ctx.lineWidth = 2.5
+  ctx.shadowColor = '#22aa22'
+  ctx.shadowBlur = 6
+  ctx.beginPath()
+  ctx.moveTo(x, y - 54)
+  ctx.lineTo(x, y - 62)
+  ctx.stroke()
+
+  // Pumpkin body — 3 oval lobes of dots
+  ctx.shadowColor = c
+  ctx.shadowBlur = 14 * glow
+  ctx.fillStyle = c
+  const lobes = [
+    { cx: x - 16, cy: y - 32, rx: 12, ry: 18 },
+    { cx: x, cy: y - 34, rx: 14, ry: 20 },
+    { cx: x + 16, cy: y - 32, rx: 12, ry: 18 },
+  ]
+  for (const lobe of lobes) {
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2
+      ctx.beginPath()
+      ctx.arc(lobe.cx + Math.cos(a) * lobe.rx, lobe.cy + Math.sin(a) * lobe.ry, 2.5, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    ctx.beginPath()
+    ctx.arc(lobe.cx, lobe.cy, 2.5, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  // Eyes — triangular yellow dots
+  ctx.fillStyle = '#ffff00'
+  ctx.shadowColor = '#ffff00'
+  ctx.shadowBlur = 10
+  const eyeY = y - 38
+  for (const ex of [x - 10, x + 10]) {
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath()
+      ctx.arc(ex + (i - 1) * 3, eyeY - i * 3, 2, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
+
+  // Mouth — jagged teeth
+  ctx.fillStyle = '#ffff00'
+  const teethY = y - 22
+  const teeth = [-10, -5, 0, 5, 10]
+  for (let i = 0; i < teeth.length; i++) {
+    const ty = i % 2 === 0 ? teethY : teethY + 4
+    ctx.beginPath()
+    ctx.arc(x + teeth[i], ty, 2, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  ctx.restore()
+}
+
+function drawGhost(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
+  const c = color ?? '#e8e8ff'
+  const glow = anim.glowIntensity
+  ctx.save()
+  ctx.globalAlpha = selected ? 1.0 : 0.92
+  ctx.shadowBlur = 18 * glow
+  ctx.shadowColor = c
+  ctx.fillStyle = c
+
+  // Top dome
+  const domeR = 22
+  const domeY = y - 44
+  for (let i = 0; i <= 12; i++) {
+    const a = Math.PI + (i / 12) * Math.PI
+    ctx.beginPath()
+    ctx.arc(x + Math.cos(a) * domeR, domeY + Math.sin(a) * domeR, 3, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  // Sides
+  for (let i = 1; i <= 4; i++) {
+    ctx.beginPath()
+    ctx.arc(x - domeR, domeY + i * 8, 3, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(x + domeR, domeY + i * 8, 3, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  // Wavy bottom
+  const waveY = y - 10
+  for (let i = 0; i < 5; i++) {
+    const bx = x - domeR + i * (domeR * 2 / 4)
+    ctx.beginPath()
+    ctx.arc(bx, waveY - (i % 2 === 0 ? 4 : 0), 3, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  // Eyes — dark ovals
+  ctx.fillStyle = '#1a1a3a'
+  ctx.shadowBlur = 0
+  for (const ex of [x - 8, x + 8]) {
+    ctx.beginPath()
+    ctx.ellipse(ex, domeY + 8, 4, 5, 0, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  ctx.restore()
+}
+
+function drawSkull(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
+  const c = color ?? '#e0e0e0'
+  const glow = anim.glowIntensity
+  ctx.save()
+  ctx.globalAlpha = selected ? 1.0 : 0.92
+  ctx.shadowBlur = 14 * glow
+  ctx.shadowColor = c
+  ctx.fillStyle = c
+
+  // Skull dome
+  const r = 22
+  const cy = y - 38
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2
+    ctx.beginPath()
+    ctx.arc(x + Math.cos(a) * r, cy + Math.sin(a) * r, 2.5, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  // Teeth rows
+  const teethY = y - 12
+  for (let i = -2; i <= 2; i++) {
+    ctx.beginPath()
+    ctx.arc(x + i * 8, teethY, 3, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.arc(x + i * 8, teethY + 6, 3, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  // Eye sockets
+  ctx.fillStyle = '#0a0a0a'
+  ctx.shadowBlur = 0
+  for (const ex of [x - 9, x + 9]) {
+    ctx.beginPath()
+    ctx.ellipse(ex, cy - 2, 6, 7, 0, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  // Nose
+  ctx.fillStyle = '#0a0a0a'
+  ctx.beginPath()
+  ctx.arc(x, cy + 10, 2.5, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.arc(x - 3, cy + 15, 2, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.arc(x + 3, cy + 15, 2, 0, Math.PI * 2)
+  ctx.fill()
+
+  ctx.restore()
+}
+
+function drawGravestone(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
+  const c = color ?? '#9999aa'
+  const glow = anim.glowIntensity
+  ctx.save()
+  ctx.globalAlpha = selected ? 1.0 : 0.92
+  ctx.shadowBlur = 10 * glow
+  ctx.shadowColor = c
+  ctx.fillStyle = c
+
+  const w = 28, h = 44
+  const topY = y - h
+
+  // Top dome
+  for (let i = 0; i <= 8; i++) {
+    const a = Math.PI + (i / 8) * Math.PI
+    ctx.beginPath()
+    ctx.arc(x + Math.cos(a) * (w / 2), topY + 14 + Math.sin(a) * 14, 2.5, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  // Left side
+  for (let i = 0; i <= 4; i++) {
+    ctx.beginPath()
+    ctx.arc(x - w / 2, topY + 14 + i * 7, 2.5, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  // Right side
+  for (let i = 0; i <= 4; i++) {
+    ctx.beginPath()
+    ctx.arc(x + w / 2, topY + 14 + i * 7, 2.5, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  // Base
+  for (let i = -3; i <= 3; i++) {
+    ctx.beginPath()
+    ctx.arc(x + i * (w / 6), y - 4, 2.5, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  // Cross pattern
+  ctx.shadowBlur = 6
+  const ripY = topY + 22
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath()
+    ctx.arc(x + i * 5, ripY, 2, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath()
+    ctx.arc(x, ripY + i * 5, 2, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  ctx.restore()
+}
+
 function drawDefault(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
   ctx.save()
   ctx.shadowBlur = 30 * anim.glowIntensity
@@ -379,6 +602,10 @@ function drawProp(ctx: CanvasRenderingContext2D, prop: DisplayProp, x: number, y
   else if (isRoof) drawRoofline(ctx, x, y, color, anim, selected, prop.length, prop.angle)
   else if (t.includes('arch')) drawArch(ctx, x, y, color, anim, selected)
   else if (t.includes('matrix')) drawMatrix(ctx, x, y, color, anim, selected)
+  else if (t.includes('pumpkin')) drawPumpkin(ctx, x, y, color, anim, selected)
+  else if (t.includes('ghost')) drawGhost(ctx, x, y, color, anim, selected)
+  else if (t.includes('skull')) drawSkull(ctx, x, y, color, anim, selected)
+  else if (t.includes('gravestone') || t.includes('grave')) drawGravestone(ctx, x, y, color, anim, selected)
   else drawDefault(ctx, x, y, color, anim, selected)
 
   if (s !== 1) ctx.restore()

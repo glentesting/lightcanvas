@@ -624,6 +624,10 @@ export default function LightCanvasSequencerPrototype() {
     const defaultChannels: Record<string, number> = {
       Roofline: 16, Arches: 8, 'Mini Tree': 4, 'Mega Tree': 16,
       'Talking Face': 8, 'Ground Stakes': 4, Matrix: 16, 'Smart Pixel': 8,
+      'Pumpkin Face': 8, Ghost: 8, Skull: 8, Gravestone: 4,
+    }
+    const defaultColors: Record<string, string> = {
+      'Pumpkin Face': '#ff6600', Ghost: '#e8e8ff', Skull: '#e0e0e0', Gravestone: '#9999aa',
     }
     const channels = defaultChannels[type] ?? 8
     const nextStart = propsState.length
@@ -644,7 +648,7 @@ export default function LightCanvasSequencerPrototype() {
       houseType,
       angle: opts?.angle,
       length: opts?.length,
-      color: '#ffe8c0',
+      color: defaultColors[type] ?? '#ffe8c0',
     }
     setPropsState((prev) => [...prev, created])
     setSelectedPropId(created.id)

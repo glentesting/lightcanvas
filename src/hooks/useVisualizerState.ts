@@ -10,6 +10,10 @@ export type PlacementTool =
   | 'stake'
   | 'matrix'
   | 'custom'
+  | 'pumpkin'
+  | 'ghost'
+  | 'skull'
+  | 'gravestone'
   | 'eraser'
 
 export interface ToolDef {
@@ -27,6 +31,10 @@ export const TOOLS: ToolDef[] = [
   { id: 'stake', label: 'Stake', propType: 'Ground Stakes' },
   { id: 'matrix', label: 'Matrix', propType: 'Matrix' },
   { id: 'custom', label: '+ Custom', propType: 'Smart Pixel' },
+  { id: 'pumpkin', label: 'Pumpkin', propType: 'Pumpkin Face' },
+  { id: 'ghost', label: 'Ghost', propType: 'Ghost' },
+  { id: 'skull', label: 'Skull', propType: 'Skull' },
+  { id: 'gravestone', label: 'Gravestone', propType: 'Gravestone' },
   { id: 'eraser', label: 'Eraser', propType: '' },
 ]
 

@@ -47,6 +47,10 @@ export const propTypes = [
   'Arches',
   'Smart Pixel',
   'AC Traditional',
+  'Pumpkin Face',
+  'Ghost',
+  'Skull',
+  'Gravestone',
 ]
 
 export const effectOptions = [
