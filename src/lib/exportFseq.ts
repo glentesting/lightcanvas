@@ -4,7 +4,7 @@ import type { DisplayProp } from '../types/display'
 export function generateFseqV2(
   events: TimelineEvent[],
   props: DisplayProp[],
-  songTitle: string,
+  _songTitle: string,
   durationSeconds: number,
 ): Blob {
   const FPS = 50
