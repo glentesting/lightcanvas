@@ -9,6 +9,7 @@ import { downloadXlightsXml } from '../../../lib/exportXlights'
 import { downloadShowPackage } from '../../../lib/exportShowPackage'
 import { validateChannelMapping } from '../../../lib/validateChannels'
 import { importLorFile, type LorImportResult } from '../../../lib/importLor'
+import type { UserPlan } from '../../../lib/phase1Repository'
 import { Button } from '../shared/Button'
 
 export interface ExportWorkspaceProps {
@@ -21,14 +22,16 @@ export interface ExportWorkspaceProps {
   channelsPerController: number
   onImportLor?: (result: LorImportResult) => void
   audioBlob?: Blob | null
+  userPlan: UserPlan
 }
 
 const sectionLabel = 'mb-3 block text-xs font-medium uppercase tracking-[0.14em] text-slate-500'
 
 export function ExportWorkspace({
   selectedSong, propsState, totalChannels, events, exportPayload,
-  controllers, channelsPerController, onImportLor, audioBlob,
+  controllers, channelsPerController, onImportLor, audioBlob, userPlan,
 }: ExportWorkspaceProps) {
+  void userPlan
   const hasEvents = events.length > 0
   const lorFileRef = useRef<HTMLInputElement>(null)
   const [lorResult, setLorResult] = useState<LorImportResult | null>(null)

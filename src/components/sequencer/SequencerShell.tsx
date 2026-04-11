@@ -1,7 +1,7 @@
 import type { ChangeEvent, ComponentType, Dispatch, MouseEvent, RefObject, SetStateAction } from 'react'
 import type { SongAudioAnalysis } from '../../lib/audioAnalysis'
 import type { DisplayProp } from '../../types/display'
-import type { HousePhotoRow } from '../../lib/phase1Repository'
+import type { HousePhotoRow, UserPlan } from '../../lib/phase1Repository'
 import type { Song } from '../../types/song'
 import { CopilotPanel } from './CopilotPanel'
 import { SequencerHeader } from './SequencerHeader'
@@ -99,6 +99,7 @@ export interface SequencerShellProps {
   profileId: string | null
   housePhotos: HousePhotoRow[]
   onDeletePhoto: (photoId: string, storagePath: string) => void
+  userPlan: UserPlan
   onRenameProp?: (id: string, name: string) => void
   onRechannelProp?: (id: string, channels: number) => void
   onImportLor?: (result: LorImportResult) => void
@@ -192,6 +193,7 @@ export function SequencerShell({
   profileId,
   housePhotos,
   onDeletePhoto,
+  userPlan,
   onRenameProp,
   onRechannelProp,
   onImportLor,
@@ -271,6 +273,7 @@ export function SequencerShell({
                 AnalysisBandRows={AnalysisBandRows}
                 runAudioAnalysis={runAudioAnalysis}
                 songAnalysisBusy={songAnalysisBusy}
+                userPlan={userPlan}
               />
             )}
 
@@ -327,6 +330,7 @@ export function SequencerShell({
                 channelsPerController={channelsPerController}
                 onImportLor={onImportLor}
                 audioBlob={audioBlob}
+                userPlan={userPlan}
               />
             )}
             {activeTab === 'ai' && (

@@ -333,6 +333,7 @@ function SongLibraryInlineAudio({ song }: { song: Song }) {
 
 export default function LightCanvasSequencerPrototype() {
   const { user, signOut } = useAuth()
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TabValue>('setup')
   const [controllers, setControllers] = useState(3)
   const [channelsPerController, setChannelsPerController] = useState(16)

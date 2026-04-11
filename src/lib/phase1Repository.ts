@@ -142,7 +142,7 @@ export async function getOrCreateDisplayProfile(userId: string): Promise<{
     .eq('is_default', true)
     .maybeSingle()
 
-  if (e1) throw e1
+  if (e1) { console.error('getOrCreateDisplayProfile: select default', e1); throw new Error(e1.message) }
   if (byDefault) {
     return {
       id: byDefault.id,
@@ -159,7 +159,7 @@ export async function getOrCreateDisplayProfile(userId: string): Promise<{
     .limit(1)
     .maybeSingle()
 
-  if (e2) throw e2
+  if (e2) { console.error('getOrCreateDisplayProfile: select any', e2); throw new Error(e2.message) }
   if (anyProfile) {
     return {
       id: anyProfile.id,
@@ -181,7 +181,7 @@ export async function getOrCreateDisplayProfile(userId: string): Promise<{
     .select('id, controllers, channels_per_controller, photo_url')
     .single()
 
-  if (e3) throw e3
+  if (e3) { console.error('getOrCreateDisplayProfile: insert', e3); throw new Error(e3.message) }
   return {
     id: created.id,
     controllers: created.controllers,
@@ -212,7 +212,7 @@ export async function loadDisplayProps(profileId: string): Promise<DisplayProp[]
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
 
-  if (error) throw error
+  if (error) { console.error('loadDisplayProps', error); throw new Error(error.message) }
   return (data as DisplayPropRow[]).map(rowToDisplayProp)
 }
 
@@ -286,7 +286,7 @@ export async function loadSongs(userId: string): Promise<Song[]> {
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
-  if (error) throw error
+  if (error) { console.error('loadSongs', error); throw new Error(error.message) }
   return (data as SongRow[]).map(rowToSong)
 }
 
@@ -559,4 +559,55 @@ export async function loadSequence(
     .maybeSingle()
   if (error || !data) return null
   return data.events as unknown[]
+}
+
+// ── User Plans ───────────────────────────────────────────────────────
+
+export type UserPlan = {
+  plan: 'free' | 'pro'
+  stripeCustomerId: string | null
+  stripeSubscriptionId: string | null
+  subscriptionStatus: string | null
+  currentPeriodEnd: string | null
+  sequenceCreditsRemaining: number
+  sequenceCreditsTotal: number
+}
+
+const FREE_PLAN: UserPlan = {
+  plan: 'free',
+  stripeCustomerId: null,
+  stripeSubscriptionId: null,
+  subscriptionStatus: null,
+  currentPeriodEnd: null,
+  sequenceCreditsRemaining: 0,
+  sequenceCreditsTotal: 0,
+}
+
+export async function loadUserPlan(userId: string): Promise<UserPlan> {
+  if (!supabase) return FREE_PLAN
+  const { data, error } = await supabase
+    .from('user_plans')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error || !data) return FREE_PLAN
+  return {
+    plan: data.plan as 'free' | 'pro',
+    stripeCustomerId: data.stripe_customer_id,
+    stripeSubscriptionId: data.stripe_subscription_id,
+    subscriptionStatus: data.subscription_status,
+    currentPeriodEnd: data.current_period_end,
+    sequenceCreditsRemaining: data.sequence_credits_remaining,
+    sequenceCreditsTotal: data.sequence_credits_total,
+  }
+}
+
+export async function ensureUserPlanExists(userId: string): Promise<void> {
+  if (!supabase) return
+  await supabase
+    .from('user_plans')
+    .upsert(
+      { user_id: userId, plan: 'free' },
+      { onConflict: 'user_id', ignoreDuplicates: true },
+    )
 }

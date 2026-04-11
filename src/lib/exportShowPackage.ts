@@ -77,7 +77,7 @@ docs.lightcanvas.co
   }
 
   const zipped = zipSync(zipData, { level: 6 })
-  const blob = new Blob([zipped], { type: 'application/zip' })
+  const blob = new Blob([zipped as BlobPart], { type: 'application/zip' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
