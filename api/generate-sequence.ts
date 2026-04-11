@@ -3,6 +3,9 @@
  * Calls Anthropic Claude to produce timeline events from song analysis + display props.
  */
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { CHRISTMAS_SYSTEM_PROMPT } from '../src/holidays/christmas/prompts'
+// TODO: Import HALLOWEEN_SYSTEM_PROMPT and swap based on holidayId parameter
+// import { HALLOWEEN_SYSTEM_PROMPT } from '../src/holidays/halloween/prompts'
 
 type SectionInput = {
   name: string
@@ -32,6 +35,8 @@ type SequenceRequestPayload = {
   bpm?: number
   sections?: SectionInput[]
   props?: PropInput[]
+  // TODO: Accept holidayId to swap between CHRISTMAS_SYSTEM_PROMPT / HALLOWEEN_SYSTEM_PROMPT
+  stylePreset?: 'beginner' | 'standard' | 'spectacular'
 }
 
 const ALLOWED_EFFECTS = [
@@ -47,7 +52,16 @@ const ALLOWED_EFFECTS = [
   'Ripple',
 ] as const
 
-function buildPrompt(body: SequenceRequestPayload): string {
+const STYLE_PRESET_INSTRUCTIONS: Record<string, string> = {
+  beginner:
+    'Keep effects simple. Max 2 effect types per prop. Long blocks, no rapid switching. Prioritize on/off patterns.',
+  standard:
+    'Balanced complexity. Variety of effects. Match energy to song sections.',
+  spectacular:
+    'Maximum complexity. Dense effect blocks. Rapid switching on high energy sections. All props active during chorus and finale.',
+}
+
+function buildUserMessage(body: SequenceRequestPayload): string {
   const duration = Math.max(0, Number(body.songDurationSeconds) || 0)
   const bpm = Math.max(1, Math.round(Number(body.bpm) || 120))
   const analysis = body.analysis ?? {
@@ -59,16 +73,33 @@ function buildPrompt(body: SequenceRequestPayload): string {
   }
   const sections = Array.isArray(body.sections) ? body.sections : []
   const props = Array.isArray(body.props) ? body.props : []
+  const stylePreset = body.stylePreset ?? 'standard'
 
-  return `You are an expert holiday light show sequencer for RGB displays (xLights / FPP style).
-
-## Task
-Generate a light show SEQUENCE as a JSON array only (no markdown, no commentary). Each element must be one timeline event.
+  let msg = `Generate a light show sequence for this song. Return ONLY valid JSON with the shape:
+{
+  "events": [
+    {
+      "propId": "string",
+      "propName": "string",
+      "effect": "Pulse|Chase|Twinkle|Sweep|Shimmer|Mouth Sync|Hold|Color Pop|Fan|Ripple",
+      "start": 0.0,
+      "end": 4.0,
+      "intensity": 0.8,
+      "color": "#ffe8c0"
+    }
+  ]
+}
 
 ## Song
 - Duration: ${duration} seconds
 - BPM: ${bpm}
-- Analysis metrics (0-100): beat confidence ${analysis.beat_confidence}, bass strength ${analysis.bass_strength}, treble strength ${analysis.treble_strength}, vocal confidence ${analysis.vocal_confidence}, dynamics ${analysis.dynamics}
+
+## Audio Analysis (0-100)
+- Beat confidence: ${analysis.beat_confidence}
+- Bass strength: ${analysis.bass_strength}
+- Treble strength: ${analysis.treble_strength}
+- Vocal confidence: ${analysis.vocal_confidence}
+- Dynamics: ${analysis.dynamics}
 
 ## Sections (use exact names and time ranges)
 ${sections
@@ -78,7 +109,7 @@ ${sections
   )
   .join('\n')}
 
-## Display props (use exact id and name; never invent prop ids)
+## Display Props (use exact id, name, and type — never invent prop ids)
 ${props
   .map(
     (p) =>
@@ -86,26 +117,20 @@ ${props
   )
   .join('\n')}
 
-## Creative rules (mandatory)
-1. **Talking Face** props: use **Mouth Sync** during sections where vocals are present; use **Hold** (or subtle **Twinkle**) during non-vocal sections.
-2. **Ground Stakes** props: use **Pulse** in bass-heavy / high-energy sections; calmer sections may use **Color Pop** or **Hold**.
-3. **Mega Tree** props: use **Sweep** in high-energy sections (energy roughly ≥ 75); use **Twinkle** or **Shimmer** in lower-energy sections.
-4. **Finale**: identify the section whose name suggests a finale/outro/ending (or the last high-energy section). For that section, use **maximum intensity (95-100)** for **all** props with bold effects (e.g. Sweep, Pulse, Chase, Shimmer as appropriate to prop type).
-5. Other prop types: choose sensible effects from the allowed list; align energy with section energy and analysis metrics.
-6. Split work into multiple events per section per prop when needed (roughly 4–14 second chunks) so the timeline is editable; cover the full section [start,end] for each prop without gaps inside the section.
-7. **Effect names** must be exactly one of: ${ALLOWED_EFFECTS.join(', ')}.
+## Allowed effects (use exactly these names)
+${ALLOWED_EFFECTS.join(', ')}
 
-## Output format (strict JSON array)
-Return ONLY a JSON array. Each object must have:
-- "propId" (string, must match an id from the props list)
-- "propName" (string)
-- "section" (string, must match a section name above)
-- "start" (number, seconds, 0 – ${duration})
-- "end" (number, seconds, > start, ≤ ${duration})
-- "effect" (string, from allowed list)
-- "intensity" (integer 0–100)
+## Rules
+- Split work into multiple events per section per prop (roughly 4–14 second chunks).
+- Cover the full section [start,end] for each prop without gaps inside the section.
+- Identify the finale/outro section and use maximum intensity (95-100) for all props.`
 
-Example shape (illustrative): [{"propId":"…","propName":"…","section":"Chorus","start":45.2,"end":52.0,"effect":"Sweep","intensity":88}]`
+  const styleInstructions = STYLE_PRESET_INSTRUCTIONS[stylePreset]
+  if (styleInstructions) {
+    msg += `\n\n## Style preset: ${stylePreset}\n${styleInstructions}`
+  }
+
+  return msg
 }
 
 function extractJsonArray(text: string): unknown {
@@ -113,8 +138,12 @@ function extractJsonArray(text: string): unknown {
   const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/)
   const raw = fence ? fence[1].trim() : trimmed
   const parsed = JSON.parse(raw) as unknown
-  if (!Array.isArray(parsed)) throw new Error('Claude response is not a JSON array')
-  return parsed
+  if (Array.isArray(parsed)) return parsed
+  // Support { "events": [...] } wrapper shape
+  if (parsed && typeof parsed === 'object' && Array.isArray((parsed as Record<string, unknown>).events)) {
+    return (parsed as Record<string, unknown>).events
+  }
+  throw new Error('Claude response is not a JSON array or { events: [...] } object')
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -157,7 +186,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const duration = Math.max(0.001, Number(body.songDurationSeconds) || 0)
   const propIds = new Set(body.props.map((p) => p.id))
 
-  const prompt = buildPrompt(body)
+  const userMessage = buildUserMessage(body)
+
+  // TODO: Select system prompt based on holidayId parameter (christmas vs halloween)
+  const systemPrompt = CHRISTMAS_SYSTEM_PROMPT
 
   let textContent = ''
   try {
@@ -171,7 +203,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       body: JSON.stringify({
         model,
         max_tokens: 8192,
-        messages: [{ role: 'user', content: prompt }],
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }],
       }),
     })
 
