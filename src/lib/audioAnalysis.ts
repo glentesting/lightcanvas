@@ -391,6 +391,21 @@ export function analyzeAudioBuffer(buffer: AudioBuffer): SongAudioAnalysis {
   }
 }
 
+export function analyzeRawAudio(
+  channelData: Float32Array[],
+  sampleRate: number,
+  duration: number,
+): SongAudioAnalysis {
+  const fakeBuffer = {
+    numberOfChannels: channelData.length,
+    sampleRate,
+    duration,
+    length: channelData[0]?.length ?? 0,
+    getChannelData: (channel: number) => channelData[channel] ?? new Float32Array(0),
+  } as unknown as AudioBuffer
+  return analyzeAudioBuffer(fakeBuffer)
+}
+
 const PERSIST_FLAT_SERIES_LEN = 200
 
 /**

@@ -9,7 +9,6 @@ import {
 } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import {
-  analyzeAudioBuffer,
   minimalSongAudioAnalysisFromPersisted,
   type SongAudioAnalysis,
 } from '../lib/audioAnalysis'
@@ -30,7 +29,10 @@ import {
   deleteHousePhoto,
   saveSequence,
   loadSequence,
+  loadUserPlan,
+  ensureUserPlanExists,
   type HousePhotoRow,
+  type UserPlan,
 } from '../lib/phase1Repository'
 import { supabase } from '../lib/supabaseClient'
 import type { DisplayProp } from '../types/display'
@@ -39,6 +41,32 @@ import type { TabValue } from './sequencer/types'
 import type { StylePreset } from './sequencer/workspaces/AISequencingWorkspace'
 import type { LorImportResult } from '../lib/importLor'
 import { SequencerShell } from './sequencer/SequencerShell'
+
+function runAnalysisInWorker(decoded: AudioBuffer): Promise<SongAudioAnalysis> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(
+      new URL('../workers/audioAnalysis.worker.ts', import.meta.url),
+      { type: 'module' },
+    )
+    const channelData: Float32Array[] = []
+    for (let i = 0; i < decoded.numberOfChannels; i++) {
+      channelData.push(decoded.getChannelData(i).slice())
+    }
+    worker.onmessage = (e) => {
+      worker.terminate()
+      if (e.data.type === 'result') resolve(e.data.result)
+      else reject(new Error(e.data.message))
+    }
+    worker.onerror = (err) => {
+      worker.terminate()
+      reject(new Error(err.message))
+    }
+    worker.postMessage(
+      { type: 'analyze', channelData, sampleRate: decoded.sampleRate, duration: decoded.duration },
+      channelData.map(c => c.buffer),
+    )
+  })
+}
 
 const effectOptions = [
   'Mouth Sync',
@@ -345,6 +373,11 @@ export default function LightCanvasSequencerPrototype() {
   const [songUploading, setSongUploading] = useState(false)
   const [songDeleteError, setSongDeleteError] = useState<string | null>(null)
   const [songAnalyses, setSongAnalyses] = useState<Record<string, SongAudioAnalysis>>({})
+  const [userPlan, setUserPlan] = useState<UserPlan>({
+    plan: 'free', stripeCustomerId: null, stripeSubscriptionId: null,
+    subscriptionStatus: null, currentPeriodEnd: null,
+    sequenceCreditsRemaining: 0, sequenceCreditsTotal: 0,
+  })
   const [rebuildAnalyzing, setRebuildAnalyzing] = useState(false)
   const [rebuildPhase, setRebuildPhase] = useState<'idle' | 'decode' | 'sequence'>('idle')
   const [sequenceEventsBySong, setSequenceEventsBySong] = useState<Record<string, TimelineEvent[]>>(
@@ -559,6 +592,10 @@ export default function LightCanvasSequencerPrototype() {
         const songList = await loadSongs(uid)
         if (cancelled) return
         setSongs(songList)
+
+        await ensureUserPlanExists(uid)
+        const plan = await loadUserPlan(uid)
+        if (!cancelled) setUserPlan(plan)
       } catch (err) {
         console.error('Failed to load workspace from Supabase', err)
       } finally {
@@ -878,7 +915,7 @@ export default function LightCanvasSequencerPrototype() {
         void ctx.close()
       }
       setAnalysisProgress(72)
-      const result = analyzeAudioBuffer(decoded)
+      const result = await runAnalysisInWorker(decoded)
       result.analyzedAt = new Date().toISOString()
       setSongAnalyses((prev) => ({ ...prev, [sid]: result }))
       const persistedSections: SongSectionSnapshot[] = result.sections.map((sec) => ({
@@ -1144,7 +1181,7 @@ export default function LightCanvasSequencerPrototype() {
           void ctx.close()
         }
         setAnalysisProgress(75)
-        const result = analyzeAudioBuffer(decoded)
+        const result = await runAnalysisInWorker(decoded)
         result.analyzedAt = new Date().toISOString()
         setSongAnalyses((prev) => ({ ...prev, [sid]: result }))
         const persistedSections: SongSectionSnapshot[] = result.sections.map((sec) => ({
@@ -1413,6 +1450,7 @@ export default function LightCanvasSequencerPrototype() {
       onRechannelProp={rechannelProp}
       onImportLor={handleImportLor}
       audioBlob={audioBlob}
+      userPlan={userPlan}
       undo={undo}
       canUndo={canUndo}
     />
