@@ -1012,7 +1012,7 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
       <canvas
         ref={canvasRef}
         className="block w-full"
-        style={{ minHeight: '62vh', cursor }}
+        style={{ minHeight: '45vh', cursor }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

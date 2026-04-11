@@ -38,6 +38,7 @@ export interface DisplaySetupWorkspaceProps {
   onDeletePhoto: (photoId: string, storagePath: string) => void
   onRenameProp?: (id: string, name: string) => void
   onRechannelProp?: (id: string, channels: number) => void
+  onClearAllProps: () => void
   undo: () => void
   canUndo: boolean
 }
@@ -58,7 +59,7 @@ export function DisplaySetupWorkspace({
   userId, profileId,
   housePhotos, onDeletePhoto,
   onRenameProp, onRechannelProp,
-  undo, canUndo,
+  onClearAllProps, undo, canUndo,
 }: DisplaySetupWorkspaceProps) {
   const capacityPct = Math.min(100, (usedChannels / Math.max(1, totalChannels)) * 100)
 
@@ -98,11 +99,11 @@ export function DisplaySetupWorkspace({
 
       {/* Photo library */}
       {housePhotos.length > 0 && (
-        <div className="rounded-xl border border-slate-200/90 bg-white px-4 py-3">
+        <div className="rounded-xl border border-slate-200/90 bg-white px-4 py-4">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Your house photos</span>
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex gap-3 overflow-x-auto pb-1">
             {housePhotos.map((photo) => (
               <button
                 key={photo.id}
@@ -115,7 +116,7 @@ export function DisplaySetupWorkspace({
                 <img
                   src={photo.public_url}
                   alt=""
-                  className="h-10 w-[60px] object-cover"
+                  className="h-16 w-[96px] object-cover"
                 />
                 <button
                   type="button"
@@ -127,6 +128,7 @@ export function DisplaySetupWorkspace({
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
+                <div className="truncate px-1 text-[10px] text-slate-400">{photo.storage_path.split('/').pop()?.slice(0, 12)}</div>
               </button>
             ))}
           </div>
@@ -178,7 +180,22 @@ export function DisplaySetupWorkspace({
 
           {/* Col 3: Prop list + add prop */}
           <div>
-            <h2 className={colHeading}>Props</h2>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Props</h2>
+              {propsState.length > 0 && (
+                <button
+                  type="button"
+                  className="text-xs text-brand-red hover:underline"
+                  onClick={() => {
+                    if (window.confirm('Remove all props from your display? This cannot be undone.')) {
+                      onClearAllProps()
+                    }
+                  }}
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
             <div className="space-y-4">
               <div className="max-h-[min(48vh,420px)] overflow-y-auto rounded-lg border border-slate-200 bg-slate-50">
                 {propsState.length === 0 ? (

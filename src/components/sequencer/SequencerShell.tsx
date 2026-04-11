@@ -102,6 +102,7 @@ export interface SequencerShellProps {
   userPlan: UserPlan
   onRenameProp?: (id: string, name: string) => void
   onRechannelProp?: (id: string, channels: number) => void
+  onClearAllProps: () => void
   onImportLor?: (result: LorImportResult) => void
   audioBlob?: Blob | null
   undo: () => void
@@ -196,6 +197,7 @@ export function SequencerShell({
   userPlan,
   onRenameProp,
   onRechannelProp,
+  onClearAllProps,
   onImportLor,
   audioBlob,
   undo,
@@ -248,6 +250,7 @@ export function SequencerShell({
                 onDeletePhoto={onDeletePhoto}
                 onRenameProp={onRenameProp}
                 onRechannelProp={onRechannelProp}
+                onClearAllProps={onClearAllProps}
                 undo={undo}
                 canUndo={canUndo}
               />

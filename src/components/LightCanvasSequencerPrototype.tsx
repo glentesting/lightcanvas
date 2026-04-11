@@ -858,6 +858,11 @@ export default function LightCanvasSequencerPrototype() {
     setPropsState((prev) => prev.map((p) => (p.id === id ? { ...p, channels } : p)))
   }
 
+  const clearAllProps = () => {
+    pushUndo()
+    setPropsState([])
+  }
+
   const handleImportLor = (result: LorImportResult) => {
     // Create props for any that don't already exist by name
     const newProps: DisplayProp[] = []
@@ -1587,6 +1592,7 @@ export default function LightCanvasSequencerPrototype() {
       }}
       onRenameProp={renameProp}
       onRechannelProp={rechannelProp}
+      onClearAllProps={clearAllProps}
       onImportLor={handleImportLor}
       audioBlob={audioBlob}
       userPlan={userPlan}
