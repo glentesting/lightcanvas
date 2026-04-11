@@ -10,6 +10,7 @@ export type PlacementTool =
   | 'mega-tree'
   | 'face'
   | 'stake'
+  | 'stake-cluster'
   | 'matrix'
   | 'custom'
   | 'pumpkin'

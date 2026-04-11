@@ -114,6 +114,31 @@ function drawStake(ctx: CanvasRenderingContext2D, x: number, y: number, color: s
   ctx.restore()
 }
 
+function drawStakeCluster(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
+  const count = 5
+  const spacing = 18
+  const totalW = (count - 1) * spacing
+  const startX = x - totalW / 2
+  for (let i = 0; i < count; i++) {
+    const sx = startX + i * spacing
+    ctx.save()
+    ctx.shadowBlur = 15 * anim.glowIntensity
+    ctx.shadowColor = color
+    ctx.globalAlpha = selected ? 1.0 : 0.92
+    ctx.strokeStyle = color
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(sx, y)
+    ctx.lineTo(sx, y - 36)
+    ctx.stroke()
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.arc(sx, y - 36, 5 * anim.scale, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+  }
+}
+
 function drawFace(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
   ctx.save()
   ctx.globalAlpha = selected ? 1.0 : 0.72
@@ -573,6 +598,7 @@ function propBounds(t: string): [number, number, number, number] {
   if (t.includes('face') || t.includes('talking')) return [-60, -100, 120, 105]
   if (t.includes('mega')) return [-24, -72, 48, 74]
   if (t.includes('mini') || (t.includes('tree') && !t.includes('mega'))) return [-16, -44, 32, 46]
+  if (t.includes('cluster')) return [-40, -38, 80, 40]
   if (t.includes('stake') || t.includes('ground')) return [-8, -38, 16, 40]
   if (t.includes('arch')) return [-26, -38, 52, 40]
   if (t.includes('matrix')) return [-27, -51, 54, 53]
@@ -597,6 +623,7 @@ function drawProp(ctx: CanvasRenderingContext2D, prop: DisplayProp, x: number, y
 
   if (t.includes('mega') && t.includes('tree')) drawMegaTree(ctx, x, y, color, anim, selected)
   else if (t.includes('mini') || (t.includes('tree') && !t.includes('mega'))) drawMiniTree(ctx, x, y, color, anim, selected)
+  else if (t.includes('cluster')) drawStakeCluster(ctx, x, y, color, anim, selected)
   else if (t.includes('stake') || t.includes('ground')) drawStake(ctx, x, y, color, anim, selected)
   else if (t.includes('face') || t.includes('talking')) drawFace(ctx, x, y, color, anim, selected)
   else if (isRoof) drawRoofline(ctx, x, y, color, anim, selected, prop.length, prop.angle)
