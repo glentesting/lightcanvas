@@ -20,7 +20,7 @@ export default function MobileUploadPage() {
       .from('house-photos')
       .upload(path, file, { contentType: file.type, upsert: true })
     if (uploadError) {
-      setError('Upload failed. Try again.')
+      setError('Upload failed. Try a different photo.')
       setUploading(false)
       return
     }

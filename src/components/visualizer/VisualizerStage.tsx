@@ -15,6 +15,7 @@ interface VisualizerStageProps {
   onCanvasClick: (normX: number, normY: number) => void
   onPropClick: (id: string) => void
   onPropDrag: (id: string, normX: number, normY: number) => void
+  onPropResize: (id: string, length: number, angle: number) => void
   onUpdatePropColor: (id: string, color: string) => void
   onPhotoReady: (url: string) => void
 }
@@ -29,6 +30,7 @@ export function VisualizerStage({
   onCanvasClick,
   onPropClick,
   onPropDrag,
+  onPropResize,
   onUpdatePropColor,
   onPhotoReady,
 }: VisualizerStageProps) {
@@ -53,6 +55,7 @@ export function VisualizerStage({
         onCanvasClick={onCanvasClick}
         onPropClick={onPropClick}
         onPropDrag={onPropDrag}
+        onPropResize={onPropResize}
       />
       <UploadPhotoFlow
         open={uploadOpen}

@@ -39,6 +39,7 @@ export interface UseVisualizerStateOptions {
   onRemoveProp: (id: string) => void
   onMoveProp: (id: string, x: number, y: number) => void
   onUpdatePropColor: (id: string, color: string) => void
+  onResizeProp: (id: string, length: number, angle: number) => void
 }
 
 export function useVisualizerState(opts: UseVisualizerStateOptions) {
@@ -68,9 +69,13 @@ export function useVisualizerState(opts: UseVisualizerStateOptions) {
 
   const handlePropClick = useCallback(
     (id: string) => {
+      if (!id) {
+        opts.onSelectProp(null)
+        return
+      }
       if (activeTool === 'eraser') {
         opts.onRemoveProp(id)
-      } else if (!activeTool) {
+      } else {
         opts.onSelectProp(id)
       }
     },
@@ -80,6 +85,13 @@ export function useVisualizerState(opts: UseVisualizerStateOptions) {
   const handlePropDrag = useCallback(
     (id: string, canvasX: number, canvasY: number) => {
       opts.onMoveProp(id, canvasX, canvasY)
+    },
+    [opts],
+  )
+
+  const handlePropResize = useCallback(
+    (id: string, length: number, angle: number) => {
+      opts.onResizeProp(id, length, angle)
     },
     [opts],
   )
@@ -98,6 +110,7 @@ export function useVisualizerState(opts: UseVisualizerStateOptions) {
     handleCanvasClick,
     handlePropClick,
     handlePropDrag,
+    handlePropResize,
     photoUrl: opts.photoUrl,
   }
 }

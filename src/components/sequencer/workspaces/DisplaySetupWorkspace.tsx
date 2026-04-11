@@ -27,6 +27,7 @@ export interface DisplaySetupWorkspaceProps {
   quickAddProp: (type: string, x: number, y: number, houseType: string, opts?: { angle?: number; length?: number }) => void
   updatePropColor: (id: string, color: string) => void
   moveProp: (id: string, x: number, y: number) => void
+  resizeProp: (id: string, length: number, angle: number) => void
   photoUrl: string | null
   onPhotoReady: (url: string) => void
 }
@@ -42,7 +43,7 @@ export function DisplaySetupWorkspace({
   totalChannels, usedChannels, remainingChannels,
   newPropName, setNewPropName, newPropType, setNewPropType,
   newPropChannels, setNewPropChannels,
-  addProp, removeProp, quickAddProp, updatePropColor, moveProp,
+  addProp, removeProp, quickAddProp, updatePropColor, moveProp, resizeProp,
   photoUrl, onPhotoReady,
 }: DisplaySetupWorkspaceProps) {
   const capacityPct = Math.min(100, (usedChannels / Math.max(1, totalChannels)) * 100)
@@ -56,6 +57,7 @@ export function DisplaySetupWorkspace({
     onRemoveProp: removeProp,
     onMoveProp: moveProp,
     onUpdatePropColor: updatePropColor,
+    onResizeProp: resizeProp,
   })
 
   return (
@@ -70,6 +72,7 @@ export function DisplaySetupWorkspace({
         onCanvasClick={viz.handleCanvasClick}
         onPropClick={viz.handlePropClick}
         onPropDrag={viz.handlePropDrag}
+        onPropResize={viz.handlePropResize}
         onUpdatePropColor={updatePropColor}
         onPhotoReady={onPhotoReady}
       />

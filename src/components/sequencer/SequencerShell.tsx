@@ -44,6 +44,7 @@ export interface SequencerShellProps {
   quickAddProp: (type: string, x: number, y: number, houseType: string, opts?: { angle?: number; length?: number }) => void
   updatePropColor: (id: string, color: string) => void
   moveProp: (id: string, x: number, y: number) => void
+  resizeProp: (id: string, length: number, angle: number) => void
   songs: Song[]
   selectedSongId: string | null
   setSelectedSongId: Dispatch<SetStateAction<string | null>>
@@ -124,6 +125,7 @@ export function SequencerShell({
   quickAddProp,
   updatePropColor,
   moveProp,
+  resizeProp,
   songs,
   selectedSongId,
   setSelectedSongId,
@@ -159,8 +161,8 @@ export function SequencerShell({
   previewTime,
   sequenceEventsForPreview,
   patchTimelineEvent,
-  displayHouseType,
-  setDisplayHouseType,
+  displayHouseType: _displayHouseType,
+  setDisplayHouseType: _setDisplayHouseType,
   timelineSong,
   timelineEvents,
   timelineSongId,
@@ -210,6 +212,7 @@ export function SequencerShell({
                 quickAddProp={quickAddProp}
                 updatePropColor={updatePropColor}
                 moveProp={moveProp}
+                resizeProp={resizeProp}
                 photoUrl={photoUrl}
                 onPhotoReady={onPhotoReady}
               />
@@ -294,8 +297,6 @@ export function SequencerShell({
                 selectedSong={selectedSong}
                 previewTime={previewTime}
                 sequenceEvents={sequenceEventsForPreview}
-                houseType={displayHouseType}
-                onHouseTypeChange={setDisplayHouseType}
               />
             )}
           </>

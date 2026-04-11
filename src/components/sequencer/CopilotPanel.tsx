@@ -10,8 +10,6 @@ import {
 } from 'lucide-react'
 import type { DisplayProp } from '../../types/display'
 import type { Song } from '../../types/song'
-import type { HouseTemplateId } from '../HouseTemplates'
-import { HousePreviewScene } from '../HousePreviewScene'
 import type { ChatMessage, TimelineEvent } from './types'
 import { formatTime } from './utils'
 import { Button } from './shared/Button'
@@ -43,8 +41,6 @@ export interface CopilotPanelProps {
   selectedSong: Song
   previewTime: number
   sequenceEvents: TimelineEvent[]
-  houseType: HouseTemplateId
-  onHouseTypeChange: (id: HouseTemplateId) => void
 }
 
 export function CopilotPanel({
@@ -59,23 +55,8 @@ export function CopilotPanel({
   selectedSong,
   previewTime,
   sequenceEvents,
-  houseType,
-  onHouseTypeChange,
 }: CopilotPanelProps) {
   const duration = Math.max(0.001, selectedSong.duration)
-  const previewOverlay =
-    propsState.length > 0
-      ? {
-          currentTimeSec: previewTime,
-          durationSec: duration,
-          events: sequenceEvents.map((e) => ({
-            propId: e.propId,
-            start: e.start,
-            end: e.end,
-            intensity: e.intensity,
-          })),
-        }
-      : null
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-8">
@@ -113,15 +94,9 @@ export function CopilotPanel({
           </div>
           <div className="grid gap-5 lg:grid-cols-4">
             <div className="min-w-0 lg:col-span-3">
-              <HousePreviewScene
-                previewOnly
-                sequencePreview={previewOverlay}
-                props={propsState}
-                selectedPropId={null}
-                onSelectProp={() => {}}
-                houseType={houseType}
-                onHouseTypeChange={onHouseTypeChange}
-              />
+              <div className="flex min-h-[200px] items-center justify-center rounded-2xl" style={{ backgroundColor: '#0a0e1a' }}>
+                <p className="text-sm text-slate-500">Live preview plays when a sequence is running.</p>
+              </div>
             </div>
             <div className="min-w-0 space-y-2 rounded-xl border border-slate-200/90 bg-slate-50/90 p-4 text-xs leading-snug text-slate-600 lg:col-span-1">
               <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Now playing</div>

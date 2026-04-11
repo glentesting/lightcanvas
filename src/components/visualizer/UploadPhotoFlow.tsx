@@ -64,7 +64,7 @@ export function UploadPhotoFlow({ open, onClose, onPhotoReady }: UploadPhotoFlow
       .from('house-photos')
       .upload(path, file, { contentType: file.type, upsert: true })
     if (uploadError) {
-      setError('Upload failed. Try again.')
+      setError("Couldn't upload that photo. Check your connection and try again.")
       setUploading(false)
       return
     }

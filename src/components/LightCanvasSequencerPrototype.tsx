@@ -623,6 +623,10 @@ export default function LightCanvasSequencerPrototype() {
     setPropsState((prev) => prev.map((p) => (p.id === id ? { ...p, canvasX: x, canvasY: y } : p)))
   }
 
+  const resizeProp = (id: string, length: number, angle: number) => {
+    setPropsState((prev) => prev.map((p) => (p.id === id ? { ...p, length, angle } : p)))
+  }
+
   const removeProp = (id: string) => {
     const remaining = propsState.filter((p) => p.id !== id)
     setPropsState(remaining)
@@ -1174,6 +1178,7 @@ export default function LightCanvasSequencerPrototype() {
       quickAddProp={quickAddProp}
       updatePropColor={updatePropColor}
       moveProp={moveProp}
+      resizeProp={resizeProp}
       songs={songs}
       selectedSongId={selectedSongId}
       setSelectedSongId={setSelectedSongId}
