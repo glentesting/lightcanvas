@@ -987,13 +987,14 @@ export default function LightCanvasSequencerPrototype() {
         ),
       )
       setAnalysisProgress(100)
+      setAnalysesRunToday((n) => n + 1)
     } catch (e) {
       console.error(e)
       setSongUploadError(e instanceof Error ? e.message : 'Analysis failed')
     } finally {
       setSongAnalysisBusy(false)
     }
-  }, [songs, selectedSongId, selectedSong])
+  }, [songs, selectedSongId, selectedSong, analysesRunToday, userPlan.plan])
 
   const handleDeleteSong = async (song: Song, ev: MouseEvent) => {
     ev.stopPropagation()
