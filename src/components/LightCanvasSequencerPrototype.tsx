@@ -41,6 +41,7 @@ import type { Song, SongSectionSnapshot } from '../types/song'
 import type { TabValue } from './sequencer/types'
 import type { StylePreset } from './sequencer/workspaces/AISequencingWorkspace'
 import type { LorImportResult } from '../lib/importLor'
+import { OnboardingFlow } from './OnboardingFlow'
 import { SequencerShell } from './sequencer/SequencerShell'
 
 function runAnalysisInWorker(decoded: AudioBuffer): Promise<SongAudioAnalysis> {
@@ -358,6 +359,7 @@ export default function LightCanvasSequencerPrototype() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [housePhotos, setHousePhotos] = useState<HousePhotoRow[]>([])
   const [displayConfigReady, setDisplayConfigReady] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const [songs, setSongs] = useState<Song[]>([])
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null)
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
@@ -623,6 +625,15 @@ export default function LightCanvasSequencerPrototype() {
       cancelled = true
     }
   }, [user?.id])
+
+  useEffect(() => {
+    if (!displayConfigReady) return
+    const done = localStorage.getItem('lc_onboarding_done')
+    if (done) return
+    if (songs.length === 0 && propsState.length === 0 && !photoUrl) {
+      setShowOnboarding(true)
+    }
+  }, [displayConfigReady, songs.length, propsState.length, photoUrl])
 
   useEffect(() => {
     if (propsState.length === 0) {
@@ -1405,6 +1416,16 @@ export default function LightCanvasSequencerPrototype() {
   }
 
   return (
+    <>
+    {showOnboarding && (
+      <OnboardingFlow
+        setActiveTab={setActiveTab}
+        onComplete={() => {
+          setShowOnboarding(false)
+          localStorage.setItem('lc_onboarding_done', '1')
+        }}
+      />
+    )}
     <SequencerShell
       activeTab={activeTab}
       setActiveTab={setActiveTab}
@@ -1519,5 +1540,6 @@ export default function LightCanvasSequencerPrototype() {
       undo={undo}
       canUndo={canUndo}
     />
+    </>
   )
 }
