@@ -5,7 +5,9 @@ import type { ChangeEvent, ComponentType, MouseEvent, RefObject } from 'react'
 import type { SongAudioAnalysis } from '../../../lib/audioAnalysis'
 import type { Song } from '../../../types/song'
 import { SongWaveform } from '../../SongWaveform'
+import { GoPremiumPrompt } from '../../GoPremiumPrompt'
 import type { UserPlan } from '../../../lib/phase1Repository'
+import { canAddSong } from '../../../lib/planGating'
 import { Button } from '../shared/Button'
 import { PLACEHOLDER_SONG } from '../types'
 import { formatTime } from '../utils'
@@ -43,8 +45,8 @@ export function SongsWorkspace({
   SongLibraryInlineAudio, SongWorkspaceAudio, AnalysisBeatStrip, AnalysisBandRows,
   runAudioAnalysis, songAnalysisBusy, userPlan,
 }: SongsWorkspaceProps) {
-  void userPlan
   const [analysisOpen, setAnalysisOpen] = useState(true)
+  const songGating = canAddSong(songs.length, userPlan.plan)
   const analysis = songAnalyses[selectedSong.id]
 
   return (
@@ -126,6 +128,11 @@ export function SongsWorkspace({
             {songDeleteError && <span className="text-sm text-brand-red">{songDeleteError}</span>}
           </div>
           <span className="text-xs text-slate-400">MP3, WAV, or M4A — up to 20MB</span>
+          {!songGating.allowed && songGating.reason && (
+            <div className="mt-2">
+              <GoPremiumPrompt reason={songGating.reason} />
+            </div>
+          )}
         </div>
 
         <div className="mt-1">

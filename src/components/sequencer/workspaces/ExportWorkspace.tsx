@@ -10,6 +10,8 @@ import { downloadShowPackage } from '../../../lib/exportShowPackage'
 import { validateChannelMapping } from '../../../lib/validateChannels'
 import { importLorFile, type LorImportResult } from '../../../lib/importLor'
 import type { UserPlan } from '../../../lib/phase1Repository'
+import { canExportFseq, canExportXlights } from '../../../lib/planGating'
+import { GoPremiumPrompt } from '../../GoPremiumPrompt'
 import { Button } from '../shared/Button'
 
 export interface ExportWorkspaceProps {
@@ -31,7 +33,9 @@ export function ExportWorkspace({
   selectedSong, propsState, totalChannels, events, exportPayload,
   controllers, channelsPerController, onImportLor, audioBlob, userPlan,
 }: ExportWorkspaceProps) {
-  void userPlan
+  const fseqGating = canExportFseq(userPlan.plan)
+  const xlightsGating = canExportXlights(userPlan.plan)
+  const [exportGatingMessage, setExportGatingMessage] = useState<string | null>(null)
   const hasEvents = events.length > 0
   const lorFileRef = useRef<HTMLInputElement>(null)
   const [lorResult, setLorResult] = useState<LorImportResult | null>(null)
@@ -139,7 +143,10 @@ export function ExportWorkspace({
             <div>
               <Button
                 disabled={!canDownload}
-                onClick={() => downloadFseq(events, propsState, selectedSong.title, selectedSong.duration)}
+                onClick={() => {
+                  if (!fseqGating.allowed) { setExportGatingMessage(fseqGating.reason); return }
+                  downloadFseq(events, propsState, selectedSong.title, selectedSong.duration)
+                }}
               >
                 <Download className="h-4 w-4" /> Download FSEQ
               </Button>
@@ -151,7 +158,10 @@ export function ExportWorkspace({
               <button
                 type="button"
                 disabled={!canDownload}
-                onClick={() => downloadXlightsXml(events, propsState, selectedSong.title, selectedSong.duration)}
+                onClick={() => {
+                  if (!xlightsGating.allowed) { setExportGatingMessage(xlightsGating.reason); return }
+                  downloadXlightsXml(events, propsState, selectedSong.title, selectedSong.duration)
+                }}
                 className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-brand-green/60 hover:text-brand-green disabled:opacity-50"
               >
                 <Download className="h-4 w-4" /> Download xLights XML
@@ -160,6 +170,11 @@ export function ExportWorkspace({
                 Import into xLights via File &rarr; Open Sequence
               </p>
             </div>
+            {exportGatingMessage && (
+              <div className="mt-3">
+                <GoPremiumPrompt reason={exportGatingMessage} onDismiss={() => setExportGatingMessage(null)} />
+              </div>
+            )}
           </section>
         </div>
 
