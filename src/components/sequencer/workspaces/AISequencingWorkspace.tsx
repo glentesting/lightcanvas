@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Sparkles } from 'lucide-react'
 import type { DisplayProp } from '../../../types/display'
@@ -9,6 +10,14 @@ import { InfoPopover } from '../shared/InfoPopover'
 import { Progress } from '../shared/Progress'
 import { SliderRow } from '../shared/SliderRow'
 
+export type StylePreset = 'beginner' | 'standard' | 'spectacular'
+
+const STYLE_PRESETS: { value: StylePreset; label: string; description: string }[] = [
+  { value: 'beginner', label: 'Beginner', description: 'Simple, easy to wire' },
+  { value: 'standard', label: 'Standard', description: 'Balanced show' },
+  { value: 'spectacular', label: 'Spectacular', description: 'Dense, all-out' },
+]
+
 export interface AISequencingWorkspaceProps {
   analysisProgress: number
   complexity: number
@@ -19,6 +28,8 @@ export interface AISequencingWorkspaceProps {
   selectedSong: Song
   sections: Section[]
   propsState: DisplayProp[]
+  stylePreset: StylePreset
+  onStylePresetChange: (preset: StylePreset) => void
 }
 
 export function AISequencingWorkspace({
@@ -31,6 +42,8 @@ export function AISequencingWorkspace({
   selectedSong,
   sections,
   propsState,
+  stylePreset,
+  onStylePresetChange,
 }: AISequencingWorkspaceProps) {
   return (
     <motion.div
@@ -63,6 +76,30 @@ export function AISequencingWorkspace({
             </div>
             <div className="mt-1">
               <Progress value={analysisProgress} />
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <InfoPopover title="Style preset">
+              <p>
+                Pick a style that matches how ambitious your show is. Beginner keeps things simple; Spectacular goes all-out.
+              </p>
+            </InfoPopover>
+            <div className="flex gap-2">
+              {STYLE_PRESETS.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => onStylePresetChange(p.value)}
+                  className={`flex-1 rounded-xl border-2 px-3 py-2.5 text-center transition-all duration-150 ${
+                    stylePreset === p.value
+                      ? 'border-brand-green bg-brand-green/10 text-slate-900 shadow-sm'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="text-sm font-semibold">{p.label}</div>
+                  <div className="mt-0.5 text-[11px] leading-tight text-slate-500">{p.description}</div>
+                </button>
+              ))}
             </div>
           </section>
 

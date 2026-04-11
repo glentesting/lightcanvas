@@ -53,6 +53,7 @@ export async function requestClaudeSequence(params: {
   bpm: number
   sections: SequenceSectionPayload[]
   props: DisplayProp[]
+  stylePreset?: string
 }): Promise<ClaudeSequenceEvent[]> {
   const url = getGenerateSequenceUrl()
   const resolvedUrl = resolveSequenceRequestUrl(url)
@@ -83,6 +84,7 @@ export async function requestClaudeSequence(params: {
         channels: p.channels,
         controller: p.controller,
       })),
+      stylePreset: params.stylePreset ?? 'standard',
     }),
   })
 

@@ -7,7 +7,7 @@ import { CopilotPanel } from './CopilotPanel'
 import { SequencerHeader } from './SequencerHeader'
 import { SequencerTabs } from './SequencerTabs'
 import type { ChatMessage, Section, TabValue, TimelineEvent } from './types'
-import { AISequencingWorkspace } from './workspaces/AISequencingWorkspace'
+import { AISequencingWorkspace, type StylePreset } from './workspaces/AISequencingWorkspace'
 import { DisplaySetupWorkspace } from './workspaces/DisplaySetupWorkspace'
 import { ExportWorkspace } from './workspaces/ExportWorkspace'
 import { SongsWorkspace } from './workspaces/SongsWorkspace'
@@ -19,6 +19,8 @@ export interface SequencerShellProps {
   rebuildAnalyzing: boolean
   rebuildPhase: 'idle' | 'decode' | 'sequence'
   runAi: () => void
+  stylePreset: StylePreset
+  onStylePresetChange: (preset: StylePreset) => void
   controllers: number
   channelsPerController: number
   usedChannels: number
@@ -104,6 +106,8 @@ export function SequencerShell({
   rebuildAnalyzing,
   rebuildPhase,
   runAi,
+  stylePreset,
+  onStylePresetChange,
   controllers,
   channelsPerController,
   usedChannels,
@@ -266,6 +270,8 @@ export function SequencerShell({
                 selectedSong={selectedSong}
                 sections={sections}
                 propsState={propsState}
+                stylePreset={stylePreset}
+                onStylePresetChange={onStylePresetChange}
               />
             )}
 

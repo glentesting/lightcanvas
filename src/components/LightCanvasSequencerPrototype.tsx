@@ -34,6 +34,7 @@ import { supabase } from '../lib/supabaseClient'
 import type { DisplayProp } from '../types/display'
 import type { Song, SongSectionSnapshot } from '../types/song'
 import type { TabValue } from './sequencer/types'
+import type { StylePreset } from './sequencer/workspaces/AISequencingWorkspace'
 import { SequencerShell } from './sequencer/SequencerShell'
 
 const effectOptions = [
@@ -329,6 +330,7 @@ export default function LightCanvasSequencerPrototype() {
   const [analysisProgress, setAnalysisProgress] = useState(91)
   const [playing, setPlaying] = useState(false)
   const [complexity, setComplexity] = useState(62)
+  const [stylePreset, setStylePreset] = useState<StylePreset>('standard')
   const [selectedPropId, setSelectedPropId] = useState<string | null>(null)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [newPropName, setNewPropName] = useState('')
@@ -931,6 +933,7 @@ export default function LightCanvasSequencerPrototype() {
           bpm,
           sections: sectionList,
           props: propsState,
+          stylePreset,
         })
         const mapped = mapClaudeEventsToTimeline(raw, propsState) as TimelineEvent[]
         setSequenceEventsBySong((prev) => ({ ...prev, [sid]: mapped }))
@@ -1194,6 +1197,8 @@ export default function LightCanvasSequencerPrototype() {
       rebuildAnalyzing={rebuildAnalyzing}
       rebuildPhase={rebuildPhase}
       runAi={runAi}
+      stylePreset={stylePreset}
+      onStylePresetChange={setStylePreset}
       controllers={controllers}
       channelsPerController={channelsPerController}
       usedChannels={usedChannels}
