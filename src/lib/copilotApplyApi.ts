@@ -2,6 +2,90 @@ import type { DisplayProp } from '../types/display'
 import type { SongAnalysis } from '../types/song'
 import type { SequenceSectionPayload, ClaudeSequenceEvent } from './generateSequenceApi'
 
+// ── Copilot Message API (real Claude calls) ──────────────────────────
+
+export type CopilotMessagePayload = {
+  message: string
+  currentEvents: Array<{
+    propId: string
+    propName: string
+    effect: string
+    start: number
+    end: number
+    intensity: number
+  }>
+  props: DisplayProp[]
+  songAnalysis: {
+    beat: number
+    bass: number
+    treble: number
+    vocals: number
+    dynamics: number
+    bpm?: number
+    duration?: number
+  }
+  chatHistory: Array<{ role: 'user' | 'assistant'; text: string }>
+}
+
+export type CopilotMessageResult = {
+  reply: string
+  events: ClaudeSequenceEvent[] | null
+}
+
+function getCopilotMessageUrl(): string {
+  const u = import.meta.env.VITE_COPILOT_MESSAGE_URL as string | undefined
+  return u?.trim() || '/api/copilot-message'
+}
+
+export async function requestCopilotMessage(payload: CopilotMessagePayload): Promise<CopilotMessageResult> {
+  const url = getCopilotMessageUrl()
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      message: payload.message,
+      currentEvents: payload.currentEvents,
+      props: payload.props.map((p) => ({
+        id: p.id,
+        name: p.name,
+        type: p.type,
+        channels: p.channels,
+        controller: p.controller,
+      })),
+      songAnalysis: payload.songAnalysis,
+      chatHistory: payload.chatHistory,
+    }),
+  })
+
+  const rawText = await res.text()
+  const ct = res.headers.get('content-type') ?? ''
+
+  if (ct.includes('text/html') || looksLikeHtml(rawText)) {
+    throw new CopilotApiUnavailableError()
+  }
+
+  let data: {
+    error?: string
+    reply?: string
+    events?: ClaudeSequenceEvent[] | null
+  }
+
+  try {
+    data = JSON.parse(rawText) as typeof data
+  } catch {
+    throw new CopilotApiUnavailableError()
+  }
+
+  if (!res.ok) {
+    throw new Error(data.error || `Copilot API failed (${res.status})`)
+  }
+
+  return {
+    reply: data.reply ?? 'Done.',
+    events: data.events ?? null,
+  }
+}
+
 export type CopilotApplyPayload = {
   userMessage: string
   complexity: number

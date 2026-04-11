@@ -187,6 +187,12 @@ export function CopilotPanel({
                 {msg.text}
               </div>
             ))}
+            {copilotBusy && (
+              <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2.5 text-xs text-slate-500">
+                <Bot className="h-3 w-3 shrink-0 animate-pulse" />
+                Thinking...
+              </div>
+            )}
           </div>
           <textarea
             value={chatInput}
@@ -201,7 +207,7 @@ export function CopilotPanel({
             <div className="flex items-start gap-2">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
               <p className="text-xs leading-relaxed text-slate-600">
-                Copilot calls <code className="rounded bg-white px-1 py-0.5 text-[11px]">/api/copilot-apply</code>. Run{' '}
+                Copilot calls <code className="rounded bg-white px-1 py-0.5 text-[11px]">/api/copilot-message</code>. Run{' '}
                 <code className="rounded bg-white px-1 py-0.5 text-[11px]">vercel dev</code> (not{' '}
                 <code className="rounded bg-white px-1 py-0.5 text-[11px]">npm run dev</code> alone) with{' '}
                 <code className="rounded bg-white px-1 py-0.5 text-[11px]">ANTHROPIC_API_KEY</code>, or set{' '}

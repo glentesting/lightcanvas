@@ -13,7 +13,7 @@ import {
   minimalSongAudioAnalysisFromPersisted,
   type SongAudioAnalysis,
 } from '../lib/audioAnalysis'
-import { CopilotApiUnavailableError, requestCopilotApply } from '../lib/copilotApplyApi'
+import { CopilotApiUnavailableError, requestCopilotMessage } from '../lib/copilotApplyApi'
 import { mapClaudeEventsToTimeline, requestClaudeSequence } from '../lib/generateSequenceApi'
 import { getAudioDurationFromFile } from '../lib/getAudioDurationFromFile'
 import {
@@ -1090,49 +1090,45 @@ export default function LightCanvasSequencerPrototype() {
     }
 
     setCopilotBusy(true)
+    setChat((prev) => [...prev, { id: Date.now(), role: 'user', text: prompt }])
+    setChatInput('')
     try {
-      const result = await requestCopilotApply({
-        userMessage: prompt,
-        complexity,
-        songDurationSeconds: selectedSong.duration,
-        bpm: selectedSong.bpm ?? 120,
-        analysis: selectedSong.analysis,
-        sections: sections.map((s) => ({
-          name: s.name,
-          start: s.start,
-          end: s.end,
-          energy: s.energy,
-          vocals: s.vocals,
+      const result = await requestCopilotMessage({
+        message: prompt,
+        currentEvents: events.map((e) => ({
+          propId: e.propId,
+          propName: e.propName,
+          effect: e.effect,
+          start: e.start,
+          end: e.end,
+          intensity: e.intensity,
         })),
         props: propsState,
-        currentEvents: events,
+        songAnalysis: {
+          ...selectedSong.analysis,
+          bpm: selectedSong.bpm ?? 120,
+          duration: selectedSong.duration,
+        },
+        chatHistory: chat.slice(-10).map((m) => ({ role: m.role, text: m.text })),
       })
-      if (result.set_complexity != null) setComplexity(result.set_complexity)
       if (result.events?.length) {
         const mapped = mapClaudeEventsToTimeline(result.events, propsState)
         setSequenceEventsBySong((prev) => ({ ...prev, [selectedSong.id]: mapped }))
       }
       setChat((prev) => [
         ...prev,
-        { id: Date.now() + 1, role: 'user', text: prompt },
-        { id: Date.now() + 2, role: 'assistant', text: result.assistant_message },
+        { id: Date.now() + 1, role: 'assistant', text: result.reply },
       ])
-      setChatInput('')
     } catch (e) {
       const hint =
         e instanceof CopilotApiUnavailableError
           ? e.message
           : e instanceof Error
             ? e.message
-            : 'Request failed'
+            : 'Something went wrong. Check that your API server is running and try again.'
       setChat((prev) => [
         ...prev,
-        { id: Date.now() + 1, role: 'user', text: prompt },
-        {
-          id: Date.now() + 2,
-          role: 'assistant',
-          text: hint,
-        },
+        { id: Date.now() + 1, role: 'assistant', text: hint },
       ])
     } finally {
       setCopilotBusy(false)
