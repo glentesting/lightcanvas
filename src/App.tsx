@@ -4,6 +4,7 @@ import AppShell from './components/AppShell'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import MobileUploadPage from './pages/MobileUploadPage'
+import PricingPage from './pages/PricingPage'
 
 export default function App() {
   return (
@@ -11,6 +12,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
           <Route path="/upload/:token" element={<MobileUploadPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<AppShell />} />
