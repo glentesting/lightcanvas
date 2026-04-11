@@ -122,22 +122,17 @@ ${props
 ## Allowed effects (use exactly these names)
 ${ALLOWED_EFFECTS.join(', ')}
 
-## CRITICAL RULES — MUST FOLLOW
-- NEVER create one event that spans an entire section. MAX event duration is 8 seconds.
-- Each prop MUST have 3-6 separate events PER section with DIFFERENT effects.
-- Example for a 30-second section: Pulse(0-5s) → Chase(5-10s) → Twinkle(10-16s) → Pulse(16-22s) → Shimmer(22-30s)
-- Vary the effect name for each consecutive event on the same prop — never repeat the same effect twice in a row.
-- High energy sections: 2-4 second events, rapid switching, intensity 75-100
-- Low energy sections: 4-8 second events, Hold and Shimmer dominant, intensity 30-60
-- Talking Tree Face: ONLY Mouth Sync during vocal sections, Hold elsewhere
-- Mega Tree: bass-reactive — Pulse and Sweep on beats
-- Roofline: Chase effect, speed varies with energy
-- Stakes/clusters: Twinkle and Pulse on treble hits
-- Arches: Ripple and Chase
-- Matrix: Color Pop and Sweep on high energy
-- Finale: ALL props at intensity 90-100, rapid 2-3s switching
-- Cover the FULL song duration with no gaps — every second must be covered for every prop
-- Return ONLY valid JSON — no markdown, no explanation, no code fences`
+## CRITICAL RULES
+- Generate 2-4 events per prop per section (not 1 giant block)
+- Each event: 4-12 seconds duration maximum
+- Vary effects within each prop — no two consecutive events on the same prop should have the same effect
+- Be concise — total response must fit in 8000 tokens
+- High energy sections: intensity 70-95, faster effects
+- Low energy: intensity 30-60, Hold and Shimmer
+- Talking Tree Face: Mouth Sync in vocal sections only
+- Finale: all props intensity 85-100
+- Cover full song duration, no gaps per prop
+- Return ONLY valid JSON, no explanation`
 
   const styleInstructions = STYLE_PRESET_INSTRUCTIONS[stylePreset]
   if (styleInstructions) {
@@ -202,7 +197,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Server misconfiguration: ANTHROPIC_API_KEY is not set' })
   }
 
-  const model = process.env.CLAUDE_MODEL?.trim() || 'claude-sonnet-4-5'
+  const model = process.env.CLAUDE_MODEL?.trim() || 'claude-sonnet-4-5-20251001'
 
   let body: SequenceRequestPayload
   try {
@@ -240,7 +235,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       body: JSON.stringify({
         model,
-        max_tokens: 16000,
+        max_tokens: 8192,
         stop_sequences: [],
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }],
