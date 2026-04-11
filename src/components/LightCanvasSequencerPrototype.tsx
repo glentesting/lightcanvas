@@ -31,7 +31,6 @@ import { supabase } from '../lib/supabaseClient'
 import type { DisplayProp } from '../types/display'
 import type { Song, SongSectionSnapshot } from '../types/song'
 import type { TabValue } from './sequencer/types'
-import { getDefaultCanvasPlacementForPropType, type HouseTemplateId } from './HouseTemplates'
 import { SequencerShell } from './sequencer/SequencerShell'
 
 const effectOptions = [
@@ -144,7 +143,7 @@ function buildEvents(
           note:
             prop.type === 'Talking Face'
               ? section.vocals
-                ? 'Fake phoneme pass anchors mouth-open / mouth-closed states.'
+                ? 'Mouth sync follows vocal phrases — open on syllables, closed between.'
                 : 'Face held idle while instrumental section plays.'
               : prop.type === 'Mega Tree'
                 ? 'Pattern density rises with phrase intensity and section lift.'
@@ -315,7 +314,6 @@ export default function LightCanvasSequencerPrototype() {
     setPropsState(prev)
   }, [])
   const canUndo = undoStackRef.current.length > 0
-  const [displayHouseType, setDisplayHouseType] = useState<HouseTemplateId>('two-story')
   const [timelineSongId, setTimelineSongId] = useState<string | null>(null)
   const [timelineSequenceSource, setTimelineSequenceSource] = useState<'formula' | 'stored'>('stored')
   const [songAnalysisBusy, setSongAnalysisBusy] = useState(false)
@@ -588,7 +586,9 @@ export default function LightCanvasSequencerPrototype() {
       ? Math.max(...propsState.map((p) => p.start + p.channels))
       : 1
     const controllerIndex = (propsState.length % Math.max(1, controllers)) + 1
-    const placement = getDefaultCanvasPlacementForPropType(newPropType, displayHouseType, propsState.length)
+    // Default placement: center of canvas, offset slightly per prop to avoid stacking
+    const offsetX = 0.5 + (propsState.length % 5 - 2) * 0.06
+    const offsetY = 0.5 + Math.floor(propsState.length / 5) * 0.08
     const created: DisplayProp = {
       id: crypto.randomUUID(),
       name: newPropName,
@@ -597,10 +597,9 @@ export default function LightCanvasSequencerPrototype() {
       channels: Number(newPropChannels),
       start: nextStart,
       priority: 'General',
-      notes: `Fake detailed mapping note for ${newPropType}. LightCanvas would recommend how this prop behaves during verses, choruses, and finales.`,
-      canvasX: placement.canvasX,
-      canvasY: placement.canvasY,
-      houseType: placement.houseType,
+      notes: '',
+      canvasX: offsetX,
+      canvasY: offsetY,
       color: '#ffe8c0',
     }
     setPropsState((prev) => [...prev, created])
@@ -1244,8 +1243,6 @@ export default function LightCanvasSequencerPrototype() {
       previewTime={previewTime}
       sequenceEventsForPreview={events}
       patchTimelineEvent={patchTimelineEvent}
-      displayHouseType={displayHouseType}
-      setDisplayHouseType={setDisplayHouseType}
       timelineSong={timelineSong}
       timelineEvents={timelineEvents}
       timelineSongId={timelineSongId}

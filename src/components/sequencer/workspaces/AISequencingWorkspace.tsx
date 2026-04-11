@@ -69,8 +69,8 @@ export function AISequencingWorkspace({
           <section className="space-y-4">
             <InfoPopover title="Sequence parameters">
               <p>
-                <strong className="text-slate-800">Sequence complexity</strong> is live today: higher values create more
-                cuts and busier patterns across all props. Other sliders are placeholders for future releases.
+                <strong className="text-slate-800">Sequence complexity</strong> controls how busy the pattern is — higher values create more
+                cuts and busier patterns across all props.
               </p>
             </InfoPopover>
             <div className="space-y-4 rounded-2xl border-2 border-brand-green/20 bg-white p-5 shadow-sm">

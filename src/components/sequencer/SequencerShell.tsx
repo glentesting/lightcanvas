@@ -5,7 +5,6 @@ import type { Song } from '../../types/song'
 import { CopilotPanel } from './CopilotPanel'
 import { SequencerHeader } from './SequencerHeader'
 import { SequencerTabs } from './SequencerTabs'
-import type { HouseTemplateId } from '../HouseTemplates'
 import type { ChatMessage, Section, TabValue, TimelineEvent } from './types'
 import { AISequencingWorkspace } from './workspaces/AISequencingWorkspace'
 import { DisplaySetupWorkspace } from './workspaces/DisplaySetupWorkspace'
@@ -80,8 +79,6 @@ export interface SequencerShellProps {
   previewTime: number
   sequenceEventsForPreview: TimelineEvent[]
   patchTimelineEvent: (id: string, patch: Partial<TimelineEvent>) => void
-  displayHouseType: HouseTemplateId
-  setDisplayHouseType: (id: HouseTemplateId) => void
   timelineSong: Song
   timelineEvents: TimelineEvent[]
   timelineSongId: string | null
@@ -163,8 +160,6 @@ export function SequencerShell({
   previewTime,
   sequenceEventsForPreview,
   patchTimelineEvent,
-  displayHouseType: _displayHouseType,
-  setDisplayHouseType: _setDisplayHouseType,
   timelineSong,
   timelineEvents,
   timelineSongId,

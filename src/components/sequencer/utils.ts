@@ -73,7 +73,7 @@ export function buildEvents(displayProps: DisplayProp[], complexity: number, sec
           note:
             prop.type === 'Talking Face'
               ? section.vocals
-                ? 'Fake phoneme pass anchors mouth-open / mouth-closed states.'
+                ? 'Mouth sync follows vocal phrases — open on syllables, closed between.'
                 : 'Face held idle while instrumental section plays.'
               : prop.type === 'Mega Tree'
                 ? 'Pattern density rises with phrase intensity and section lift.'
