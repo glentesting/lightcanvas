@@ -318,6 +318,8 @@ export function SequencerShell({
                 totalChannels={totalChannels}
                 events={events}
                 exportPayload={exportPayload}
+                controllers={controllers}
+                channelsPerController={channelsPerController}
               />
             )}
             {activeTab === 'ai' && (

@@ -1,10 +1,12 @@
+import { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { Download } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Download, XCircle } from 'lucide-react'
 import type { DisplayProp } from '../../../types/display'
 import type { Song } from '../../../types/song'
 import type { TimelineEvent } from '../types'
 import { downloadFseq } from '../../../lib/exportFseq'
 import { downloadXlightsXml } from '../../../lib/exportXlights'
+import { validateChannelMapping } from '../../../lib/validateChannels'
 import { Button } from '../shared/Button'
 
 export interface ExportWorkspaceProps {
@@ -13,14 +15,26 @@ export interface ExportWorkspaceProps {
   totalChannels: number
   events: TimelineEvent[]
   exportPayload: string
+  controllers: number
+  channelsPerController: number
 }
 
 const sectionLabel = 'mb-3 block text-xs font-medium uppercase tracking-[0.14em] text-slate-500'
 
 export function ExportWorkspace({
   selectedSong, propsState, totalChannels, events, exportPayload,
+  controllers, channelsPerController,
 }: ExportWorkspaceProps) {
   const hasEvents = events.length > 0
+
+  const issues = useMemo(
+    () => validateChannelMapping(propsState, controllers, channelsPerController),
+    [propsState, controllers, channelsPerController],
+  )
+  const errors = issues.filter(i => i.severity === 'error')
+  const warnings = issues.filter(i => i.severity === 'warning')
+  const hasErrors = errors.length > 0
+  const canDownload = hasEvents && !hasErrors
 
   const items = [
     ['Song', selectedSong.title],
@@ -37,6 +51,51 @@ export function ExportWorkspace({
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
         {/* Left: Export settings */}
         <div className="space-y-5">
+          {/* Pre-export checklist */}
+          <section>
+            <h2 className={sectionLabel}>Pre-export Checklist</h2>
+            <div className="space-y-1.5 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              {/* No events check */}
+              <div className="flex items-start gap-2 text-sm">
+                {hasEvents
+                  ? <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
+                  : <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-brand-red" />}
+                <span className={hasEvents ? 'text-slate-700' : 'text-brand-red'}>
+                  {hasEvents ? `${events.length} sequence events` : 'No sequence events — generate a sequence first'}
+                </span>
+              </div>
+              {/* Validation issues */}
+              {issues.length === 0 && hasEvents && (
+                <div className="flex items-start gap-2 text-sm">
+                  <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-brand-green" />
+                  <span className="text-slate-700">Channel mapping valid</span>
+                </div>
+              )}
+              {errors.map((issue, i) => (
+                <div key={`e${i}`} className="flex items-start gap-2 text-sm">
+                  <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-brand-red" />
+                  <span className="text-brand-red">{issue.message}</span>
+                </div>
+              ))}
+              {warnings.map((issue, i) => (
+                <div key={`w${i}`} className="flex items-start gap-2 text-sm">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                  <span className="text-amber-700">{issue.message}</span>
+                </div>
+              ))}
+              {/* Summary */}
+              <div className="mt-2 border-t border-slate-200 pt-2 text-xs font-medium">
+                {hasErrors
+                  ? <span className="text-brand-red">{errors.length} error{errors.length > 1 ? 's' : ''} found — fix before exporting</span>
+                  : warnings.length > 0
+                    ? <span className="text-amber-600">Ready to export ({warnings.length} warning{warnings.length > 1 ? 's' : ''})</span>
+                    : hasEvents
+                      ? <span className="text-brand-green">Ready to export</span>
+                      : <span className="text-slate-500">Generate a sequence first</span>}
+              </div>
+            </div>
+          </section>
+
           <section>
             <h2 className={sectionLabel}>Export Summary</h2>
             <div className="space-y-0">
@@ -53,7 +112,7 @@ export function ExportWorkspace({
             <h2 className={sectionLabel}>Download</h2>
             <div>
               <Button
-                disabled={!hasEvents}
+                disabled={!canDownload}
                 onClick={() => downloadFseq(events, propsState, selectedSong.title, selectedSong.duration)}
               >
                 <Download className="h-4 w-4" /> Download FSEQ
@@ -65,7 +124,7 @@ export function ExportWorkspace({
             <div>
               <button
                 type="button"
-                disabled={!hasEvents}
+                disabled={!canDownload}
                 onClick={() => downloadXlightsXml(events, propsState, selectedSong.title, selectedSong.duration)}
                 className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-brand-green/60 hover:text-brand-green disabled:opacity-50"
               >
