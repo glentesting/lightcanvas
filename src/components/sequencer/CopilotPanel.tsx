@@ -61,22 +61,42 @@ export function CopilotPanel({
 }: CopilotPanelProps) {
   const duration = Math.max(0.001, selectedSong.duration)
   const canvasRef = useRef<VisualizerCanvasHandle>(null)
+  const previewTimeRef = useRef(previewTime)
+  useEffect(() => { previewTimeRef.current = previewTime }, [previewTime])
+  const sequenceEventsRef = useRef(sequenceEvents)
+  useEffect(() => { sequenceEventsRef.current = sequenceEvents }, [sequenceEvents])
 
   useEffect(() => {
     if (!playing) {
-      canvasRef.current?.triggerFrame({
-        beatStrength: 0,
-        bassStrength: 0,
-        trebleStrength: 0,
-        vocalConfidence: 0,
-        timestamp: 0,
-      })
-      return
+      // Ambient glow when not playing — props pulse gently
+      const ambient = setInterval(() => {
+        canvasRef.current?.triggerFrame({
+          beatStrength: 0.3 + Math.sin(Date.now() / 1000) * 0.1,
+          bassStrength: 0.2,
+          trebleStrength: 0.2,
+          vocalConfidence: 0,
+          timestamp: 0,
+        })
+      }, 200)
+      return () => clearInterval(ambient)
     }
     const interval = setInterval(() => {
-      const activeEvents = sequenceEvents.filter(
-        e => e.start <= previewTime && e.end > previewTime,
-      )
+      const t = previewTimeRef.current
+      const events = sequenceEventsRef.current
+
+      // Fallback ambient if no sequence events exist
+      if (!events.length) {
+        canvasRef.current?.triggerFrame({
+          beatStrength: 0.5,
+          bassStrength: 0.4,
+          trebleStrength: 0.4,
+          vocalConfidence: 0.1,
+          timestamp: t,
+        })
+        return
+      }
+
+      const activeEvents = events.filter(e => e.start <= t && e.end > t)
       const hasEffect = (effects: string[]) =>
         activeEvents.some(e => effects.includes(e.effect))
 
@@ -85,11 +105,11 @@ export function CopilotPanel({
         bassStrength: hasEffect(['Pulse', 'Sweep', 'Fan']) ? 0.75 : 0.15,
         trebleStrength: hasEffect(['Twinkle', 'Shimmer', 'Ripple']) ? 0.75 : 0.15,
         vocalConfidence: hasEffect(['Mouth Sync']) ? 0.95 : 0.05,
-        timestamp: previewTime,
+        timestamp: t,
       })
     }, 50)
     return () => clearInterval(interval)
-  }, [playing, previewTime, sequenceEvents])
+  }, [playing])
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-8">
