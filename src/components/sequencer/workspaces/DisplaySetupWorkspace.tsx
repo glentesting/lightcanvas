@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Trash2 } from 'lucide-react'
+import { Check, Pencil, Plus, Trash2, X } from 'lucide-react'
 import type { DisplayProp } from '../../../types/display'
 import type { HousePhotoRow } from '../../../lib/phase1Repository'
 import { useVisualizerState } from '../../../hooks/useVisualizerState'
@@ -35,6 +36,8 @@ export interface DisplaySetupWorkspaceProps {
   profileId: string | null
   housePhotos: HousePhotoRow[]
   onDeletePhoto: (photoId: string, storagePath: string) => void
+  onRenameProp?: (id: string, name: string) => void
+  onRechannelProp?: (id: string, channels: number) => void
   undo: () => void
   canUndo: boolean
 }
@@ -54,6 +57,7 @@ export function DisplaySetupWorkspace({
   photoUrl, onPhotoReady,
   userId, profileId,
   housePhotos, onDeletePhoto,
+  onRenameProp, onRechannelProp,
   undo, canUndo,
 }: DisplaySetupWorkspaceProps) {
   const capacityPct = Math.min(100, (usedChannels / Math.max(1, totalChannels)) * 100)
@@ -186,7 +190,7 @@ export function DisplaySetupWorkspace({
                   </div>
                 ) : (
                   propsState.map((prop) => (
-                    <PropMappingRow key={prop.id} prop={prop} selected={selectedPropId === prop.id} onSelect={() => setSelectedPropId(prop.id)} onRemove={() => removeProp(prop.id)} />
+                    <PropMappingRow key={prop.id} prop={prop} selected={selectedPropId === prop.id} onSelect={() => setSelectedPropId(prop.id)} onRemove={() => removeProp(prop.id)} onRename={onRenameProp} onRechannel={onRechannelProp} />
                   ))
                 )}
               </div>
@@ -210,7 +214,72 @@ export function DisplaySetupWorkspace({
   )
 }
 
-function PropMappingRow({ prop, selected, onSelect, onRemove }: { prop: DisplayProp; selected: boolean; onSelect: () => void; onRemove: () => void }) {
+const editFieldClass = 'rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-green'
+
+function PropMappingRow({ prop, selected, onSelect, onRemove, onRename, onRechannel }: {
+  prop: DisplayProp; selected: boolean; onSelect: () => void; onRemove: () => void
+  onRename?: (id: string, name: string) => void
+  onRechannel?: (id: string, channels: number) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState(prop.name)
+  const [editChannels, setEditChannels] = useState(prop.channels)
+
+  const startEdit = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditName(prop.name)
+    setEditChannels(prop.channels)
+    setEditing(true)
+  }
+
+  const confirmEdit = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const trimmed = editName.trim()
+    if (trimmed && trimmed !== prop.name) onRename?.(prop.id, trimmed)
+    if (editChannels > 0 && editChannels !== prop.channels) onRechannel?.(prop.id, editChannels)
+    setEditing(false)
+  }
+
+  const cancelEdit = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <div className={`group flex items-center border-b border-slate-200 last:border-b-0 ${selected ? `border-l-2 ${SEL_ACCENT} bg-white` : 'border-l-2 border-l-transparent bg-white'}`}>
+        <div className="min-w-0 flex-1 py-2 pl-2.5 pr-1" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-1.5">
+            {prop.color && <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: prop.color }} />}
+            <input
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className={`${editFieldClass} flex-1`}
+              autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter') confirmEdit(e as unknown as React.MouseEvent); if (e.key === 'Escape') setEditing(false) }}
+            />
+          </div>
+          <div className="mt-1 flex items-center gap-2 text-xs text-slate-600">
+            <span>{prop.type}</span>
+            <span className="flex items-center gap-1">
+              ch <input type="number" min={1} value={editChannels} onChange={(e) => setEditChannels(Math.max(1, Number(e.target.value) || 1))} className={`${editFieldClass} w-14`} />
+            </span>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-0.5 px-1">
+          <button type="button" aria-label="Confirm" onClick={confirmEdit}
+            className="p-1.5 text-brand-green transition hover:text-brand-green-dark">
+            <Check className="h-3.5 w-3.5" />
+          </button>
+          <button type="button" aria-label="Cancel" onClick={cancelEdit}
+            className="p-1.5 text-slate-400 transition hover:text-slate-600">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={`group flex border-b border-slate-200 last:border-b-0 ${selected ? `border-l-2 ${SEL_ACCENT} bg-white` : 'border-l-2 border-l-transparent hover:bg-white'}`}>
       <button type="button" onClick={onSelect} className="min-w-0 flex-1 py-2.5 pl-2.5 pr-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-green/50">
@@ -222,11 +291,19 @@ function PropMappingRow({ prop, selected, onSelect, onRemove }: { prop: DisplayP
           <span>{prop.type}</span><span>{prop.controller}</span><span>ch {prop.start}-{prop.start + prop.channels - 1}</span>
         </div>
       </button>
-      <button type="button" aria-label={`Remove ${prop.name}`}
-        className="shrink-0 self-start p-2 text-brand-red transition hover:text-brand-red-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-red/40"
-        onClick={onRemove}>
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
+      <div className="flex shrink-0 items-center gap-0.5 px-1">
+        {(onRename || onRechannel) && (
+          <button type="button" aria-label={`Edit ${prop.name}`} onClick={startEdit}
+            className="p-1.5 text-slate-400 opacity-0 transition group-hover:opacity-100 hover:text-slate-700">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        )}
+        <button type="button" aria-label={`Remove ${prop.name}`}
+          className="shrink-0 p-2 text-brand-red transition hover:text-brand-red-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-red/40"
+          onClick={onRemove}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
     </div>
   )
 }

@@ -82,6 +82,8 @@ export interface SequencerShellProps {
   previewTime: number
   sequenceEventsForPreview: TimelineEvent[]
   patchTimelineEvent: (id: string, patch: Partial<TimelineEvent>) => void
+  onDeleteEvent: (id: string) => void
+  onSeek: (time: number) => void
   timelineSong: Song
   timelineEvents: TimelineEvent[]
   timelineSongId: string | null
@@ -96,6 +98,8 @@ export interface SequencerShellProps {
   profileId: string | null
   housePhotos: HousePhotoRow[]
   onDeletePhoto: (photoId: string, storagePath: string) => void
+  onRenameProp?: (id: string, name: string) => void
+  onRechannelProp?: (id: string, channels: number) => void
   undo: () => void
   canUndo: boolean
 }
@@ -169,6 +173,8 @@ export function SequencerShell({
   previewTime,
   sequenceEventsForPreview,
   patchTimelineEvent,
+  onDeleteEvent,
+  onSeek,
   timelineSong,
   timelineEvents,
   timelineSongId,
@@ -183,6 +189,8 @@ export function SequencerShell({
   profileId,
   housePhotos,
   onDeletePhoto,
+  onRenameProp,
+  onRechannelProp,
   undo,
   canUndo,
 }: SequencerShellProps) {
@@ -231,6 +239,8 @@ export function SequencerShell({
                 profileId={profileId}
                 housePhotos={housePhotos}
                 onDeletePhoto={onDeletePhoto}
+                onRenameProp={onRenameProp}
+                onRechannelProp={onRechannelProp}
                 undo={undo}
                 canUndo={canUndo}
               />
@@ -292,6 +302,12 @@ export function SequencerShell({
                 setSelectedEventId={setSelectedEventId}
                 selectedEvent={selectedEvent}
                 patchTimelineEvent={patchTimelineEvent}
+                sections={sections}
+                playing={playing}
+                previewTime={previewTime}
+                beatTimes={songAnalyses[timelineSong.id]?.beatTimes ?? []}
+                onSeek={onSeek}
+                onDeleteEvent={onDeleteEvent}
               />
             )}
 

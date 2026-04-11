@@ -438,6 +438,29 @@ export default function LightCanvasSequencerPrototype() {
     [timelineSong, songAnalyses, propsState, complexity, timelineSequenceSource, debouncedSaveSequence],
   )
 
+  const handleDeleteEvent = useCallback(
+    (id: string) => {
+      const sid = timelineSong.id
+      setSequenceEventsBySong((prev) => {
+        const sections = resolveSectionsForSequence(timelineSong, songAnalyses)
+        const formula = buildEvents(propsState, complexity, sections)
+        const useStored = timelineSequenceSource === 'stored' && prev[sid]?.length
+        const base = useStored ? prev[sid]! : formula
+        const next = base.filter((e) => e.id !== id)
+        debouncedSaveSequence(sid, next)
+        return { ...prev, [sid]: next }
+      })
+    },
+    [timelineSong, songAnalyses, propsState, complexity, timelineSequenceSource, debouncedSaveSequence],
+  )
+
+  const handleSeek = useCallback(
+    (time: number) => {
+      setPreviewTime(Math.max(0, Math.min(time, selectedSong.duration)))
+    },
+    [selectedSong.duration],
+  )
+
   const selectedProp =
     propsState.length === 0
       ? undefined
@@ -703,6 +726,14 @@ export default function LightCanvasSequencerPrototype() {
     if (remaining.length === 0) setSelectedPropId(null)
     else if (selectedPropId === id || !remaining.some((p) => p.id === selectedPropId))
       setSelectedPropId(remaining[0].id)
+  }
+
+  const renameProp = (id: string, name: string) => {
+    setPropsState((prev) => prev.map((p) => (p.id === id ? { ...p, name } : p)))
+  }
+
+  const rechannelProp = (id: string, channels: number) => {
+    setPropsState((prev) => prev.map((p) => (p.id === id ? { ...p, channels } : p)))
   }
 
   const triggerSongFilePicker = () => {
@@ -1287,6 +1318,8 @@ export default function LightCanvasSequencerPrototype() {
       previewTime={previewTime}
       sequenceEventsForPreview={events}
       patchTimelineEvent={patchTimelineEvent}
+      onDeleteEvent={handleDeleteEvent}
+      onSeek={handleSeek}
       timelineSong={timelineSong}
       timelineEvents={timelineEvents}
       timelineSongId={timelineSongId}
@@ -1313,6 +1346,8 @@ export default function LightCanvasSequencerPrototype() {
           if (profileId) void updateProfilePhotoUrl(profileId, '')
         }
       }}
+      onRenameProp={renameProp}
+      onRechannelProp={rechannelProp}
       undo={undo}
       canUndo={canUndo}
     />
