@@ -121,9 +121,20 @@ ${props
 ${ALLOWED_EFFECTS.join(', ')}
 
 ## Rules
-- Split work into multiple events per section per prop (roughly 4–14 second chunks).
-- Cover the full section [start,end] for each prop without gaps inside the section.
-- Identify the finale/outro section and use maximum intensity (95-100) for all props.`
+- Each prop MUST have multiple events per section — aim for 3-6 events per section per prop
+- Event duration: 2-8 seconds each, NOT spanning whole sections
+- Vary effects within each prop across a section — e.g. Pulse → Chase → Twinkle → Pulse
+- High energy sections: faster switching, higher intensity
+- Low energy sections: slower, Hold and Shimmer dominant
+- Talking Tree Face: ONLY use Mouth Sync during vocal sections, Hold elsewhere
+- Mega Tree: bass-reactive — Pulse and Sweep on beats
+- Roofline: Chase effect, speed varies with energy
+- Stakes/clusters: Twinkle and Pulse on treble hits
+- Arches: Ripple and Chase, ripple outward on beats
+- Matrix: Color Pop and Sweep on high energy
+- Finale: ALL props at intensity 90-100, rapid switching
+- Cover the FULL song duration with no gaps
+- Return ONLY valid JSON in the exact format specified`
 
   const styleInstructions = STYLE_PRESET_INSTRUCTIONS[stylePreset]
   if (styleInstructions) {

@@ -1038,6 +1038,14 @@ export default function LightCanvasSequencerPrototype() {
       console.log('[LightCanvas] runAi: skipped (placeholder song — add a song to the library)')
       return
     }
+    if (!selectedSong.storagePath || !selectedSong.storageBucket) {
+      setChat(prev => [...prev, {
+        id: Date.now(),
+        role: 'assistant',
+        text: 'Upload a song in the Song Library first, then rebuild.',
+      }])
+      return
+    }
     const sid = selectedSong.id
     const hasFile = Boolean(selectedSong.storagePath && selectedSong.storageBucket)
     const hasPersistedOrRuntimeAnalysis =

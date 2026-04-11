@@ -115,7 +115,7 @@ export function CopilotPanel({
                     </div>
                   ))}
                 {sequenceEvents.filter((e) => previewTime >= e.start && previewTime < e.end).length === 0 && (
-                  <p className="text-slate-500">Nothing active at this second — start Preview to scrub the show.</p>
+                  <p className="text-slate-500">Nothing playing — hit Preview to start</p>
                 )}
               </div>
             </div>
