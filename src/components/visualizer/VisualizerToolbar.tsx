@@ -2,16 +2,20 @@ import type { PlacementTool } from '../../hooks/useVisualizerState'
 import { TOOLS } from '../../hooks/useVisualizerState'
 import type { DisplayProp } from '../../types/display'
 
-export const COLOR_PRESETS = [
-  { label: 'Warm White', color: '#ffe8c0' },
-  { label: 'Cool White', color: '#e8f4ff' },
-  { label: 'Red', color: '#ff2020' },
-  { label: 'Green', color: '#20ff40' },
-  { label: 'Blue', color: '#4080ff' },
-  { label: 'Amber', color: '#ffaa00' },
-  { label: 'Purple', color: '#aa40ff' },
-  { label: 'Pink', color: '#ff40aa' },
-]
+function hexToHue(hex: string): number {
+  const h = hex.replace('#', '')
+  const r = parseInt(h.substring(0, 2), 16) / 255
+  const g = parseInt(h.substring(2, 4), 16) / 255
+  const b = parseInt(h.substring(4, 6), 16) / 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b)
+  if (max === min) return 0
+  const d = max - min
+  let hue = 0
+  if (max === r) hue = ((g - b) / d + (g < b ? 6 : 0)) * 60
+  else if (max === g) hue = ((b - r) / d + 2) * 60
+  else hue = ((r - g) / d + 4) * 60
+  return Math.round(hue)
+}
 
 interface VisualizerToolbarProps {
   activeTool: PlacementTool | null
@@ -19,6 +23,8 @@ interface VisualizerToolbarProps {
   selectedProp: DisplayProp | null
   onUpdateColor?: (id: string, color: string) => void
   onUploadPhoto: () => void
+  undo: () => void
+  canUndo: boolean
 }
 
 export function VisualizerToolbar({
@@ -27,6 +33,8 @@ export function VisualizerToolbar({
   selectedProp,
   onUpdateColor,
   onUploadPhoto,
+  undo,
+  canUndo,
 }: VisualizerToolbarProps) {
   return (
     <div className="bg-zinc-950 px-4 py-3">
@@ -69,24 +77,44 @@ export function VisualizerToolbar({
           </button>
         ))}
 
-        {/* Color picker when prop selected */}
+        {/* Undo */}
+        <span className="mx-1 h-4 border-l border-zinc-700" />
+        <button
+          type="button"
+          title="Undo (Ctrl+Z)"
+          onClick={undo}
+          disabled={!canUndo}
+          className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-medium text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-400"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+          </svg>
+          Undo
+        </button>
+
+        {/* Color slider when prop selected */}
         {selectedProp && onUpdateColor && (
           <div className="ml-2 flex items-center gap-2 border-l border-zinc-700 pl-3">
             <span className="text-xs font-medium text-zinc-400">Color:</span>
-            {COLOR_PRESETS.map((preset) => (
-              <button
-                key={preset.label}
-                type="button"
-                title={preset.label}
-                onClick={() => onUpdateColor(selectedProp.id, preset.color)}
-                className={`h-4 w-4 shrink-0 rounded-full border transition ${
-                  selectedProp.color === preset.color
-                    ? 'border-white'
-                    : 'border-zinc-500 hover:border-zinc-300'
-                }`}
-                style={{ backgroundColor: preset.color }}
-              />
-            ))}
+            <span
+              className="inline-block h-5 w-5 shrink-0 rounded-full border border-zinc-500"
+              style={{ backgroundColor: selectedProp.color ?? '#ffe8c0' }}
+            />
+            <input
+              type="range"
+              min={0}
+              max={360}
+              value={hexToHue(selectedProp.color ?? '#ff0000')}
+              onChange={(e) => {
+                const h = Number(e.target.value)
+                const s = 1, l = 0.55
+                const a = s * Math.min(l, 1 - l)
+                const f = (n: number) => { const k = (n + h / 30) % 12; return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))) }
+                onUpdateColor(selectedProp.id, `#${[f(0), f(8), f(4)].map(v => v.toString(16).padStart(2, '0')).join('')}`)
+              }}
+              className="h-1.5 w-32 cursor-pointer appearance-none rounded-full"
+              style={{ background: 'linear-gradient(to right,#ff0000,#ffff00,#00ff00,#00ffff,#0000ff,#ff00ff,#ff0000)' }}
+            />
           </div>
         )}
       </div>

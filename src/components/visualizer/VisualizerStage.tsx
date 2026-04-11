@@ -18,6 +18,8 @@ interface VisualizerStageProps {
   onPropResize: (id: string, length: number, angle: number) => void
   onUpdatePropColor: (id: string, color: string) => void
   onPhotoReady: (url: string) => void
+  undo: () => void
+  canUndo: boolean
 }
 
 export function VisualizerStage({
@@ -33,9 +35,12 @@ export function VisualizerStage({
   onPropResize,
   onUpdatePropColor,
   onPhotoReady,
+  undo,
+  canUndo,
 }: VisualizerStageProps) {
   const canvasRef = useRef<VisualizerCanvasHandle>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [nightSlider, setNightSlider] = useState(40)
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
@@ -45,10 +50,29 @@ export function VisualizerStage({
         selectedProp={selectedProp}
         onUpdateColor={onUpdatePropColor}
         onUploadPhoto={() => setUploadOpen(true)}
+        undo={undo}
+        canUndo={canUndo}
       />
+      {/* Night mode slider */}
+      <div className="flex items-center gap-3 border-t border-zinc-800/60 bg-zinc-950 px-4 py-1.5">
+        <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-500">
+          <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" /></svg>
+          Night mode
+        </span>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={nightSlider}
+          onChange={(e) => setNightSlider(Number(e.target.value))}
+          className="h-1 w-28 cursor-pointer appearance-none rounded-full bg-zinc-700 accent-zinc-400"
+        />
+        <span className="w-7 text-right text-xs tabular-nums text-zinc-500">{nightSlider}%</span>
+      </div>
       <VisualizerCanvas
         ref={canvasRef}
         photoUrl={photoUrl}
+        nightOpacity={nightSlider / 100}
         props={props}
         selectedPropId={selectedPropId}
         activeTool={activeTool}

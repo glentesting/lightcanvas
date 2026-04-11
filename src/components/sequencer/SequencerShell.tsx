@@ -92,6 +92,8 @@ export interface SequencerShellProps {
   songAnalysisBusy: boolean
   photoUrl: string | null
   onPhotoReady: (url: string) => void
+  undo: () => void
+  canUndo: boolean
 }
 
 export function SequencerShell({
@@ -173,6 +175,8 @@ export function SequencerShell({
   songAnalysisBusy,
   photoUrl,
   onPhotoReady,
+  undo,
+  canUndo,
 }: SequencerShellProps) {
   return (
     <div className="w-full min-h-0 flex-1 bg-[#f4f5f8] pb-12 text-slate-900 antialiased">
@@ -215,6 +219,8 @@ export function SequencerShell({
                 resizeProp={resizeProp}
                 photoUrl={photoUrl}
                 onPhotoReady={onPhotoReady}
+                undo={undo}
+                canUndo={canUndo}
               />
             )}
             {activeTab === 'songs' && (

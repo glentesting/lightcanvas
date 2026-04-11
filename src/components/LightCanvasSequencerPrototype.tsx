@@ -303,6 +303,18 @@ export default function LightCanvasSequencerPrototype() {
   const [controllers, setControllers] = useState(3)
   const [channelsPerController, setChannelsPerController] = useState(16)
   const [propsState, setPropsState] = useState<DisplayProp[]>([])
+  const undoStackRef = useRef<DisplayProp[][]>([])
+  const pushUndo = () => {
+    undoStackRef.current = [...undoStackRef.current.slice(-19), propsState]
+  }
+  const undo = useCallback(() => {
+    const stack = undoStackRef.current
+    if (stack.length === 0) return
+    const prev = stack[stack.length - 1]
+    undoStackRef.current = stack.slice(0, -1)
+    setPropsState(prev)
+  }, [])
+  const canUndo = undoStackRef.current.length > 0
   const [displayHouseType, setDisplayHouseType] = useState<HouseTemplateId>('two-story')
   const [timelineSongId, setTimelineSongId] = useState<string | null>(null)
   const [timelineSequenceSource, setTimelineSequenceSource] = useState<'formula' | 'stored'>('stored')
@@ -416,6 +428,20 @@ export default function LightCanvasSequencerPrototype() {
   const totalChannels = controllers * channelsPerController
   const usedChannels = propsState.reduce((sum, p) => sum + p.channels, 0)
   const remainingChannels = totalChannels - usedChannels
+
+  // Ctrl+Z undo
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        const tag = (e.target as HTMLElement)?.tagName?.toLowerCase()
+        if (tag === 'input' || tag === 'textarea' || tag === 'select') return
+        e.preventDefault()
+        undo()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [undo])
 
   useEffect(() => {
     if (!playing) return
@@ -557,6 +583,7 @@ export default function LightCanvasSequencerPrototype() {
 
   const addProp = () => {
     if (!newPropName.trim()) return
+    pushUndo()
     const nextStart = propsState.length
       ? Math.max(...propsState.map((p) => p.start + p.channels))
       : 1
@@ -584,6 +611,7 @@ export default function LightCanvasSequencerPrototype() {
   }
 
   const quickAddProp = (type: string, x: number, y: number, houseType: string, opts?: { angle?: number; length?: number }) => {
+    pushUndo()
     const count = propsState.filter((p) => p.type === type).length + 1
     const name = `${type} ${count}`
     const defaultChannels: Record<string, number> = {
@@ -616,6 +644,7 @@ export default function LightCanvasSequencerPrototype() {
   }
 
   const updatePropColor = (id: string, color: string) => {
+    pushUndo()
     setPropsState((prev) => prev.map((p) => (p.id === id ? { ...p, color } : p)))
   }
 
@@ -628,6 +657,7 @@ export default function LightCanvasSequencerPrototype() {
   }
 
   const removeProp = (id: string) => {
+    pushUndo()
     const remaining = propsState.filter((p) => p.id !== id)
     setPropsState(remaining)
     if (remaining.length === 0) setSelectedPropId(null)
@@ -1229,6 +1259,8 @@ export default function LightCanvasSequencerPrototype() {
         setPhotoUrl(url)
         if (profileId) void updateProfilePhotoUrl(profileId, url)
       }}
+      undo={undo}
+      canUndo={canUndo}
     />
   )
 }

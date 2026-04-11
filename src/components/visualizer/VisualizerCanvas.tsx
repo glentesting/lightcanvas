@@ -18,11 +18,11 @@ function hexToRgba(hex: string, alpha: number): string {
 function drawMegaTree(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
   const w = 44; const h = 70
   ctx.save()
-  ctx.shadowBlur = 20 * anim.glowIntensity
+  ctx.shadowBlur = 30 * anim.glowIntensity
   ctx.shadowColor = color
   ctx.strokeStyle = color
   ctx.lineWidth = 2
-  ctx.globalAlpha = selected ? 1.0 : 0.6
+  ctx.globalAlpha = selected ? 1.0 : 0.92
   // Triangle outline
   ctx.beginPath()
   ctx.moveTo(x, y - h)
@@ -30,10 +30,10 @@ function drawMegaTree(ctx: CanvasRenderingContext2D, x: number, y: number, color
   ctx.lineTo(x + w / 2, y)
   ctx.closePath()
   ctx.stroke()
-  ctx.fillStyle = hexToRgba(color, 0.08 * anim.glowIntensity)
+  ctx.fillStyle = hexToRgba(color, 0.18 * anim.glowIntensity)
   ctx.fill()
   // Star at peak
-  ctx.shadowBlur = 30 * anim.glowIntensity
+  ctx.shadowBlur = 45 * anim.glowIntensity
   ctx.fillStyle = '#ffffff'
   ctx.beginPath()
   ctx.arc(x, y - h, 4, 0, Math.PI * 2)
@@ -44,27 +44,27 @@ function drawMegaTree(ctx: CanvasRenderingContext2D, x: number, y: number, color
 function drawMiniTree(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
   const w = 28; const h = 42
   ctx.save()
-  ctx.shadowBlur = 15 * anim.glowIntensity
+  ctx.shadowBlur = 22 * anim.glowIntensity
   ctx.shadowColor = color
   ctx.strokeStyle = color
   ctx.lineWidth = 1.5
-  ctx.globalAlpha = selected ? 1.0 : 0.6
+  ctx.globalAlpha = selected ? 1.0 : 0.92
   ctx.beginPath()
   ctx.moveTo(x, y - h)
   ctx.lineTo(x - w / 2, y)
   ctx.lineTo(x + w / 2, y)
   ctx.closePath()
   ctx.stroke()
-  ctx.fillStyle = hexToRgba(color, 0.06 * anim.glowIntensity)
+  ctx.fillStyle = hexToRgba(color, 0.14 * anim.glowIntensity)
   ctx.fill()
   ctx.restore()
 }
 
 function drawStake(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
   ctx.save()
-  ctx.shadowBlur = 15 * anim.glowIntensity
+  ctx.shadowBlur = 22 * anim.glowIntensity
   ctx.shadowColor = color
-  ctx.globalAlpha = selected ? 1.0 : 0.6
+  ctx.globalAlpha = selected ? 1.0 : 0.92
   // Thin vertical line
   ctx.strokeStyle = color
   ctx.lineWidth = 2
@@ -81,78 +81,95 @@ function drawStake(ctx: CanvasRenderingContext2D, x: number, y: number, color: s
 }
 
 function drawFace(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
-  const hw = 32; const h = 80
-  const tipX = x; const tipY = y - h; const baseY = y
   ctx.save()
-  ctx.shadowBlur = 18 * anim.glowIntensity
-  ctx.shadowColor = color
-  ctx.globalAlpha = selected ? 1.0 : 0.65
+  ctx.globalAlpha = selected ? 1.0 : 0.72
 
-  const dot = (dx: number, dy: number, c: string, r = 2.2) => {
-    ctx.fillStyle = c
+  // --- Tree outline: dot-per-pixel string around perimeter ---
+  ctx.shadowBlur = 28 * anim.glowIntensity
+  ctx.shadowColor = color
+  ctx.fillStyle = color
+
+  // Left side: 20 dots from tip (x, y-85) down to base-left (x-55, y)
+  for (let i = 0; i < 20; i++) {
+    const t = i / 19
     ctx.beginPath()
-    ctx.arc(dx, dy, r, 0, Math.PI * 2)
+    ctx.arc(x - 55 * t, (y - 85) + 85 * t, 3.5, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  // Bottom: 18 dots from base-left (x-55, y) to base-right (x+55, y)
+  for (let i = 0; i < 18; i++) {
+    const t = i / 17
+    ctx.beginPath()
+    ctx.arc(x - 55 + 110 * t, y, 3.5, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  // Right side: 20 dots from base-right (x+55, y) up to tip (x, y-85)
+  for (let i = 0; i < 20; i++) {
+    const t = i / 19
+    ctx.beginPath()
+    ctx.arc(x + 55 - 55 * t, y - 85 * t, 3.5, 0, Math.PI * 2)
     ctx.fill()
   }
 
-  // Triangle outline — many dots like real LOR pixel strings
-  // Left edge: tip down to bottom-left
-  for (let i = 0; i <= 16; i++) {
-    const t = i / 16
-    dot(tipX - hw * t, tipY + h * t, color)
-  }
-  // Bottom edge: left to right
-  for (let i = 0; i <= 14; i++) {
-    const t = i / 14
-    dot(x - hw + 2 * hw * t, baseY, color)
-  }
-  // Right edge: bottom-right up to tip
-  for (let i = 1; i <= 15; i++) {
-    const t = i / 16
-    dot(tipX + hw * (1 - t), baseY - h * t, color)
-  }
-
-  // Star at peak — 5-pointed, gold
+  // --- Star floating above the tip ---
+  ctx.shadowBlur = 20
   ctx.shadowColor = '#ffdd00'
-  const starCy = tipY - 6
+  ctx.fillStyle = '#ffdd00'
+  ctx.strokeStyle = '#ffaa00'
+  ctx.lineWidth = 1
+  const starCx = x
+  const starCy = y - 97
+  const outerR = 9
+  const innerR = 4
+  ctx.beginPath()
   for (let i = 0; i < 10; i++) {
-    const a = (i * Math.PI) / 5 - Math.PI / 2
-    const sr = i % 2 === 0 ? 8 : 3.5
-    dot(x + Math.cos(a) * sr, starCy + Math.sin(a) * sr, '#ffdd00', 2.2)
+    const angle = -Math.PI / 2 + (i * Math.PI) / 5
+    const r = i % 2 === 0 ? outerR : innerR
+    const sx = starCx + Math.cos(angle) * r
+    const sy = starCy + Math.sin(angle) * r
+    if (i === 0) ctx.moveTo(sx, sy)
+    else ctx.lineTo(sx, sy)
   }
-  dot(x, starCy, '#ffdd00', 2.5)
+  ctx.closePath()
+  ctx.fill()
+  ctx.stroke()
 
-  // Eyes — large oval rings of dots, lavender/white
-  ctx.shadowColor = '#c8c0ff'
-  const eyeColor = '#d8d0ff'
-  const eyeY = tipY + h * 0.35 // upper third of triangle
-  const eyeSpread = hw * 0.42
-  for (const side of [-1, 1]) {
-    const cx = x + side * eyeSpread
-    // Outer oval ring — 12 dots
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2
-      dot(cx + Math.cos(a) * 8, eyeY + Math.sin(a) * 6, eyeColor, 2)
+  // --- Eyes: two filled circles of dots ---
+  ctx.shadowBlur = 14
+  ctx.shadowColor = '#8888ff'
+  const eyeColor = '#c8c0ff'
+  for (const ecx of [x - 19, x + 19]) {
+    const ecy = y - 38
+    // Center dot
+    ctx.fillStyle = eyeColor
+    ctx.beginPath()
+    ctx.arc(ecx, ecy, 3.5, 0, Math.PI * 2)
+    ctx.fill()
+    // Inner ring: 8 dots at radius 7
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2
+      ctx.beginPath()
+      ctx.arc(ecx + Math.cos(a) * 7, ecy + Math.sin(a) * 7, 2.5, 0, Math.PI * 2)
+      ctx.fill()
     }
-    // Inner fill — 5 dots
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2
-      dot(cx + Math.cos(a) * 3.5, eyeY + Math.sin(a) * 2.5, eyeColor, 1.8)
+    // Outer ring: 8 dots at radius 13
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2
+      ctx.beginPath()
+      ctx.arc(ecx + Math.cos(a) * 13, ecy + Math.sin(a) * 13, 2, 0, Math.PI * 2)
+      ctx.fill()
     }
-    dot(cx, eyeY, '#ffffff', 2)
   }
 
-  // Mouth — wide smile arc of red dots, curves UP (visually a grin)
-  ctx.shadowColor = '#ff2020'
-  const mouthCount = 12
-  const mouthW = hw * 0.65
-  const mouthBaseY = tipY + h * 0.7
-  const smileLift = 8 + anim.mouthOpen * 5
-  for (let i = 0; i < mouthCount; i++) {
-    const t = i / (mouthCount - 1)
-    const mx = x - mouthW + 2 * mouthW * t
-    const my = mouthBaseY - Math.sin(t * Math.PI) * smileLift
-    dot(mx, my, '#ff2020', 2.4)
+  // --- Selection box ---
+  if (selected) {
+    ctx.shadowBlur = 0
+    ctx.shadowColor = 'transparent'
+    ctx.setLineDash([4, 4])
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)'
+    ctx.lineWidth = 1.5
+    ctx.strokeRect(x - 60, y - 100, 120, 105)
+    ctx.setLineDash([])
   }
 
   ctx.restore()
@@ -164,7 +181,7 @@ function drawRoofline(ctx: CanvasRenderingContext2D, x: number, y: number, color
   const angle = (propAngle ?? 0) * Math.PI / 180
 
   ctx.save()
-  ctx.globalAlpha = selected ? 1.0 : 0.6
+  ctx.globalAlpha = selected ? 1.0 : 0.92
   ctx.translate(x, y)
   ctx.rotate(angle)
 
@@ -175,8 +192,8 @@ function drawRoofline(ctx: CanvasRenderingContext2D, x: number, y: number, color
     const bx = -halfLen + i * spacing
     // Chase effect
     const dist = Math.abs((i / (count - 1)) - anim.chasePosition)
-    const bulbGlow = Math.max(0.3, 1.0 - dist * 3) * anim.glowIntensity
-    ctx.shadowBlur = 12 * bulbGlow
+    const bulbGlow = Math.max(0.5, 1.0 - dist * 2.5) * anim.glowIntensity
+    ctx.shadowBlur = 24 * bulbGlow
     ctx.shadowColor = color
     ctx.fillStyle = hexToRgba(color, bulbGlow)
     ctx.beginPath()
@@ -211,10 +228,10 @@ function drawRoofline(ctx: CanvasRenderingContext2D, x: number, y: number, color
 function drawArch(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
   const count = 9
   ctx.save()
-  ctx.shadowBlur = 12 * anim.glowIntensity
+  ctx.shadowBlur = 18 * anim.glowIntensity
   ctx.shadowColor = color
   ctx.fillStyle = color
-  ctx.globalAlpha = selected ? 1.0 : 0.6
+  ctx.globalAlpha = selected ? 1.0 : 0.92
   for (let i = 0; i < count; i++) {
     const t = (i / (count - 1)) * Math.PI
     const ax = x + Math.cos(t) * 24
@@ -228,10 +245,10 @@ function drawArch(ctx: CanvasRenderingContext2D, x: number, y: number, color: st
 
 function drawMatrix(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
   ctx.save()
-  ctx.shadowBlur = 8 * anim.glowIntensity
+  ctx.shadowBlur = 14 * anim.glowIntensity
   ctx.shadowColor = color
   ctx.fillStyle = color
-  ctx.globalAlpha = selected ? 1.0 : 0.6
+  ctx.globalAlpha = selected ? 1.0 : 0.92
   for (let r = 0; r < 5; r++) {
     for (let c = 0; c < 5; c++) {
       const dx = (c - 2) * 10
@@ -246,35 +263,75 @@ function drawMatrix(ctx: CanvasRenderingContext2D, x: number, y: number, color: 
 
 function drawDefault(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
   ctx.save()
-  ctx.shadowBlur = 20 * anim.glowIntensity
+  ctx.shadowBlur = 30 * anim.glowIntensity
   ctx.shadowColor = color
   ctx.fillStyle = color
-  ctx.globalAlpha = selected ? 1.0 : 0.6
+  ctx.globalAlpha = selected ? 1.0 : 0.92
   ctx.beginPath()
   ctx.arc(x, y - 12, 8, 0, Math.PI * 2)
   ctx.fill()
   ctx.restore()
 }
 
+/** Bounding box (relative to anchor) for a prop type */
+function propBounds(t: string): [number, number, number, number] {
+  if (t.includes('face') || t.includes('talking')) return [-60, -100, 120, 105]
+  if (t.includes('mega')) return [-24, -72, 48, 74]
+  if (t.includes('mini') || (t.includes('tree') && !t.includes('mega'))) return [-16, -44, 32, 46]
+  if (t.includes('stake') || t.includes('ground')) return [-8, -38, 16, 40]
+  if (t.includes('arch')) return [-26, -38, 52, 40]
+  if (t.includes('matrix')) return [-27, -51, 54, 53]
+  return [-12, -22, 24, 24]
+}
+
 function drawProp(ctx: CanvasRenderingContext2D, prop: DisplayProp, x: number, y: number, anim: PropAnimState, selected: boolean) {
   const color = prop.color ?? '#ffe8c0'
   const t = prop.type.toLowerCase()
+  const isRoof = t.includes('roof')
+
+  // Scale for non-roofline props: prop.length as percentage (100 = 1x)
+  const s = (!isRoof && prop.length != null) ? Math.max(0.3, prop.length / 100) : 1
+
+  // Apply scale transform around anchor point
+  if (s !== 1) {
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.scale(s, s)
+    ctx.translate(-x, -y)
+  }
+
   if (t.includes('mega') && t.includes('tree')) drawMegaTree(ctx, x, y, color, anim, selected)
   else if (t.includes('mini') || (t.includes('tree') && !t.includes('mega'))) drawMiniTree(ctx, x, y, color, anim, selected)
   else if (t.includes('stake') || t.includes('ground')) drawStake(ctx, x, y, color, anim, selected)
   else if (t.includes('face') || t.includes('talking')) drawFace(ctx, x, y, color, anim, selected)
-  else if (t.includes('roof')) drawRoofline(ctx, x, y, color, anim, selected, prop.length, prop.angle)
+  else if (isRoof) drawRoofline(ctx, x, y, color, anim, selected, prop.length, prop.angle)
   else if (t.includes('arch')) drawArch(ctx, x, y, color, anim, selected)
   else if (t.includes('matrix')) drawMatrix(ctx, x, y, color, anim, selected)
   else drawDefault(ctx, x, y, color, anim, selected)
 
-  // Selection dashed rectangle
-  if (selected) {
+  if (s !== 1) ctx.restore()
+
+  // Selection box + corner handles (drawn at scaled positions but unscaled stroke)
+  if (selected && !isRoof) {
+    const [bx, by, bw, bh] = propBounds(t)
+    const sx = x + bx * s, sy = y + by * s, sw = bw * s, sh = bh * s
     ctx.save()
     ctx.setLineDash([4, 4])
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)'
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)'
     ctx.lineWidth = 1
-    ctx.strokeRect(x - 30, y - 80, 60, 88)
+    ctx.strokeRect(sx, sy, sw, sh)
+    ctx.setLineDash([])
+    // Corner handles
+    const corners: [number, number][] = [[sx, sy], [sx + sw, sy], [sx, sy + sh], [sx + sw, sy + sh]]
+    for (const [hx, hy] of corners) {
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'
+      ctx.strokeStyle = '#70AD47'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.arc(hx, hy, 5, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.stroke()
+    }
     ctx.restore()
   }
 }
@@ -312,6 +369,7 @@ export interface VisualizerCanvasHandle {
 
 interface VisualizerCanvasProps {
   photoUrl: string | null
+  nightOpacity: number
   props: DisplayProp[]
   selectedPropId: string | null
   activeTool: string | null
@@ -322,12 +380,12 @@ interface VisualizerCanvasProps {
 }
 
 export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCanvasProps>(
-  function VisualizerCanvas({ photoUrl, props, selectedPropId, activeTool, onCanvasClick, onPropClick, onPropDrag, onPropResize }, ref) {
+  function VisualizerCanvas({ photoUrl, nightOpacity, props, selectedPropId, activeTool, onCanvasClick, onPropClick, onPropDrag, onPropResize }, ref) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const bgImageRef = useRef<HTMLImageElement | null>(null)
     const rafRef = useRef<number>(0)
     const dragRef = useRef<{ id: string } | null>(null)
-    const resizeRef = useRef<{ id: string; fixedX: number; fixedY: number } | null>(null)
+    const resizeRef = useRef<{ id: string; mode: 'roofline' | 'corner'; fixedX: number; fixedY: number } | null>(null)
     const { updateSnapshot, getAnimState } = usePropsAnimation()
 
     // Expose triggerFrame for sequencer-driven animation
@@ -378,8 +436,8 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
           sy = (bg.height - sh) / 2
         }
         ctx.drawImage(bg, sx, sy, sw, sh, 0, 0, cw, ch)
-        // Dark overlay to maintain night feel
-        ctx.fillStyle = 'rgba(2,6,16,0.45)'
+        // Dark overlay controlled by night mode slider
+        ctx.fillStyle = `rgba(2,6,16,${nightOpacity})`
         ctx.fillRect(0, 0, cw, ch)
       } else {
         // No photo — dark gradient placeholder
@@ -402,7 +460,7 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
       }
 
       rafRef.current = requestAnimationFrame(draw)
-    }, [props, selectedPropId, getAnimState])
+    }, [props, selectedPropId, nightOpacity, getAnimState])
 
     useEffect(() => {
       rafRef.current = requestAnimationFrame(draw)
@@ -430,36 +488,64 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
       return null
     }, [props])
 
-    /** Check if (px,py) is near either endpoint of the selected roofline prop. Returns the FIXED endpoint (the other end) if hit, or null. */
-    const findRooflineEndpoint = useCallback((px: number, py: number): { id: string; fixedX: number; fixedY: number } | null => {
+    /** Check if (px,py) is near a resize handle on the selected prop.
+        For roofline: endpoint handles. For others: corner handles.
+        Returns { id, mode, fixedX, fixedY } or null. */
+    const findResizeHandle = useCallback((px: number, py: number): { id: string; mode: 'roofline' | 'corner'; fixedX: number; fixedY: number } | null => {
       if (!selectedPropId) return null
       const canvas = canvasRef.current
       if (!canvas) return null
       const rect = canvas.getBoundingClientRect()
       const sel = props.find((p) => p.id === selectedPropId)
-      if (!sel || !sel.type.toLowerCase().includes('roof')) return null
-      if (sel.canvasX == null || sel.canvasY == null) return null
+      if (!sel || sel.canvasX == null || sel.canvasY == null) return null
       const [cx, cy] = toPixel(sel.canvasX, sel.canvasY, rect.width, rect.height)
-      const len = sel.length ?? 120
-      const ang = (sel.angle ?? 0) * Math.PI / 180
-      const halfLen = len / 2
-      // Two endpoints in pixel space
-      const e1x = cx - Math.cos(ang) * halfLen, e1y = cy - Math.sin(ang) * halfLen
-      const e2x = cx + Math.cos(ang) * halfLen, e2y = cy + Math.sin(ang) * halfLen
-      const d1 = Math.hypot(px - e1x, py - e1y)
-      const d2 = Math.hypot(px - e2x, py - e2y)
-      if (d1 < 15) return { id: sel.id, fixedX: e2x, fixedY: e2y }
-      if (d2 < 15) return { id: sel.id, fixedX: e1x, fixedY: e1y }
+      const t = sel.type.toLowerCase()
+
+      if (t.includes('roof')) {
+        // Roofline endpoint handles
+        const len = sel.length ?? 120
+        const ang = (sel.angle ?? 0) * Math.PI / 180
+        const halfLen = len / 2
+        const e1x = cx - Math.cos(ang) * halfLen, e1y = cy - Math.sin(ang) * halfLen
+        const e2x = cx + Math.cos(ang) * halfLen, e2y = cy + Math.sin(ang) * halfLen
+        if (Math.hypot(px - e1x, py - e1y) < 15) return { id: sel.id, mode: 'roofline', fixedX: e2x, fixedY: e2y }
+        if (Math.hypot(px - e2x, py - e2y) < 15) return { id: sel.id, mode: 'roofline', fixedX: e1x, fixedY: e1y }
+      } else {
+        // Corner handles for all other props
+        const s = (sel.length != null) ? Math.max(0.3, sel.length / 100) : 1
+        const [bx, by, bw, bh] = propBounds(t)
+        const corners: [number, number][] = [
+          [cx + bx * s, cy + by * s],
+          [cx + (bx + bw) * s, cy + by * s],
+          [cx + bx * s, cy + (by + bh) * s],
+          [cx + (bx + bw) * s, cy + (by + bh) * s],
+        ]
+        for (const [hx, hy] of corners) {
+          if (Math.hypot(px - hx, py - hy) < 12) {
+            // Fixed point is the opposite corner (center of prop)
+            return { id: sel.id, mode: 'corner', fixedX: cx, fixedY: cy }
+          }
+        }
+      }
       return null
     }, [props, selectedPropId])
+
+    // Store original distance from center to corner at drag start for scale computation
+    const scaleBaseRef = useRef<number>(1)
 
     const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
       const [px, py] = getCanvasPos(e)
 
-      // Check roofline endpoint resize first (only when selected)
-      const endpoint = findRooflineEndpoint(px, py)
-      if (endpoint) {
-        resizeRef.current = endpoint
+      // Check resize handles first (roofline endpoints + corner handles)
+      const handle = findResizeHandle(px, py)
+      if (handle) {
+        resizeRef.current = handle
+        if (handle.mode === 'corner') {
+          // Store current distance from center for relative scaling
+          const sel = props.find((p) => p.id === handle.id)
+          const currentScale = (sel?.length != null) ? sel.length / 100 : 1
+          scaleBaseRef.current = currentScale / Math.max(1, Math.hypot(px - handle.fixedX, py - handle.fixedY))
+        }
         ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
         return
       }
@@ -485,23 +571,28 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
       }
 
       onPropClick('')
-    }, [activeTool, getCanvasPos, findRooflineEndpoint, findPropAt, onPropClick, onCanvasClick])
+    }, [activeTool, getCanvasPos, findResizeHandle, findPropAt, onPropClick, onCanvasClick, props])
 
     const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
-      // Roofline resize mode
       if (resizeRef.current) {
         const [px, py] = getCanvasPos(e)
-        const fx = resizeRef.current.fixedX
-        const fy = resizeRef.current.fixedY
-        const dx = px - fx
-        const dy = py - fy
-        const newLength = Math.max(30, Math.hypot(dx, dy))
-        const newAngle = Math.atan2(dy, dx) * 180 / Math.PI
-        // Recompute center as midpoint between fixed end and mouse
-        const rect = canvasRef.current!.getBoundingClientRect()
-        const [nx, ny] = toNorm((fx + px) / 2, (fy + py) / 2, rect.width, rect.height)
-        onPropDrag(resizeRef.current.id, nx, ny)
-        onPropResize(resizeRef.current.id, newLength, newAngle)
+        const r = resizeRef.current
+
+        if (r.mode === 'roofline') {
+          // Roofline: length + angle from fixed endpoint to mouse
+          const dx = px - r.fixedX, dy = py - r.fixedY
+          const newLength = Math.max(30, Math.hypot(dx, dy))
+          const newAngle = Math.atan2(dy, dx) * 180 / Math.PI
+          const rect = canvasRef.current!.getBoundingClientRect()
+          const [nx, ny] = toNorm((r.fixedX + px) / 2, (r.fixedY + py) / 2, rect.width, rect.height)
+          onPropDrag(r.id, nx, ny)
+          onPropResize(r.id, newLength, newAngle)
+        } else {
+          // Corner: scale based on distance from center
+          const dist = Math.hypot(px - r.fixedX, py - r.fixedY)
+          const newScale = Math.max(30, Math.min(400, Math.round(dist * scaleBaseRef.current * 100)))
+          onPropResize(r.id, newScale, 0)
+        }
         return
       }
 

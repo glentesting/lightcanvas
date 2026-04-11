@@ -30,6 +30,8 @@ export interface DisplaySetupWorkspaceProps {
   resizeProp: (id: string, length: number, angle: number) => void
   photoUrl: string | null
   onPhotoReady: (url: string) => void
+  undo: () => void
+  canUndo: boolean
 }
 
 const SEL_ACCENT = 'border-brand-green'
@@ -45,6 +47,7 @@ export function DisplaySetupWorkspace({
   newPropChannels, setNewPropChannels,
   addProp, removeProp, quickAddProp, updatePropColor, moveProp, resizeProp,
   photoUrl, onPhotoReady,
+  undo, canUndo,
 }: DisplaySetupWorkspaceProps) {
   const capacityPct = Math.min(100, (usedChannels / Math.max(1, totalChannels)) * 100)
 
@@ -75,6 +78,8 @@ export function DisplaySetupWorkspace({
         onPropResize={viz.handlePropResize}
         onUpdatePropColor={updatePropColor}
         onPhotoReady={onPhotoReady}
+        undo={undo}
+        canUndo={canUndo}
       />
 
       {/* White controls card */}
