@@ -127,6 +127,14 @@ export function TimelineWorkspace({
       exit={{ opacity: 0, y: -12 }}
       className="flex w-full min-w-0 max-w-full flex-col gap-4 rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_12px_40px_-16px_rgba(15,23,42,0.1)]"
     >
+      {/* Empty state guidance */}
+      {allEvents.length === 0 && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+          Your sequence shows up here after you run AI sequencing. Click any colored block to edit it — change the effect,
+          intensity, or color. Click empty space to seek.
+        </div>
+      )}
+
       {/* Song/Sequence selectors */}
       <div className="grid gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-5 sm:grid-cols-2">
         <label className="block">

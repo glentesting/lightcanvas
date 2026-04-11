@@ -1,6 +1,6 @@
 import { useRef, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { AlertTriangle, CheckCircle, Download, Upload, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Copy, Download, Upload, XCircle } from 'lucide-react'
 import type { DisplayProp } from '../../../types/display'
 import type { Song } from '../../../types/song'
 import type { TimelineEvent } from '../types'
@@ -187,6 +187,9 @@ export function ExportWorkspace({
         </div>
       </div>
 
+      {/* Share section */}
+      <ShareSection />
+
       {/* Import section */}
       {onImportLor && (
         <div className="mt-6 border-t border-slate-200 pt-5">
@@ -257,5 +260,28 @@ export function ExportWorkspace({
         </div>
       )}
     </motion.div>
+  )
+}
+
+function ShareSection() {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = () => {
+    void navigator.clipboard.writeText('https://lightcanvas.co')
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <div className="mt-6 border-t border-slate-200 pt-5">
+      <h2 className={sectionLabel}>Enjoying LightCanvas?</h2>
+      <p className="mb-3 text-sm text-slate-600">Share it with your light show community.</p>
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-brand-green/60 hover:text-brand-green"
+      >
+        <Copy className="h-4 w-4" />
+        {copied ? 'Copied!' : 'Copy link to share'}
+      </button>
+    </div>
   )
 }

@@ -53,8 +53,8 @@ export function AISequencingWorkspace({
       className="w-full min-w-0 max-w-full space-y-8 rounded-2xl border border-slate-200/90 bg-white p-7 shadow-[0_12px_40px_-16px_rgba(15,23,42,0.1)]"
     >
       <p className="text-[15px] leading-relaxed text-slate-600">
-        Tune how dense your show feels, then run a full rebuild. The live preview and copilot below use the same props and
-        song data as the rest of the app.
+        Pick a style, set complexity, then hit Rebuild. The AI reads your song analysis and generates a sequence for every
+        prop on your display. Takes about 10-15 seconds.
       </p>
 
       <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
