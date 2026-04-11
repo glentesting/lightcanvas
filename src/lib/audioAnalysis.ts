@@ -181,73 +181,84 @@ function buildSectionsFromEnergy(
   duration: number,
   energy: number[],
   vocalRatio: number[],
-  sr: number,
-  hop: number,
+  _sr: number,
+  _hop: number,
 ): AnalyzedSection[] {
-  const fps = sr / hop
   if (energy.length < 4 || duration <= 0) {
-    return [
-      {
-        name: 'Full track',
-        start: 0,
-        end: duration,
-        energy: 50,
-        vocals: false,
-      },
-    ]
+    return [{ name: 'Full track', start: 0, end: duration, energy: 50, vocals: false }]
   }
 
   const smooth = movingAverage(energy, Math.max(3, Math.floor(energy.length / 80)))
   const n = smooth.length
+  const MIN_SECTION = 10 // seconds
+  const MAX_SECTIONS = 12
+  const WINDOW = Math.min(20, Math.max(15, duration / 8)) // 15-20s windows
 
-  const valleys: number[] = []
-  for (let i = 2; i < n - 2; i++) {
-    const v = smooth[i]
-    if (
-      v <= smooth[i - 1] &&
-      v <= smooth[i + 1] &&
-      v < smooth[i - 2] * 0.92 &&
-      v < smooth[i + 2] * 0.92
-    ) {
-      valleys.push(i)
+  // Step 1: compute average energy per fixed window
+  const windowCount = Math.max(1, Math.floor(duration / WINDOW))
+  const windowEnergies: number[] = []
+  for (let w = 0; w < windowCount; w++) {
+    const wStart = Math.floor((w / windowCount) * n)
+    const wEnd = Math.min(n, Math.floor(((w + 1) / windowCount) * n))
+    let sum = 0, cnt = 0
+    for (let j = wStart; j < wEnd; j++) { sum += smooth[j]; cnt++ }
+    windowEnergies.push(cnt > 0 ? sum / cnt : 0)
+  }
+
+  // Step 2: find boundaries where energy changes by >15%
+  const rawBoundaries = new Set<number>()
+  rawBoundaries.add(0)
+  rawBoundaries.add(duration)
+  for (let w = 1; w < windowEnergies.length; w++) {
+    const prev = windowEnergies[w - 1]
+    const curr = windowEnergies[w]
+    const avg = (prev + curr) / 2 + 1e-10
+    if (Math.abs(curr - prev) / avg > 0.15) {
+      rawBoundaries.add(Math.round((w / windowCount) * duration * 10) / 10)
     }
   }
 
-  const minGap = Math.max(2, Math.floor(4 * fps))
-
-  const splits: number[] = [0]
-  let last = 0
-  for (const v of valleys) {
-    if (v - last >= minGap) {
-      splits.push(v)
-      last = v
-    }
+  // Step 3: fallback boundaries at 25%, 50%, 75% if too few natural ones
+  if (rawBoundaries.size < 5 && duration > 40) {
+    rawBoundaries.add(Math.round(duration * 0.25 * 10) / 10)
+    rawBoundaries.add(Math.round(duration * 0.5 * 10) / 10)
+    rawBoundaries.add(Math.round(duration * 0.75 * 10) / 10)
   }
-  splits.push(n - 1)
 
-  let boundaries = splits.map((f) => (f / Math.max(1, n - 1)) * duration)
-  boundaries = [0, ...Array.from(new Set(boundaries.filter((b) => b > 0 && b < duration))), duration].sort(
-    (a, b) => a - b,
-  )
-
-  const minDur = Math.max(4, duration * 0.06)
+  // Step 4: sort and merge close boundaries
+  let boundaries = Array.from(rawBoundaries).sort((a, b) => a - b)
   const merged: number[] = [boundaries[0]]
   for (let i = 1; i < boundaries.length; i++) {
-    if (boundaries[i] - merged[merged.length - 1] < minDur) continue
-    merged.push(boundaries[i])
+    if (boundaries[i] - merged[merged.length - 1] >= MIN_SECTION) {
+      merged.push(boundaries[i])
+    }
   }
   if (merged[merged.length - 1] < duration) merged.push(duration)
   if (merged.length < 2) merged.push(duration)
 
+  // Cap at MAX_SECTIONS
+  while (merged.length - 1 > MAX_SECTIONS) {
+    // Remove the boundary that creates the shortest section
+    let minIdx = 1, minLen = Infinity
+    for (let i = 1; i < merged.length - 1; i++) {
+      const len = merged[i + 1] - merged[i - 1]
+      if (merged[i + 1] - merged[i] < minLen || merged[i] - merged[i - 1] < minLen) {
+        const shorter = Math.min(merged[i + 1] - merged[i], merged[i] - merged[i - 1])
+        if (shorter < minLen) { minLen = shorter; minIdx = i }
+      }
+    }
+    merged.splice(minIdx, 1)
+  }
+
+  // Step 5: build sections with energy and vocal stats
+  const peakEnergy = Math.max(...smooth, 1e-12)
   const sections: AnalyzedSection[] = []
   for (let i = 0; i < merged.length - 1; i++) {
     const start = merged[i]
     const end = merged[i + 1]
     const i0 = Math.floor((start / duration) * (n - 1))
     const i1 = Math.ceil((end / duration) * (n - 1))
-    let eSum = 0
-    let vSum = 0
-    let cnt = 0
+    let eSum = 0, vSum = 0, cnt = 0
     for (let j = Math.max(0, i0); j <= Math.min(n - 1, i1); j++) {
       eSum += smooth[j]
       vSum += vocalRatio[j] ?? 0
@@ -255,9 +266,9 @@ function buildSectionsFromEnergy(
     }
     const eMean = cnt ? eSum / cnt : 0
     const vMean = cnt ? vSum / cnt : 0
-    const eRank = eMean / (Math.max(...smooth, 1e-12) + 1e-12)
+    const eRank = eMean / peakEnergy
     sections.push({
-      name: SECTION_NAMES[Math.min(i, SECTION_NAMES.length - 1)] ?? `Section ${i + 1}`,
+      name: `Section ${i + 1}`,
       start,
       end,
       energy: Math.round(Math.min(100, Math.max(5, eRank * 100))),
@@ -265,35 +276,39 @@ function buildSectionsFromEnergy(
     })
   }
 
-  nameSectionsByEnergy(sections)
+  // Step 6: label by position and energy
+  nameSectionsByEnergy(sections, duration)
   return sections
 }
 
-function nameSectionsByEnergy(sections: AnalyzedSection[]): void {
+function nameSectionsByEnergy(sections: AnalyzedSection[], duration: number): void {
   if (sections.length === 0) return
-  sections[0].name = 'Intro'
-  sections[sections.length - 1].name = 'Finale'
-  if (sections.length <= 2) return
 
-  let best = 1
-  for (let i = 1; i < sections.length - 1; i++) {
-    if (sections[i].energy > sections[best].energy) best = i
-  }
-  sections[best].name = 'Chorus'
+  // Tag intro/finale by position
+  if (sections[0].end <= duration * 0.2) sections[0].name = 'Intro'
+  if (sections.length > 1 && sections[sections.length - 1].start >= duration * 0.85)
+    sections[sections.length - 1].name = 'Finale'
 
-  let pre = -1
-  for (let i = 1; i < sections.length - 1; i++) {
-    if (i === best) continue
-    if (pre < 0 || sections[i].energy > sections[pre].energy) pre = i
-  }
-  if (pre >= 0 && pre !== best) sections[pre].name = 'Pre-Chorus'
+  // Find median energy for high/low classification
+  const energies = sections.map(s => s.energy).sort((a, b) => a - b)
+  const median = energies[Math.floor(energies.length / 2)]
 
-  let vi = 1
-  for (let i = 1; i < sections.length - 1; i++) {
-    if (i === best || i === pre) continue
-    if (sections[i].name === 'Intro' || sections[i].name === 'Finale') continue
-    sections[i].name = vi === 1 ? 'Verse 1' : vi === 2 ? 'Verse 2' : `Section ${i + 1}`
-    vi++
+  let verseNum = 1
+  let chorusNum = 1
+  for (const s of sections) {
+    if (s.name === 'Intro' || s.name === 'Finale') continue
+    if (s.energy >= median + 10) {
+      s.name = chorusNum === 1 ? 'Chorus' : `Chorus ${chorusNum}`
+      chorusNum++
+    } else if (s.energy <= median - 10) {
+      s.name = `Verse ${verseNum}`
+      verseNum++
+    } else {
+      // Mid-energy: bridge or build
+      const pos = s.start / duration
+      if (pos > 0.5 && pos < 0.8) s.name = 'Bridge'
+      else s.name = 'Build'
+    }
   }
 }
 
