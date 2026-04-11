@@ -330,6 +330,7 @@ export default function LightCanvasSequencerPrototype() {
   const [displayConfigReady, setDisplayConfigReady] = useState(false)
   const [songs, setSongs] = useState<Song[]>([])
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null)
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [analysisProgress, setAnalysisProgress] = useState(91)
   const [playing, setPlaying] = useState(false)
   const [complexity, setComplexity] = useState(62)
@@ -497,6 +498,21 @@ export default function LightCanvasSequencerPrototype() {
       }
     })
   }, [selectedSongId, user?.id, profileId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch audio blob for export when song changes
+  useEffect(() => {
+    setAudioBlob(null)
+    const song = songs.find((s) => s.id === selectedSongId)
+    if (!song?.storagePath || !song?.storageBucket) return
+    void getSongAudioSignedUrl(song).then((url) => {
+      if (!url) return
+      void fetch(url).then((res) => {
+        if (res.ok) return res.blob()
+      }).then((blob) => {
+        if (blob) setAudioBlob(blob)
+      })
+    })
+  }, [selectedSongId, songs])
 
   useEffect(() => {
     if (!playing) return
@@ -1396,6 +1412,7 @@ export default function LightCanvasSequencerPrototype() {
       onRenameProp={renameProp}
       onRechannelProp={rechannelProp}
       onImportLor={handleImportLor}
+      audioBlob={audioBlob}
       undo={undo}
       canUndo={canUndo}
     />

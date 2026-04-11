@@ -102,6 +102,7 @@ export interface SequencerShellProps {
   onRenameProp?: (id: string, name: string) => void
   onRechannelProp?: (id: string, channels: number) => void
   onImportLor?: (result: LorImportResult) => void
+  audioBlob?: Blob | null
   undo: () => void
   canUndo: boolean
 }
@@ -194,6 +195,7 @@ export function SequencerShell({
   onRenameProp,
   onRechannelProp,
   onImportLor,
+  audioBlob,
   undo,
   canUndo,
 }: SequencerShellProps) {
@@ -324,6 +326,7 @@ export function SequencerShell({
                 controllers={controllers}
                 channelsPerController={channelsPerController}
                 onImportLor={onImportLor}
+                audioBlob={audioBlob}
               />
             )}
             {activeTab === 'ai' && (

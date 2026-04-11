@@ -6,6 +6,7 @@ import type { Song } from '../../../types/song'
 import type { TimelineEvent } from '../types'
 import { downloadFseq } from '../../../lib/exportFseq'
 import { downloadXlightsXml } from '../../../lib/exportXlights'
+import { downloadShowPackage } from '../../../lib/exportShowPackage'
 import { validateChannelMapping } from '../../../lib/validateChannels'
 import { importLorFile, type LorImportResult } from '../../../lib/importLor'
 import { Button } from '../shared/Button'
@@ -19,13 +20,14 @@ export interface ExportWorkspaceProps {
   controllers: number
   channelsPerController: number
   onImportLor?: (result: LorImportResult) => void
+  audioBlob?: Blob | null
 }
 
 const sectionLabel = 'mb-3 block text-xs font-medium uppercase tracking-[0.14em] text-slate-500'
 
 export function ExportWorkspace({
   selectedSong, propsState, totalChannels, events, exportPayload,
-  controllers, channelsPerController, onImportLor,
+  controllers, channelsPerController, onImportLor, audioBlob,
 }: ExportWorkspaceProps) {
   const hasEvents = events.length > 0
   const lorFileRef = useRef<HTMLInputElement>(null)
@@ -115,6 +117,22 @@ export function ExportWorkspace({
 
           <section className="space-y-3">
             <h2 className={sectionLabel}>Download</h2>
+
+            {/* Show Package — primary action */}
+            <div className="rounded-xl border-2 border-brand-green/30 bg-brand-green/5 p-4">
+              <Button
+                disabled={!canDownload}
+                className="w-full justify-center px-6 py-3.5 text-[15px]"
+                onClick={() => void downloadShowPackage(events, propsState, selectedSong.title, selectedSong.duration, audioBlob ?? null)}
+              >
+                <Download className="h-5 w-5" /> Download Show Package (.zip)
+              </Button>
+              <p className="mt-2 text-center text-xs text-slate-600">
+                Includes FSEQ, channel map, and instructions
+                {audioBlob ? ' — audio file included' : ''}
+              </p>
+            </div>
+
             <div>
               <Button
                 disabled={!canDownload}
