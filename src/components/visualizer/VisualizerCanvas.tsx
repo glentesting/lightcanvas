@@ -195,6 +195,30 @@ function drawFace(ctx: CanvasRenderingContext2D, x: number, y: number, color: st
     }
   }
 
+  // Mouth — red smile arc of dots inside the tree body
+  ctx.shadowBlur = 14 * anim.glowIntensity
+  ctx.shadowColor = '#ff0000'
+
+  const mouthCount = 11
+  const mouthCx = x
+  const mouthCy = y - 18
+  const mouthR = 18
+  // Animate mouth open amount — 0 = narrow smile, 1 = wide open
+  const openAmount = anim.mouthOpen ?? 0
+  const startAngle = Math.PI + 0.3 - openAmount * 0.15
+  const endAngle = Math.PI * 2 - 0.3 + openAmount * 0.15
+  const span = endAngle - startAngle
+
+  for (let i = 0; i < mouthCount; i++) {
+    const a = startAngle + (i / (mouthCount - 1)) * span
+    const dotX = mouthCx + Math.cos(a) * mouthR
+    const dotY = mouthCy + Math.sin(a) * mouthR
+    ctx.fillStyle = hexToRgba('#ff2020', 0.9 + openAmount * 0.1)
+    ctx.beginPath()
+    ctx.arc(dotX, dotY, 3.5, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
   // --- Selection box ---
   if (selected) {
     ctx.shadowBlur = 0
