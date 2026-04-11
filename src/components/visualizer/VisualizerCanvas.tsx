@@ -201,12 +201,11 @@ function drawFace(ctx: CanvasRenderingContext2D, x: number, y: number, color: st
 
   const mouthCount = 11
   const mouthCx = x
-  const mouthCy = y - 18
-  const mouthR = 18
-  // Animate mouth open amount — 0 = narrow smile, 1 = wide open
+  const mouthCy = y - 34
+  const mouthR = 16
   const openAmount = anim.mouthOpen ?? 0
-  const startAngle = Math.PI + 0.3 - openAmount * 0.15
-  const endAngle = Math.PI * 2 - 0.3 + openAmount * 0.15
+  const startAngle = 0.3 - openAmount * 0.2
+  const endAngle = Math.PI - 0.3 + openAmount * 0.2
   const span = endAngle - startAngle
 
   for (let i = 0; i < mouthCount; i++) {
