@@ -666,14 +666,20 @@ function drawProp(ctx: CanvasRenderingContext2D, prop: DisplayProp, x: number, y
 // Canvas coordinate helpers
 // ---------------------------------------------------------------------------
 
-/** Convert canvas-normalized coords (0–1) to pixel coords */
-function toPixel(normX: number, normY: number, cw: number, ch: number): [number, number] {
-  return [normX * cw, normY * ch]
+/** Convert canvas-normalized coords (0–1) to screen pixel coords (zoom-aware) */
+function toPixel(normX: number, normY: number, cw: number, ch: number, scale = 1, offset = { x: 0, y: 0 }): [number, number] {
+  return [
+    normX * cw * scale + offset.x,
+    normY * ch * scale + offset.y,
+  ]
 }
 
-/** Convert pixel coords to canvas-normalized coords (0–1) */
-function toNorm(px: number, py: number, cw: number, ch: number): [number, number] {
-  return [px / cw, py / ch]
+/** Convert screen pixel coords to canvas-normalized coords (0–1) (zoom-aware) */
+function toNorm(px: number, py: number, cw: number, ch: number, scale = 1, offset = { x: 0, y: 0 }): [number, number] {
+  return [
+    (px - offset.x) / (cw * scale),
+    (py - offset.y) / (ch * scale),
+  ]
 }
 
 // ---------------------------------------------------------------------------
@@ -691,6 +697,8 @@ function hitTest(px: number, py: number, propPx: number, propPy: number, radius 
 
 export interface VisualizerCanvasHandle {
   triggerFrame: (snapshot: AudioSnapshot) => void
+  resetView: () => void
+  getScale: () => number
 }
 
 interface VisualizerCanvasProps {
@@ -703,20 +711,26 @@ interface VisualizerCanvasProps {
   onPropClick: (id: string) => void
   onPropDrag: (id: string, normX: number, normY: number) => void
   onPropResize: (id: string, length: number, angle: number) => void
+  onViewChange?: (zoomed: boolean) => void
 }
 
 export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCanvasProps>(
-  function VisualizerCanvas({ photoUrl, nightOpacity, props, selectedPropId, activeTool, onCanvasClick, onPropClick, onPropDrag, onPropResize }, ref) {
+  function VisualizerCanvas({ photoUrl, nightOpacity, props, selectedPropId, activeTool, onCanvasClick, onPropClick, onPropDrag, onPropResize, onViewChange }, ref) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const bgImageRef = useRef<HTMLImageElement | null>(null)
     const rafRef = useRef<number>(0)
     const dragRef = useRef<{ id: string } | null>(null)
     const resizeRef = useRef<{ id: string; mode: 'roofline' | 'corner'; fixedX: number; fixedY: number } | null>(null)
+    const scaleRef = useRef(1)
+    const offsetRef = useRef({ x: 0, y: 0 })
+    const panRef = useRef<{ lastX: number; lastY: number } | null>(null)
     const { updateSnapshot, getAnimState } = usePropsAnimation()
 
-    // Expose triggerFrame for sequencer-driven animation
+    // Expose triggerFrame and view controls
     useImperativeHandle(ref, () => ({
       triggerFrame: (snapshot: AudioSnapshot) => updateSnapshot(snapshot),
+      resetView: () => { scaleRef.current = 1; offsetRef.current = { x: 0, y: 0 } },
+      getScale: () => scaleRef.current,
     }), [updateSnapshot])
 
     // Load background photo
@@ -743,9 +757,14 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
       canvas.height = ch * dpr
       ctx.scale(dpr, dpr)
 
-      // Clear
+      // Clear (full canvas, before transform)
       ctx.fillStyle = '#050a14'
       ctx.fillRect(0, 0, cw, ch)
+
+      // Apply zoom/pan transform
+      ctx.save()
+      ctx.translate(offsetRef.current.x, offsetRef.current.y)
+      ctx.scale(scaleRef.current, scaleRef.current)
 
       // Background photo
       const bg = bgImageRef.current
@@ -775,15 +794,18 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
         ctx.fillRect(0, 0, cw, ch)
       }
 
-      // Draw props
+      // Draw props (coords are in canvas-space, ctx transform handles zoom/pan)
       const now = performance.now() / 1000
       for (const prop of props) {
         if (prop.canvasX == null || prop.canvasY == null) continue
-        const [px, py] = toPixel(prop.canvasX, prop.canvasY, cw, ch)
+        const px = prop.canvasX * cw
+        const py = prop.canvasY * ch
         const anim = getAnimState(prop.type, now)
         const selected = prop.id === selectedPropId
         drawProp(ctx, prop, px, py, anim, selected)
       }
+
+      ctx.restore()
 
       rafRef.current = requestAnimationFrame(draw)
     }, [props, selectedPropId, nightOpacity, getAnimState])
@@ -808,7 +830,7 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
       for (let i = props.length - 1; i >= 0; i--) {
         const p = props[i]
         if (p.canvasX == null || p.canvasY == null) continue
-        const [ppx, ppy] = toPixel(p.canvasX, p.canvasY, rect.width, rect.height)
+        const [ppx, ppy] = toPixel(p.canvasX, p.canvasY, rect.width, rect.height, scaleRef.current, offsetRef.current)
         if (hitTest(px, py, ppx, ppy)) return p
       }
       return null
@@ -824,7 +846,7 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
       const rect = canvas.getBoundingClientRect()
       const sel = props.find((p) => p.id === selectedPropId)
       if (!sel || sel.canvasX == null || sel.canvasY == null) return null
-      const [cx, cy] = toPixel(sel.canvasX, sel.canvasY, rect.width, rect.height)
+      const [cx, cy] = toPixel(sel.canvasX, sel.canvasY, rect.width, rect.height, scaleRef.current, offsetRef.current)
       const t = sel.type.toLowerCase()
 
       if (t.includes('roof')) {
@@ -862,6 +884,14 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
     const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
       const [px, py] = getCanvasPos(e)
 
+      // Middle mouse button — always pan
+      if (e.button === 1) {
+        e.preventDefault()
+        panRef.current = { lastX: px, lastY: py }
+        ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+        return
+      }
+
       // Check resize handles first (roofline endpoints + corner handles)
       const handle = findResizeHandle(px, py)
       if (handle) {
@@ -891,12 +921,14 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
 
       if (activeTool && activeTool !== 'eraser') {
         const rect = canvasRef.current!.getBoundingClientRect()
-        const [nx, ny] = toNorm(px, py, rect.width, rect.height)
+        const [nx, ny] = toNorm(px, py, rect.width, rect.height, scaleRef.current, offsetRef.current)
         onCanvasClick(nx, ny)
         return
       }
 
-      onPropClick('')
+      // No tool, no prop hit — start panning
+      panRef.current = { lastX: px, lastY: py }
+      ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
     }, [activeTool, getCanvasPos, findResizeHandle, findPropAt, onPropClick, onCanvasClick, props])
 
     const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -910,7 +942,7 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
           const newLength = Math.max(30, Math.hypot(dx, dy))
           const newAngle = Math.atan2(dy, dx) * 180 / Math.PI
           const rect = canvasRef.current!.getBoundingClientRect()
-          const [nx, ny] = toNorm((r.fixedX + px) / 2, (r.fixedY + py) / 2, rect.width, rect.height)
+          const [nx, ny] = toNorm((r.fixedX + px) / 2, (r.fixedY + py) / 2, rect.width, rect.height, scaleRef.current, offsetRef.current)
           onPropDrag(r.id, nx, ny)
           onPropResize(r.id, newLength, newAngle)
         } else {
@@ -922,27 +954,59 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
         return
       }
 
+      // Panning
+      if (panRef.current) {
+        const [px, py] = getCanvasPos(e)
+        offsetRef.current = {
+          x: offsetRef.current.x + (px - panRef.current.lastX),
+          y: offsetRef.current.y + (py - panRef.current.lastY),
+        }
+        panRef.current = { lastX: px, lastY: py }
+        return
+      }
+
       // Normal drag
       if (!dragRef.current) return
       const rect = canvasRef.current!.getBoundingClientRect()
       const px = e.clientX - rect.left
       const py = e.clientY - rect.top
-      const [nx, ny] = toNorm(px, py, rect.width, rect.height)
+      const [nx, ny] = toNorm(px, py, rect.width, rect.height, scaleRef.current, offsetRef.current)
       onPropDrag(dragRef.current.id, nx, ny)
     }, [getCanvasPos, onPropDrag, onPropResize])
 
     const handlePointerUp = useCallback(() => {
+      if (panRef.current) {
+        onViewChange?.(scaleRef.current !== 1 || offsetRef.current.x !== 0 || offsetRef.current.y !== 0)
+      }
       dragRef.current = null
       resizeRef.current = null
-    }, [])
+      panRef.current = null
+    }, [onViewChange])
+
+    const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
+      e.preventDefault()
+      const delta = e.deltaY > 0 ? 0.9 : 1.1
+      const newScale = Math.min(4, Math.max(0.5, scaleRef.current * delta))
+      // Zoom toward mouse position
+      const [mx, my] = getCanvasPos(e)
+      const ratio = newScale / scaleRef.current
+      offsetRef.current = {
+        x: mx - ratio * (mx - offsetRef.current.x),
+        y: my - ratio * (my - offsetRef.current.y),
+      }
+      scaleRef.current = newScale
+      onViewChange?.(newScale !== 1 || offsetRef.current.x !== 0 || offsetRef.current.y !== 0)
+    }, [getCanvasPos, onViewChange])
 
     const cursor = activeTool === 'eraser'
       ? 'pointer'
       : activeTool
         ? 'crosshair'
-        : dragRef.current
+        : panRef.current
           ? 'grabbing'
-          : 'default'
+          : dragRef.current
+            ? 'grabbing'
+            : 'default'
 
     return (
       <canvas
@@ -952,6 +1016,7 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onWheel={handleWheel}
       />
     )
   },

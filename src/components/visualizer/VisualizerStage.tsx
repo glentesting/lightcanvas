@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { DisplayProp } from '../../types/display'
 import type { PlacementTool, ToolDef } from '../../hooks/useVisualizerState'
 import { VisualizerCanvas, type VisualizerCanvasHandle } from './VisualizerCanvas'
@@ -47,6 +47,12 @@ export function VisualizerStage({
   const canvasRef = useRef<VisualizerCanvasHandle>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
   const [nightSlider, setNightSlider] = useState(40)
+  const [isZoomed, setIsZoomed] = useState(false)
+
+  const handleResetView = useCallback(() => {
+    canvasRef.current?.resetView()
+    setIsZoomed(false)
+  }, [])
 
   return (
     <div className="w-full overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
@@ -59,6 +65,8 @@ export function VisualizerStage({
         onUploadPhoto={() => setUploadOpen(true)}
         onChangePhoto={() => setUploadOpen(true)}
         photoUrl={photoUrl}
+        onResetView={handleResetView}
+        showResetView={isZoomed}
         undo={undo}
         canUndo={canUndo}
       />
@@ -89,6 +97,7 @@ export function VisualizerStage({
         onPropClick={onPropClick}
         onPropDrag={onPropDrag}
         onPropResize={onPropResize}
+        onViewChange={setIsZoomed}
       />
       <UploadPhotoFlow
         open={uploadOpen}
