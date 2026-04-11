@@ -785,6 +785,7 @@ export default function LightCanvasSequencerPrototype() {
       }
       setAnalysisProgress(72)
       const result = analyzeAudioBuffer(decoded)
+      result.analyzedAt = new Date().toISOString()
       setSongAnalyses((prev) => ({ ...prev, [sid]: result }))
       const persistedSections: SongSectionSnapshot[] = result.sections.map((sec) => ({
         name: sec.name,
@@ -1050,6 +1051,7 @@ export default function LightCanvasSequencerPrototype() {
         }
         setAnalysisProgress(75)
         const result = analyzeAudioBuffer(decoded)
+        result.analyzedAt = new Date().toISOString()
         setSongAnalyses((prev) => ({ ...prev, [sid]: result }))
         const persistedSections: SongSectionSnapshot[] = result.sections.map((sec) => ({
           name: sec.name,

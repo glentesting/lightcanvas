@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ChevronDown, Sparkles, Trash2, Upload } from 'lucide-react'
+import { ChevronDown, RefreshCw, Sparkles, Trash2, Upload } from 'lucide-react'
 import type { ChangeEvent, ComponentType, MouseEvent, RefObject } from 'react'
 import type { SongAudioAnalysis } from '../../../lib/audioAnalysis'
 import type { Song } from '../../../types/song'
@@ -56,19 +56,47 @@ export function SongsWorkspace({
             power sequencing and the timeline.
           </p>
         </div>
-        <Button
-          className="shrink-0 px-6 py-3 text-[15px] shadow-brand-soft transition duration-150"
-          disabled={
-            songAnalysisBusy ||
-            selectedSong.id === PLACEHOLDER_SONG.id ||
-            !selectedSong.storagePath ||
-            !selectedSong.storageBucket
-          }
-          onClick={() => void runAudioAnalysis()}
-        >
-          <Sparkles className="h-4 w-4" />
-          {songAnalysisBusy ? 'Analyzing…' : 'Run AI analysis'}
-        </Button>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <div className="flex items-center gap-2">
+            <Button
+              className="shrink-0 px-6 py-3 text-[15px] shadow-brand-soft transition duration-150"
+              disabled={
+                songAnalysisBusy ||
+                selectedSong.id === PLACEHOLDER_SONG.id ||
+                !selectedSong.storagePath ||
+                !selectedSong.storageBucket
+              }
+              onClick={() => void runAudioAnalysis()}
+            >
+              <Sparkles className="h-4 w-4" />
+              {songAnalysisBusy ? 'Analyzing…' : 'Run AI analysis'}
+            </Button>
+            {analysis && (
+              <button
+                type="button"
+                disabled={
+                  songAnalysisBusy ||
+                  selectedSong.id === PLACEHOLDER_SONG.id ||
+                  !selectedSong.storagePath ||
+                  !selectedSong.storageBucket
+                }
+                onClick={() => void runAudioAnalysis()}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-3 text-[15px] font-medium text-slate-700 transition hover:border-brand-green/60 hover:text-brand-green disabled:opacity-50"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Re-analyze
+              </button>
+            )}
+          </div>
+          {analysis?.analyzedAt && (
+            <span className="text-xs text-slate-500">
+              Last analyzed: {new Date(analysis.analyzedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} at {new Date(analysis.analyzedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+            </span>
+          )}
+          {analysis && !analysis.analyzedAt && (
+            <span className="text-xs text-slate-500">Analyzed</span>
+          )}
+        </div>
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 md:p-5">

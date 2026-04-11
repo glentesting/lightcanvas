@@ -17,6 +17,7 @@ export interface SongAudioAnalysis {
   vocalSeries: number[]
   sections: AnalyzedSection[]
   summary: SongAnalysis
+  analyzedAt?: string
 }
 
 function mixToMono(buffer: AudioBuffer): Float32Array {
