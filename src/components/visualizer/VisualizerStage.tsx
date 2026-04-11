@@ -57,6 +57,8 @@ export function VisualizerStage({
         selectedProp={selectedProp}
         onUpdateColor={onUpdatePropColor}
         onUploadPhoto={() => setUploadOpen(true)}
+        onChangePhoto={() => setUploadOpen(true)}
+        photoUrl={photoUrl}
         undo={undo}
         canUndo={canUndo}
       />

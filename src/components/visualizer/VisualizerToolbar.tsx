@@ -23,6 +23,8 @@ interface VisualizerToolbarProps {
   selectedProp: DisplayProp | null
   onUpdateColor?: (id: string, color: string) => void
   onUploadPhoto: () => void
+  onChangePhoto?: () => void
+  photoUrl: string | null
   undo: () => void
   canUndo: boolean
 }
@@ -34,6 +36,8 @@ export function VisualizerToolbar({
   selectedProp,
   onUpdateColor,
   onUploadPhoto,
+  onChangePhoto,
+  photoUrl,
   undo,
   canUndo,
 }: VisualizerToolbarProps) {
@@ -56,6 +60,20 @@ export function VisualizerToolbar({
           </svg>
           Your House
         </button>
+
+        {photoUrl && onChangePhoto && (
+          <button
+            type="button"
+            title="Change or replace house photo"
+            onClick={onChangePhoto}
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-zinc-100"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
+            </svg>
+            Change photo
+          </button>
+        )}
 
         <span className="mx-1 h-4 border-l border-zinc-700" />
 
