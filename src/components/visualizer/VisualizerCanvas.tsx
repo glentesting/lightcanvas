@@ -622,10 +622,10 @@ function drawProp(ctx: CanvasRenderingContext2D, prop: DisplayProp, x: number, y
   }
 
   if (t.includes('mega') && t.includes('tree')) drawMegaTree(ctx, x, y, color, anim, selected)
-  else if (t.includes('mini') || (t.includes('tree') && !t.includes('mega'))) drawMiniTree(ctx, x, y, color, anim, selected)
+  else if (t.includes('face') || t.includes('talking')) drawFace(ctx, x, y, color, anim, selected)
+  else if (t.includes('mini') || t.includes('tree')) drawMiniTree(ctx, x, y, color, anim, selected)
   else if (t.includes('cluster')) drawStakeCluster(ctx, x, y, color, anim, selected)
   else if (t.includes('stake') || t.includes('ground')) drawStake(ctx, x, y, color, anim, selected)
-  else if (t.includes('face') || t.includes('talking')) drawFace(ctx, x, y, color, anim, selected)
   else if (isRoof) drawRoofline(ctx, x, y, color, anim, selected, prop.length, prop.angle)
   else if (t.includes('arch')) drawArch(ctx, x, y, color, anim, selected)
   else if (t.includes('matrix')) drawMatrix(ctx, x, y, color, anim, selected)
