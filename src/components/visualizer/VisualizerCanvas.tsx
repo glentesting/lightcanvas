@@ -32,11 +32,24 @@ function drawMegaTree(ctx: CanvasRenderingContext2D, x: number, y: number, color
   ctx.stroke()
   ctx.fillStyle = hexToRgba(color, 0.18 * anim.glowIntensity)
   ctx.fill()
-  // Star at peak
+  // 5-pointed star at peak
   ctx.shadowBlur = 45 * anim.glowIntensity
-  ctx.fillStyle = '#ffffff'
+  ctx.shadowColor = '#ffdd00'
+  ctx.fillStyle = '#ffdd00'
   ctx.beginPath()
-  ctx.arc(x, y - h, 4, 0, Math.PI * 2)
+  const starX = x
+  const starY = y - h - 6
+  const outerR = 7
+  const innerR = 3
+  for (let i = 0; i < 10; i++) {
+    const angle = (i * Math.PI) / 5 - Math.PI / 2
+    const r = i % 2 === 0 ? outerR : innerR
+    const sx = starX + Math.cos(angle) * r
+    const sy = starY + Math.sin(angle) * r
+    if (i === 0) ctx.moveTo(sx, sy)
+    else ctx.lineTo(sx, sy)
+  }
+  ctx.closePath()
   ctx.fill()
   ctx.restore()
 }
@@ -56,6 +69,27 @@ function drawMiniTree(ctx: CanvasRenderingContext2D, x: number, y: number, color
   ctx.closePath()
   ctx.stroke()
   ctx.fillStyle = hexToRgba(color, 0.14 * anim.glowIntensity)
+  ctx.fill()
+  // 5-pointed star at peak
+  ctx.shadowBlur = 30 * anim.glowIntensity
+  ctx.shadowColor = '#ffdd00'
+  ctx.fillStyle = '#ffdd00'
+  ctx.beginPath()
+  {
+    const starX2 = x
+    const starY2 = y - h - 4
+    const outerR2 = 5
+    const innerR2 = 2.5
+    for (let i = 0; i < 10; i++) {
+      const angle = (i * Math.PI) / 5 - Math.PI / 2
+      const r = i % 2 === 0 ? outerR2 : innerR2
+      const sx = starX2 + Math.cos(angle) * r
+      const sy = starY2 + Math.sin(angle) * r
+      if (i === 0) ctx.moveTo(sx, sy)
+      else ctx.lineTo(sx, sy)
+    }
+  }
+  ctx.closePath()
   ctx.fill()
   ctx.restore()
 }
@@ -226,20 +260,35 @@ function drawRoofline(ctx: CanvasRenderingContext2D, x: number, y: number, color
 }
 
 function drawArch(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
-  const count = 9
+  const count = 13
+  const archW = 50
+  const archH = 55
   ctx.save()
-  ctx.shadowBlur = 18 * anim.glowIntensity
+  ctx.shadowBlur = 14 * anim.glowIntensity
   ctx.shadowColor = color
   ctx.fillStyle = color
   ctx.globalAlpha = selected ? 1.0 : 0.92
   for (let i = 0; i < count; i++) {
     const t = (i / (count - 1)) * Math.PI
-    const ax = x + Math.cos(t) * 24
-    const ay = y - Math.sin(t) * 36
+    const ax = x + Math.cos(Math.PI - t) * archW
+    const ay = y - Math.sin(t) * archH
     ctx.beginPath()
-    ctx.arc(ax, ay, 3, 0, Math.PI * 2)
+    ctx.arc(ax, ay, 3.5, 0, Math.PI * 2)
     ctx.fill()
   }
+  // Wire connecting the dots
+  ctx.shadowBlur = 0
+  ctx.strokeStyle = hexToRgba(color, 0.15)
+  ctx.lineWidth = 0.5
+  ctx.beginPath()
+  for (let i = 0; i < count; i++) {
+    const t = (i / (count - 1)) * Math.PI
+    const ax = x + Math.cos(Math.PI - t) * archW
+    const ay = y - Math.sin(t) * archH
+    if (i === 0) ctx.moveTo(ax, ay)
+    else ctx.lineTo(ax, ay)
+  }
+  ctx.stroke()
   ctx.restore()
 }
 
