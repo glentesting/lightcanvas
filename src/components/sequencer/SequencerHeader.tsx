@@ -23,8 +23,8 @@ export function SequencerHeader({ signOut, userEmail }: SequencerHeaderProps) {
 
   return (
     <header className="flex min-h-[56px] shrink-0 items-center justify-between gap-4 bg-white">
-      <div className="flex min-w-0 flex-1 items-center justify-start">
-        <img src={logoSrc} alt="LightCanvas" className="shrink-0" style={{ height: 32 }} />
+      <div className="flex items-center justify-start">
+        <img src={logoSrc} alt="LightCanvas" style={{ height: 28, width: 'auto', maxWidth: 'none', display: 'block' }} />
       </div>
 
       <div className="relative shrink-0" ref={ref}>
