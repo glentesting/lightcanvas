@@ -116,13 +116,6 @@ export function AISequencingWorkspace({
                 Higher values produce denser timing and more effect changes on every prop.
               </p>
             </div>
-            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-100/60 p-5">
-              <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500">Coming soon</div>
-              <SliderRow label="Face sync priority" value={88} onChange={() => {}} disabled />
-              <SliderRow label="Bass reactivity" value={72} onChange={() => {}} disabled />
-              <SliderRow label="Transition smoothness" value={61} onChange={() => {}} disabled />
-              <SliderRow label="Finale escalation" value={90} onChange={() => {}} disabled />
-            </div>
           </section>
 
           <div className="flex flex-wrap gap-3 border-t border-slate-200/90 pt-6">

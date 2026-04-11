@@ -207,11 +207,7 @@ export function CopilotPanel({
             <div className="flex items-start gap-2">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
               <p className="text-xs leading-relaxed text-slate-600">
-                Copilot calls <code className="rounded bg-white px-1 py-0.5 text-[11px]">/api/copilot-message</code>. Run{' '}
-                <code className="rounded bg-white px-1 py-0.5 text-[11px]">vercel dev</code> (not{' '}
-                <code className="rounded bg-white px-1 py-0.5 text-[11px]">npm run dev</code> alone) with{' '}
-                <code className="rounded bg-white px-1 py-0.5 text-[11px]">ANTHROPIC_API_KEY</code>, or set{' '}
-                <code className="rounded bg-white px-1 py-0.5 text-[11px]">VITE_COPILOT_APPLY_URL</code>.
+                AI Copilot is powered by Claude. Changes apply to your active sequence.
               </p>
             </div>
           </div>

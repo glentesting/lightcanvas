@@ -166,17 +166,6 @@ function buildBeatTimes(
   return beats
 }
 
-const SECTION_NAMES = [
-  'Intro',
-  'Verse 1',
-  'Pre-Chorus',
-  'Chorus',
-  'Breakdown',
-  'Verse 2',
-  'Bridge',
-  'Finale',
-]
-
 function buildSectionsFromEnergy(
   duration: number,
   energy: number[],
@@ -241,7 +230,6 @@ function buildSectionsFromEnergy(
     // Remove the boundary that creates the shortest section
     let minIdx = 1, minLen = Infinity
     for (let i = 1; i < merged.length - 1; i++) {
-      const len = merged[i + 1] - merged[i - 1]
       if (merged[i + 1] - merged[i] < minLen || merged[i] - merged[i - 1] < minLen) {
         const shorter = Math.min(merged[i + 1] - merged[i], merged[i] - merged[i - 1])
         if (shorter < minLen) { minLen = shorter; minIdx = i }

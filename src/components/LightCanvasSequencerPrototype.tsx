@@ -12,7 +12,7 @@ import {
   minimalSongAudioAnalysisFromPersisted,
   type SongAudioAnalysis,
 } from '../lib/audioAnalysis'
-import { CopilotApiUnavailableError, requestCopilotMessage } from '../lib/copilotApplyApi'
+import { requestCopilotMessage } from '../lib/copilotApplyApi'
 import { mapClaudeEventsToTimeline, requestClaudeSequence } from '../lib/generateSequenceApi'
 import { getAudioDurationFromFile } from '../lib/getAudioDurationFromFile'
 import {
@@ -1202,9 +1202,16 @@ export default function LightCanvasSequencerPrototype() {
       setRebuildPhase('sequence')
       void (async () => {
         try {
-          const sectionList = resolveSectionsForSequence(selectedSong, songAnalyses)
-          const bpm = selectedSong.bpm ?? songAnalyses[sid]?.bpm ?? 120
-          await runClaudeForSong(selectedSong.analysis, bpm, sectionList, selectedSong.duration)
+          if (propsState.length > 0) {
+            const sectionList = resolveSectionsForSequence(selectedSong, songAnalyses)
+            const bpm = selectedSong.bpm ?? songAnalyses[sid]?.bpm ?? 120
+            await runClaudeForSong(selectedSong.analysis, bpm, sectionList, selectedSong.duration)
+          } else {
+            setChat((prev) => [
+              ...prev,
+              { id: Date.now(), role: 'assistant', text: 'Add props in Display Setup, then rebuild to generate a sequence.' },
+            ])
+          }
         } finally {
           setRebuildAnalyzing(false)
           setRebuildPhase('idle')
@@ -1257,8 +1264,10 @@ export default function LightCanvasSequencerPrototype() {
           'Analyzed your uploaded audio (tempo, beat grid, bass/treble/vocal bands, dynamics) and section boundaries from energy. Sequence draft updated from those signals.',
           { persistAnalysis: true, persistedSections },
         )
-        setRebuildPhase('sequence')
-        await runClaudeForSong(result.summary, result.bpm, sectionList, selectedSong.duration)
+        if (propsState.length > 0) {
+          setRebuildPhase('sequence')
+          await runClaudeForSong(result.summary, result.bpm, sectionList, selectedSong.duration)
+        }
       } catch (e) {
         console.error('Audio analysis failed', e)
         finishRebuild(
@@ -1335,15 +1344,10 @@ export default function LightCanvasSequencerPrototype() {
         { id: Date.now() + 1, role: 'assistant', text: result.reply },
       ])
     } catch (e) {
-      const hint =
-        e instanceof CopilotApiUnavailableError
-          ? e.message
-          : e instanceof Error
-            ? e.message
-            : 'Something went wrong. Check that your API server is running and try again.'
+      console.error('[LightCanvas] copilot error', e)
       setChat((prev) => [
         ...prev,
-        { id: Date.now() + 1, role: 'assistant', text: hint },
+        { id: Date.now() + 1, role: 'assistant', text: "Couldn't connect to the AI right now. Try again in a moment." },
       ])
     } finally {
       setCopilotBusy(false)
