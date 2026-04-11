@@ -19,6 +19,7 @@ import {
   deleteSongFromLibrary,
   getOrCreateDisplayProfile,
   getSongAudioSignedUrl,
+  loadDisplayProps,
   loadSongs,
   persistDisplayProfile,
   persistSongAudioAnalysis,
@@ -626,7 +627,13 @@ export default function LightCanvasSequencerPrototype() {
         setChannelsPerController(profile.channels_per_controller)
         setPhotoUrl(profile.photo_url)
 
-        setPropsState([])
+        try {
+          const props = await loadDisplayProps(profile.id)
+          if (!cancelled) setPropsState(props)
+        } catch (propsErr) {
+          console.error('Failed to load display props', propsErr)
+          if (!cancelled) setPropsState([])
+        }
 
         const photos = await loadHousePhotos(uid)
         if (cancelled) return
