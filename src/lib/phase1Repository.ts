@@ -16,6 +16,12 @@ type DisplayPropRow = {
   priority: string
   notes: string
   sort_order: number
+  canvas_x: number | null
+  canvas_y: number | null
+  color: string | null
+  angle: number | null
+  length: number | null
+  house_type: string | null
 }
 
 type SongRow = {
@@ -77,6 +83,12 @@ export function rowToDisplayProp(row: DisplayPropRow): DisplayProp {
     start: row.start_channel,
     priority: row.priority,
     notes: row.notes,
+    canvasX: row.canvas_x ?? undefined,
+    canvasY: row.canvas_y ?? undefined,
+    color: row.color ?? undefined,
+    angle: row.angle ?? undefined,
+    length: row.length ?? undefined,
+    houseType: row.house_type ?? undefined,
   }
 }
 
@@ -235,6 +247,12 @@ export async function persistDisplayProfile(
     priority: p.priority,
     notes: p.notes,
     sort_order: i,
+    canvas_x: p.canvasX ?? null,
+    canvas_y: p.canvasY ?? null,
+    color: p.color ?? null,
+    angle: p.angle ?? null,
+    length: p.length ?? null,
+    house_type: p.houseType ?? null,
   }))
 
   const { error: ins } = await supabase.from('display_props').insert(rows)
