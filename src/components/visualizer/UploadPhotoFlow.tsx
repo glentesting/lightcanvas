@@ -1,18 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import { supabase } from '../../lib/supabaseClient'
+import { saveHousePhoto } from '../../lib/phase1Repository'
 
 interface UploadPhotoFlowProps {
   open: boolean
   onClose: () => void
   onPhotoReady: (url: string) => void
+  userId: string | null
+  profileId: string | null
 }
 
 function generateToken(): string {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 16)
 }
 
-export function UploadPhotoFlow({ open, onClose, onPhotoReady }: UploadPhotoFlowProps) {
+export function UploadPhotoFlow({ open, onClose, onPhotoReady, userId, profileId }: UploadPhotoFlowProps) {
   const [token] = useState(generateToken)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -24,7 +27,8 @@ export function UploadPhotoFlow({ open, onClose, onPhotoReady }: UploadPhotoFlow
   // Generate QR code on mount
   useEffect(() => {
     if (!open) return
-    const uploadUrl = `${window.location.origin}/upload/${token}`
+    const baseUrl = import.meta.env.VITE_PUBLIC_URL?.trim() || window.location.origin
+    const uploadUrl = `${baseUrl}/upload/${token}`
     QRCode.toDataURL(uploadUrl, { width: 200, margin: 2, color: { dark: '#1a2840', light: '#ffffff' } })
       .then(setQrDataUrl)
       .catch(() => setQrDataUrl(null))
@@ -46,12 +50,13 @@ export function UploadPhotoFlow({ open, onClose, onPhotoReady }: UploadPhotoFlow
         if (urlData?.publicUrl) {
           setDone(true)
           onPhotoReady(urlData.publicUrl)
+          if (userId) void saveHousePhoto(userId, profileId, file.name, urlData.publicUrl, file.name)
           if (pollRef.current) clearInterval(pollRef.current)
         }
       }
     }, 2000)
     return () => { if (pollRef.current) clearInterval(pollRef.current) }
-  }, [open, token, onPhotoReady])
+  }, [open, token, onPhotoReady, userId, profileId])
 
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -74,9 +79,10 @@ export function UploadPhotoFlow({ open, onClose, onPhotoReady }: UploadPhotoFlow
     if (urlData?.publicUrl) {
       setDone(true)
       onPhotoReady(urlData.publicUrl)
+      if (userId) void saveHousePhoto(userId, profileId, path, urlData.publicUrl, file.name)
     }
     setUploading(false)
-  }, [token, onPhotoReady])
+  }, [token, onPhotoReady, userId, profileId])
 
   if (!open) return null
 

@@ -18,6 +18,8 @@ interface VisualizerStageProps {
   onPropResize: (id: string, length: number, angle: number) => void
   onUpdatePropColor: (id: string, color: string) => void
   onPhotoReady: (url: string) => void
+  userId: string | null
+  profileId: string | null
   undo: () => void
   canUndo: boolean
 }
@@ -35,6 +37,8 @@ export function VisualizerStage({
   onPropResize,
   onUpdatePropColor,
   onPhotoReady,
+  userId,
+  profileId,
   undo,
   canUndo,
 }: VisualizerStageProps) {
@@ -88,6 +92,8 @@ export function VisualizerStage({
           onPhotoReady(url)
           setUploadOpen(false)
         }}
+        userId={userId}
+        profileId={profileId}
       />
     </div>
   )

@@ -458,3 +458,66 @@ export async function deleteSongFromLibrary(song: Song): Promise<{ error: Error 
   const { error } = await supabase.from('songs').delete().eq('id', song.id)
   return { error: error ? new Error(error.message) : null }
 }
+
+// ---------------------------------------------------------------------------
+// House photos
+// ---------------------------------------------------------------------------
+
+export type HousePhotoRow = {
+  id: string
+  user_id: string
+  display_profile_id: string | null
+  storage_path: string
+  public_url: string
+  filename: string | null
+  uploaded_at: string
+}
+
+export async function saveHousePhoto(
+  userId: string,
+  profileId: string | null,
+  storagePath: string,
+  publicUrl: string,
+  filename?: string,
+): Promise<{ id: string | null; error: Error | null }> {
+  if (!supabase) return { id: null, error: new Error('Supabase not configured') }
+  const { data, error } = await supabase
+    .from('house_photos')
+    .insert({
+      user_id: userId,
+      display_profile_id: profileId,
+      storage_path: storagePath,
+      public_url: publicUrl,
+      filename: filename ?? null,
+    })
+    .select('id')
+    .single()
+  if (error) return { id: null, error: new Error(error.message) }
+  return { id: data.id, error: null }
+}
+
+export async function loadHousePhotos(
+  userId: string,
+): Promise<HousePhotoRow[]> {
+  if (!supabase) return []
+  const { data, error } = await supabase
+    .from('house_photos')
+    .select('*')
+    .eq('user_id', userId)
+    .order('uploaded_at', { ascending: false })
+  if (error) return []
+  return data as HousePhotoRow[]
+}
+
+export async function deleteHousePhoto(
+  photoId: string,
+  storagePath: string,
+): Promise<{ error: Error | null }> {
+  if (!supabase) return { error: new Error('Supabase not configured') }
+  await supabase.storage.from('house-photos').remove([storagePath])
+  const { error } = await supabase
+    .from('house_photos')
+    .delete()
+    .eq('id', photoId)
+  return { error: error ? new Error(error.message) : null }
+}

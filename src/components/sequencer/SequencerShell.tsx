@@ -1,6 +1,7 @@
 import type { ChangeEvent, ComponentType, Dispatch, MouseEvent, RefObject, SetStateAction } from 'react'
 import type { SongAudioAnalysis } from '../../lib/audioAnalysis'
 import type { DisplayProp } from '../../types/display'
+import type { HousePhotoRow } from '../../lib/phase1Repository'
 import type { Song } from '../../types/song'
 import { CopilotPanel } from './CopilotPanel'
 import { SequencerHeader } from './SequencerHeader'
@@ -89,6 +90,10 @@ export interface SequencerShellProps {
   songAnalysisBusy: boolean
   photoUrl: string | null
   onPhotoReady: (url: string) => void
+  userId: string | null
+  profileId: string | null
+  housePhotos: HousePhotoRow[]
+  onDeletePhoto: (photoId: string, storagePath: string) => void
   undo: () => void
   canUndo: boolean
 }
@@ -170,6 +175,10 @@ export function SequencerShell({
   songAnalysisBusy,
   photoUrl,
   onPhotoReady,
+  userId,
+  profileId,
+  housePhotos,
+  onDeletePhoto,
   undo,
   canUndo,
 }: SequencerShellProps) {
@@ -214,6 +223,10 @@ export function SequencerShell({
                 resizeProp={resizeProp}
                 photoUrl={photoUrl}
                 onPhotoReady={onPhotoReady}
+                userId={userId}
+                profileId={profileId}
+                housePhotos={housePhotos}
+                onDeletePhoto={onDeletePhoto}
                 undo={undo}
                 canUndo={canUndo}
               />

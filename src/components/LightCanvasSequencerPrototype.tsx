@@ -26,6 +26,9 @@ import {
   updateProfilePhotoUrl,
   updateSongStatus,
   uploadSongFromFile,
+  loadHousePhotos,
+  deleteHousePhoto,
+  type HousePhotoRow,
 } from '../lib/phase1Repository'
 import { supabase } from '../lib/supabaseClient'
 import type { DisplayProp } from '../types/display'
@@ -319,6 +322,7 @@ export default function LightCanvasSequencerPrototype() {
   const [songAnalysisBusy, setSongAnalysisBusy] = useState(false)
   const [profileId, setProfileId] = useState<string | null>(null)
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
+  const [housePhotos, setHousePhotos] = useState<HousePhotoRow[]>([])
   const [displayConfigReady, setDisplayConfigReady] = useState(false)
   const [songs, setSongs] = useState<Song[]>([])
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null)
@@ -478,6 +482,10 @@ export default function LightCanvasSequencerPrototype() {
         setPhotoUrl(profile.photo_url)
 
         setPropsState([])
+
+        const photos = await loadHousePhotos(uid)
+        if (cancelled) return
+        setHousePhotos(photos)
 
         const songList = await loadSongs(uid)
         if (cancelled) return
@@ -1255,6 +1263,19 @@ export default function LightCanvasSequencerPrototype() {
       onPhotoReady={(url: string) => {
         setPhotoUrl(url)
         if (profileId) void updateProfilePhotoUrl(profileId, url)
+        // Refresh photo library after a short delay to let DB insert complete
+        if (user?.id) setTimeout(() => { void loadHousePhotos(user.id).then(setHousePhotos) }, 1000)
+      }}
+      userId={user?.id ?? null}
+      profileId={profileId}
+      housePhotos={housePhotos}
+      onDeletePhoto={async (photoId: string, storagePath: string) => {
+        await deleteHousePhoto(photoId, storagePath)
+        setHousePhotos((prev) => prev.filter((p) => p.id !== photoId))
+        if (photoUrl && housePhotos.find((p) => p.id === photoId)?.public_url === photoUrl) {
+          setPhotoUrl(null)
+          if (profileId) void updateProfilePhotoUrl(profileId, '')
+        }
       }}
       undo={undo}
       canUndo={canUndo}

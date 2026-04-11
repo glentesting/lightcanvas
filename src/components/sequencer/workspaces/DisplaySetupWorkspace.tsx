@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Plus, Trash2 } from 'lucide-react'
 import type { DisplayProp } from '../../../types/display'
+import type { HousePhotoRow } from '../../../lib/phase1Repository'
 import { useVisualizerState } from '../../../hooks/useVisualizerState'
 import { VisualizerStage } from '../../visualizer/VisualizerStage'
 import { propTypes } from '../types'
@@ -30,6 +31,10 @@ export interface DisplaySetupWorkspaceProps {
   resizeProp: (id: string, length: number, angle: number) => void
   photoUrl: string | null
   onPhotoReady: (url: string) => void
+  userId: string | null
+  profileId: string | null
+  housePhotos: HousePhotoRow[]
+  onDeletePhoto: (photoId: string, storagePath: string) => void
   undo: () => void
   canUndo: boolean
 }
@@ -47,6 +52,8 @@ export function DisplaySetupWorkspace({
   newPropChannels, setNewPropChannels,
   addProp, removeProp, quickAddProp, updatePropColor, moveProp, resizeProp,
   photoUrl, onPhotoReady,
+  userId, profileId,
+  housePhotos, onDeletePhoto,
   undo, canUndo,
 }: DisplaySetupWorkspaceProps) {
   const capacityPct = Math.min(100, (usedChannels / Math.max(1, totalChannels)) * 100)
@@ -78,9 +85,48 @@ export function DisplaySetupWorkspace({
         onPropResize={viz.handlePropResize}
         onUpdatePropColor={updatePropColor}
         onPhotoReady={onPhotoReady}
+        userId={userId}
+        profileId={profileId}
         undo={undo}
         canUndo={canUndo}
       />
+
+      {/* Photo library */}
+      {housePhotos.length > 0 && (
+        <div className="rounded-xl border border-slate-200/90 bg-white px-4 py-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-medium uppercase tracking-[0.14em] text-slate-500">Your house photos</span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {housePhotos.map((photo) => (
+              <button
+                key={photo.id}
+                type="button"
+                onClick={() => onPhotoReady(photo.public_url)}
+                className={`group relative shrink-0 overflow-hidden rounded-lg border-2 transition ${
+                  photoUrl === photo.public_url ? 'border-brand-green' : 'border-transparent hover:border-slate-300'
+                }`}
+              >
+                <img
+                  src={photo.public_url}
+                  alt=""
+                  className="h-10 w-[60px] object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onDeletePhoto(photo.id, photo.storage_path) }}
+                  className="absolute right-0.5 top-0.5 hidden rounded-full bg-black/60 p-0.5 text-white group-hover:block"
+                  aria-label="Remove photo"
+                >
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* White controls card */}
       <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_12px_40px_-16px_rgba(15,23,42,0.12)]">
