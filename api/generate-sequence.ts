@@ -75,7 +75,9 @@ function buildUserMessage(body: SequenceRequestPayload): string {
   const props = Array.isArray(body.props) ? body.props : []
   const stylePreset = body.stylePreset ?? 'standard'
 
-  let msg = `Generate a light show sequence for this song. Return ONLY valid JSON with the shape:
+  let msg = `Return ONLY a JSON object. Start your response with { and end with }. No explanation, no markdown, no code blocks.
+
+Generate a light show sequence for this song. Return ONLY valid JSON with the shape:
 {
   "events": [
     {
@@ -120,21 +122,22 @@ ${props
 ## Allowed effects (use exactly these names)
 ${ALLOWED_EFFECTS.join(', ')}
 
-## Rules
-- Each prop MUST have multiple events per section — aim for 3-6 events per section per prop
-- Event duration: 2-8 seconds each, NOT spanning whole sections
-- Vary effects within each prop across a section — e.g. Pulse → Chase → Twinkle → Pulse
-- High energy sections: faster switching, higher intensity
-- Low energy sections: slower, Hold and Shimmer dominant
-- Talking Tree Face: ONLY use Mouth Sync during vocal sections, Hold elsewhere
+## CRITICAL RULES — MUST FOLLOW
+- NEVER create one event that spans an entire section. MAX event duration is 8 seconds.
+- Each prop MUST have 3-6 separate events PER section with DIFFERENT effects.
+- Example for a 30-second section: Pulse(0-5s) → Chase(5-10s) → Twinkle(10-16s) → Pulse(16-22s) → Shimmer(22-30s)
+- Vary the effect name for each consecutive event on the same prop — never repeat the same effect twice in a row.
+- High energy sections: 2-4 second events, rapid switching, intensity 75-100
+- Low energy sections: 4-8 second events, Hold and Shimmer dominant, intensity 30-60
+- Talking Tree Face: ONLY Mouth Sync during vocal sections, Hold elsewhere
 - Mega Tree: bass-reactive — Pulse and Sweep on beats
 - Roofline: Chase effect, speed varies with energy
 - Stakes/clusters: Twinkle and Pulse on treble hits
-- Arches: Ripple and Chase, ripple outward on beats
+- Arches: Ripple and Chase
 - Matrix: Color Pop and Sweep on high energy
-- Finale: ALL props at intensity 90-100, rapid switching
-- Cover the FULL song duration with no gaps
-- Return ONLY valid JSON in the exact format specified`
+- Finale: ALL props at intensity 90-100, rapid 2-3s switching
+- Cover the FULL song duration with no gaps — every second must be covered for every prop
+- Return ONLY valid JSON — no markdown, no explanation, no code fences`
 
   const styleInstructions = STYLE_PRESET_INSTRUCTIONS[stylePreset]
   if (styleInstructions) {
@@ -144,17 +147,41 @@ ${ALLOWED_EFFECTS.join(', ')}
   return msg
 }
 
-function extractJsonArray(text: string): unknown {
-  const trimmed = text.trim()
-  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/)
-  const raw = fence ? fence[1].trim() : trimmed
-  const parsed = JSON.parse(raw) as unknown
-  if (Array.isArray(parsed)) return parsed
-  // Support { "events": [...] } wrapper shape
-  if (parsed && typeof parsed === 'object' && Array.isArray((parsed as Record<string, unknown>).events)) {
-    return (parsed as Record<string, unknown>).events
+function extractJsonArray(text: string): unknown[] {
+  if (!text?.trim()) throw new Error('Empty response from Claude')
+
+  // Try to find JSON object with events array
+  const objMatch = text.match(/\{[\s\S]*"events"[\s\S]*\}/)
+  if (objMatch) {
+    try {
+      const parsed = JSON.parse(objMatch[0]) as Record<string, unknown>
+      if (Array.isArray(parsed.events)) return parsed.events
+    } catch { /* continue */ }
   }
-  throw new Error('Claude response is not a JSON array or { events: [...] } object')
+
+  // Try direct array
+  const arrMatch = text.match(/\[[\s\S]*\]/)
+  if (arrMatch) {
+    try {
+      const parsed = JSON.parse(arrMatch[0])
+      if (Array.isArray(parsed)) return parsed
+    } catch { /* continue */ }
+  }
+
+  // Try stripping markdown fences
+  const clean = text.replace(/```json|```/g, '').trim()
+  try {
+    const parsed = JSON.parse(clean) as unknown
+    if (Array.isArray(parsed)) return parsed
+    if (parsed && typeof parsed === 'object') {
+      const obj = parsed as Record<string, unknown>
+      if (Array.isArray(obj.events)) return obj.events
+    }
+  } catch { /* continue */ }
+
+  throw new Error(
+    `Could not extract JSON from Claude response. Response length: ${text.length} chars. Preview: ${text.slice(0, 200)}`,
+  )
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -213,7 +240,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
       body: JSON.stringify({
         model,
-        max_tokens: 8192,
+        max_tokens: 16000,
+        stop_sequences: [],
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }],
       }),
