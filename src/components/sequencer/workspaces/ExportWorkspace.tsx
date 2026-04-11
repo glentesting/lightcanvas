@@ -4,6 +4,7 @@ import type { DisplayProp } from '../../../types/display'
 import type { Song } from '../../../types/song'
 import type { TimelineEvent } from '../types'
 import { downloadFseq } from '../../../lib/exportFseq'
+import { downloadXlightsXml } from '../../../lib/exportXlights'
 import { Button } from '../shared/Button'
 
 export interface ExportWorkspaceProps {
@@ -59,6 +60,19 @@ export function ExportWorkspace({
               </Button>
               <p className="mt-1.5 text-xs text-slate-500">
                 FSEQ v2 — compatible with xLights and Falcon Player (FPP)
+              </p>
+            </div>
+            <div>
+              <button
+                type="button"
+                disabled={!hasEvents}
+                onClick={() => downloadXlightsXml(events, propsState, selectedSong.title, selectedSong.duration)}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-brand-green/60 hover:text-brand-green disabled:opacity-50"
+              >
+                <Download className="h-4 w-4" /> Download xLights XML
+              </button>
+              <p className="mt-1.5 text-xs text-slate-500">
+                Import into xLights via File &rarr; Open Sequence
               </p>
             </div>
           </section>
