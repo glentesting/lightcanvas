@@ -22,9 +22,9 @@ export function SequencerHeader({ signOut, userEmail }: SequencerHeaderProps) {
   const initial = userEmail?.trim().charAt(0).toUpperCase() ?? '?'
 
   return (
-    <header className="flex min-h-[56px] shrink-0 items-center justify-between bg-white border-b border-slate-100">
-      <div className="flex shrink-0 items-center px-4">
-        <img src={logoSrc} alt="LightCanvas" style={{ height: 28, width: 'auto', maxWidth: 'none', display: 'block' }} />
+    <header className="flex min-h-[56px] shrink-0 items-center justify-between px-4 bg-white border-b border-slate-100">
+      <div className="flex shrink-0 items-center">
+        <img src={logoSrc} alt="LightCanvas" style={{ height: 32, width: 'auto', maxWidth: 'none', display: 'block' }} />
       </div>
 
       <div className="relative shrink-0" ref={ref}>
