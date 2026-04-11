@@ -607,7 +607,11 @@ export default function LightCanvasSequencerPrototype() {
         try {
           await ensureUserPlanExists(uid)
           const plan = await loadUserPlan(uid)
-          if (!cancelled) setUserPlan(plan)
+          const DEV_EMAILS = ['glen@orangecoregroup.com']
+          const effectivePlan = DEV_EMAILS.includes(user?.email ?? '')
+            ? { ...plan, plan: 'pro' as const, subscriptionStatus: 'active', sequenceCreditsRemaining: 999 }
+            : plan
+          if (!cancelled) setUserPlan(effectivePlan)
         } catch (planErr) {
           console.error('Failed to load user plan', planErr)
         }
