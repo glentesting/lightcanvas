@@ -858,6 +858,16 @@ export default function LightCanvasSequencerPrototype() {
       return
     }
 
+    const MAX_FILE_SIZE_MB = 20
+    const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setSongUploadError(
+        `That file is ${Math.round(file.size / 1024 / 1024)}MB. ` +
+        `Files over 20MB can cause analysis issues — try a smaller file.`,
+      )
+      return
+    }
+
     setSongUploading(true)
     setSongUploadError(null)
     try {

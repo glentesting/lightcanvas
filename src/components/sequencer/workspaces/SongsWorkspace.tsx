@@ -5,6 +5,7 @@ import type { ChangeEvent, ComponentType, MouseEvent, RefObject } from 'react'
 import type { SongAudioAnalysis } from '../../../lib/audioAnalysis'
 import type { Song } from '../../../types/song'
 import { SongWaveform } from '../../SongWaveform'
+import type { UserPlan } from '../../../lib/phase1Repository'
 import { Button } from '../shared/Button'
 import { PLACEHOLDER_SONG } from '../types'
 import { formatTime } from '../utils'
@@ -29,6 +30,7 @@ export interface SongsWorkspaceProps {
   AnalysisBandRows: ComponentType<Pick<SongAudioAnalysis, 'bassSeries' | 'trebleSeries' | 'vocalSeries'>>
   runAudioAnalysis: () => void | Promise<void>
   songAnalysisBusy: boolean
+  userPlan: UserPlan
 }
 
 const sectionLabel = 'mb-3 block text-xs font-medium uppercase tracking-[0.14em] text-slate-500'
@@ -39,8 +41,9 @@ export function SongsWorkspace({
   songUploading, songUploadError, songDeleteError, handleDeleteSong,
   songAnalyses, analysisItems,
   SongLibraryInlineAudio, SongWorkspaceAudio, AnalysisBeatStrip, AnalysisBandRows,
-  runAudioAnalysis, songAnalysisBusy,
+  runAudioAnalysis, songAnalysisBusy, userPlan,
 }: SongsWorkspaceProps) {
+  void userPlan
   const [analysisOpen, setAnalysisOpen] = useState(true)
   const analysis = songAnalyses[selectedSong.id]
 
@@ -113,13 +116,16 @@ export function SongsWorkspace({
         <h2 className={sectionLabel}>Song Library</h2>
         <input ref={songFileInputRef} type="file" accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,audio/*" className="hidden" onChange={(e) => void handleSongFileChange(e)} />
 
-        <div className="flex items-center gap-3 border-b border-slate-200 pb-4">
-          <button type="button" disabled={songUploading} onClick={triggerSongFilePicker}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-brand-green/60 hover:text-brand-green disabled:opacity-50">
-            <Upload className="h-3.5 w-3.5" /> {songUploading ? 'Uploading...' : 'Upload audio file'}
-          </button>
-          {songUploadError && <span className="text-sm text-brand-red">{songUploadError}</span>}
-          {songDeleteError && <span className="text-sm text-brand-red">{songDeleteError}</span>}
+        <div className="flex flex-col gap-1.5 border-b border-slate-200 pb-4">
+          <div className="flex items-center gap-3">
+            <button type="button" disabled={songUploading} onClick={triggerSongFilePicker}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-brand-green/60 hover:text-brand-green disabled:opacity-50">
+              <Upload className="h-3.5 w-3.5" /> {songUploading ? 'Uploading...' : 'Upload audio file'}
+            </button>
+            {songUploadError && <span className="text-sm text-brand-red">{songUploadError}</span>}
+            {songDeleteError && <span className="text-sm text-brand-red">{songDeleteError}</span>}
+          </div>
+          <span className="text-xs text-slate-400">MP3, WAV, or M4A — up to 20MB</span>
         </div>
 
         <div className="mt-1">
