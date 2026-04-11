@@ -209,7 +209,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'Server misconfiguration: ANTHROPIC_API_KEY is not set' })
   }
 
-  const model = process.env.CLAUDE_MODEL?.trim() || 'claude-sonnet-4-5-20251001'
+  const model = process.env.CLAUDE_MODEL?.trim() || 'claude-sonnet-4-6'
 
   let body: SequenceRequestPayload
   try {
