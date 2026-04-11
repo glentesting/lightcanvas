@@ -984,10 +984,10 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
     }, [onViewChange])
 
     const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
+      if (!e.ctrlKey && !e.metaKey) return // let page scroll normally
       e.preventDefault()
       const delta = e.deltaY > 0 ? 0.9 : 1.1
       const newScale = Math.min(4, Math.max(0.5, scaleRef.current * delta))
-      // Zoom toward mouse position
       const [mx, my] = getCanvasPos(e)
       const ratio = newScale / scaleRef.current
       offsetRef.current = {

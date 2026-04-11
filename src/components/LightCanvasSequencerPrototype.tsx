@@ -365,6 +365,7 @@ export default function LightCanvasSequencerPrototype() {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [analysisProgress, setAnalysisProgress] = useState(91)
   const [playing, setPlaying] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   const [complexity, setComplexity] = useState(62)
   const [stylePreset, setStylePreset] = useState<StylePreset>('standard')
   const [selectedPropId, setSelectedPropId] = useState<string | null>(null)
@@ -496,7 +497,9 @@ export default function LightCanvasSequencerPrototype() {
 
   const handleSeek = useCallback(
     (time: number) => {
-      setPreviewTime(Math.max(0, Math.min(time, selectedSong.duration)))
+      const t = Math.max(0, Math.min(time, selectedSong.duration))
+      setPreviewTime(t)
+      if (audioRef.current) audioRef.current.currentTime = t
     },
     [selectedSong.duration],
   )
@@ -553,17 +556,51 @@ export default function LightCanvasSequencerPrototype() {
   }, [selectedSongId, songs])
 
   useEffect(() => {
-    if (!playing) return
+    if (!playing) {
+      audioRef.current?.pause()
+      audioRef.current = null
+      return
+    }
     const dur = Math.max(0.001, selectedSong.duration)
-    const t0 = performance.now()
     let raf = 0
+    let audioStarted = false
+
+    // Try to start audio playback
+    void (async () => {
+      try {
+        const url = await getSongAudioSignedUrl(selectedSong)
+        if (!url || !playing) return
+        const audio = new Audio(url)
+        audioRef.current = audio
+        audio.currentTime = previewTime
+        audio.addEventListener('ended', () => setPlaying(false))
+        await audio.play()
+        audioStarted = true
+      } catch {
+        // Audio unavailable — fall back to timer-only preview
+      }
+    })()
+
+    // Timer-based preview time sync
     const tick = () => {
-      setPreviewTime(((performance.now() - t0) / 1000) % dur)
+      if (audioStarted && audioRef.current) {
+        setPreviewTime(audioRef.current.currentTime % dur)
+      } else {
+        setPreviewTime((prev) => {
+          const next = prev + 1 / 60
+          return next >= dur ? 0 : next
+        })
+      }
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [playing, selectedSong.duration])
+    return () => {
+      cancelAnimationFrame(raf)
+      audioRef.current?.pause()
+      audioRef.current = null
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing, selectedSong.id])
 
   useEffect(() => {
     const uid = user?.id

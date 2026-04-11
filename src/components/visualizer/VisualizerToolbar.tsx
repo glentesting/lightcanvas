@@ -115,6 +115,8 @@ export function VisualizerToolbar({
           Undo
         </button>
 
+        <span className="text-[10px] text-zinc-600" title="Hold Ctrl + scroll to zoom">Ctrl+scroll to zoom</span>
+
         {/* Reset view — only when zoomed/panned */}
         {showResetView && onResetView && (
           <button
