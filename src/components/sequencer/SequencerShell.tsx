@@ -10,6 +10,7 @@ import type { ChatMessage, Section, TabValue, TimelineEvent } from './types'
 import { AISequencingWorkspace, type StylePreset } from './workspaces/AISequencingWorkspace'
 import { DisplaySetupWorkspace } from './workspaces/DisplaySetupWorkspace'
 import { ExportWorkspace } from './workspaces/ExportWorkspace'
+import type { LorImportResult } from '../../lib/importLor'
 import { SongsWorkspace } from './workspaces/SongsWorkspace'
 import { TimelineWorkspace } from './workspaces/TimelineWorkspace'
 
@@ -100,6 +101,7 @@ export interface SequencerShellProps {
   onDeletePhoto: (photoId: string, storagePath: string) => void
   onRenameProp?: (id: string, name: string) => void
   onRechannelProp?: (id: string, channels: number) => void
+  onImportLor?: (result: LorImportResult) => void
   undo: () => void
   canUndo: boolean
 }
@@ -191,6 +193,7 @@ export function SequencerShell({
   onDeletePhoto,
   onRenameProp,
   onRechannelProp,
+  onImportLor,
   undo,
   canUndo,
 }: SequencerShellProps) {
@@ -320,6 +323,7 @@ export function SequencerShell({
                 exportPayload={exportPayload}
                 controllers={controllers}
                 channelsPerController={channelsPerController}
+                onImportLor={onImportLor}
               />
             )}
             {activeTab === 'ai' && (

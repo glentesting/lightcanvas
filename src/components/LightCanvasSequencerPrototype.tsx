@@ -37,6 +37,7 @@ import type { DisplayProp } from '../types/display'
 import type { Song, SongSectionSnapshot } from '../types/song'
 import type { TabValue } from './sequencer/types'
 import type { StylePreset } from './sequencer/workspaces/AISequencingWorkspace'
+import type { LorImportResult } from '../lib/importLor'
 import { SequencerShell } from './sequencer/SequencerShell'
 
 const effectOptions = [
@@ -736,6 +737,52 @@ export default function LightCanvasSequencerPrototype() {
     setPropsState((prev) => prev.map((p) => (p.id === id ? { ...p, channels } : p)))
   }
 
+  const handleImportLor = (result: LorImportResult) => {
+    // Create props for any that don't already exist by name
+    const newProps: DisplayProp[] = []
+    const nameToId = new Map<string, string>()
+    for (const p of propsState) nameToId.set(p.name.toLowerCase(), p.id)
+
+    for (const imp of result.props) {
+      const key = imp.name.toLowerCase()
+      if (!nameToId.has(key)) {
+        const id = crypto.randomUUID()
+        nameToId.set(key, id)
+        newProps.push({
+          id,
+          name: imp.name,
+          type: imp.type,
+          channels: imp.channels,
+          controller: 'A',
+          start: imp.startChannel,
+          priority: 'Medium',
+          notes: 'Imported from LOR',
+        })
+      }
+    }
+    if (newProps.length > 0) {
+      setPropsState((prev) => [...prev, ...newProps])
+    }
+
+    // Create timeline events
+    if (result.events.length > 0) {
+      const sid = selectedSong.id
+      const mapped: TimelineEvent[] = result.events.map((e) => ({
+        id: crypto.randomUUID(),
+        propId: nameToId.get(e.propName.toLowerCase()) ?? '',
+        propName: e.propName,
+        section: '',
+        start: e.start,
+        end: e.end,
+        intensity: e.intensity,
+        smoothness: 50,
+        effect: e.effect,
+        note: '',
+      })).filter(e => e.propId)
+      setSequenceEventsBySong((prev) => ({ ...prev, [sid]: mapped }))
+    }
+  }
+
   const triggerSongFilePicker = () => {
     setSongUploadError(null)
     songFileInputRef.current?.click()
@@ -1348,6 +1395,7 @@ export default function LightCanvasSequencerPrototype() {
       }}
       onRenameProp={renameProp}
       onRechannelProp={rechannelProp}
+      onImportLor={handleImportLor}
       undo={undo}
       canUndo={canUndo}
     />

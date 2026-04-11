@@ -1,12 +1,13 @@
-import { useMemo } from 'react'
+import { useRef, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { AlertTriangle, CheckCircle, Download, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Download, Upload, XCircle } from 'lucide-react'
 import type { DisplayProp } from '../../../types/display'
 import type { Song } from '../../../types/song'
 import type { TimelineEvent } from '../types'
 import { downloadFseq } from '../../../lib/exportFseq'
 import { downloadXlightsXml } from '../../../lib/exportXlights'
 import { validateChannelMapping } from '../../../lib/validateChannels'
+import { importLorFile, type LorImportResult } from '../../../lib/importLor'
 import { Button } from '../shared/Button'
 
 export interface ExportWorkspaceProps {
@@ -17,15 +18,19 @@ export interface ExportWorkspaceProps {
   exportPayload: string
   controllers: number
   channelsPerController: number
+  onImportLor?: (result: LorImportResult) => void
 }
 
 const sectionLabel = 'mb-3 block text-xs font-medium uppercase tracking-[0.14em] text-slate-500'
 
 export function ExportWorkspace({
   selectedSong, propsState, totalChannels, events, exportPayload,
-  controllers, channelsPerController,
+  controllers, channelsPerController, onImportLor,
 }: ExportWorkspaceProps) {
   const hasEvents = events.length > 0
+  const lorFileRef = useRef<HTMLInputElement>(null)
+  const [lorResult, setLorResult] = useState<LorImportResult | null>(null)
+  const [lorLoading, setLorLoading] = useState(false)
 
   const issues = useMemo(
     () => validateChannelMapping(propsState, controllers, channelsPerController),
@@ -145,6 +150,76 @@ export function ExportWorkspace({
           </pre>
         </div>
       </div>
+
+      {/* Import section */}
+      {onImportLor && (
+        <div className="mt-6 border-t border-slate-200 pt-5">
+          <h2 className={sectionLabel}>Import</h2>
+          <div className="flex items-center gap-3">
+            <input
+              ref={lorFileRef}
+              type="file"
+              accept=".loredit,.lor,.xml"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                setLorLoading(true)
+                setLorResult(null)
+                try {
+                  const result = await importLorFile(file)
+                  setLorResult(result)
+                } finally {
+                  setLorLoading(false)
+                  if (lorFileRef.current) lorFileRef.current.value = ''
+                }
+              }}
+            />
+            <button
+              type="button"
+              disabled={lorLoading}
+              onClick={() => lorFileRef.current?.click()}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-brand-green/60 hover:text-brand-green disabled:opacity-50"
+            >
+              <Upload className="h-4 w-4" />
+              {lorLoading ? 'Reading...' : 'Import from LOR'}
+            </button>
+            <span className="text-xs text-slate-500">Accepts .loredit and .lor files</span>
+          </div>
+
+          {lorResult && (
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+              {lorResult.errors.length > 0 && (
+                <div className="mb-2 space-y-1">
+                  {lorResult.errors.map((err, i) => (
+                    <div key={i} className="flex items-start gap-2 text-brand-red">
+                      <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>{err}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {lorResult.props.length > 0 && (
+                <p className="text-slate-700">
+                  Found <strong>{lorResult.props.length}</strong> props and <strong>{lorResult.events.length}</strong> events
+                  {lorResult.durationSeconds > 0 && <> ({Math.round(lorResult.durationSeconds)}s)</>}
+                </p>
+              )}
+              {lorResult.props.length > 0 && (
+                <Button
+                  className="mt-2"
+                  onClick={() => {
+                    onImportLor(lorResult)
+                    setLorResult(null)
+                  }}
+                >
+                  Apply Import
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </motion.div>
   )
 }
