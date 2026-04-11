@@ -1,12 +1,9 @@
 import { motion } from 'framer-motion'
-import { Cable, Plus, Settings2, Trash2 } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import type { DisplayProp } from '../../../types/display'
-import { HousePreviewScene } from '../../HousePreviewScene'
+import { useVisualizerState, type HouseType } from '../../../hooks/useVisualizerState'
+import { VisualizerStage } from '../../visualizer/VisualizerStage'
 import { propTypes } from '../types'
-import { Button } from '../shared/Button'
-import { Card } from '../shared/Card'
-import { CardHeader } from '../shared/CardHeader'
-import { Progress } from '../shared/Progress'
 
 export interface DisplaySetupWorkspaceProps {
   controllers: number
@@ -27,187 +24,161 @@ export interface DisplaySetupWorkspaceProps {
   setNewPropChannels: (v: number) => void
   addProp: () => void
   removeProp: (id: string) => void
+  quickAddProp: (type: string, x: number, y: number, houseType: string, opts?: { angle?: number; length?: number }) => void
+  updatePropColor: (id: string, color: string) => void
+  moveProp: (id: string, x: number, y: number) => void
+  houseType: HouseType
+  onHouseTypeChange: (id: HouseType) => void
+  photoUrl: string | null
+  onPhotoReady: (url: string) => void
 }
 
+const SEL_ACCENT = 'border-brand-green'
+const fieldClass = 'w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-green'
+const labelClass = 'mb-1.5 block text-xs leading-tight text-slate-600'
+const colHeading = 'mb-3 block text-xs font-medium uppercase tracking-[0.14em] text-slate-500'
+
 export function DisplaySetupWorkspace({
-  controllers,
-  channelsPerController,
-  setControllers,
-  setChannelsPerController,
-  propsState,
-  selectedPropId,
-  setSelectedPropId,
-  totalChannels,
-  usedChannels,
-  remainingChannels,
-  newPropName,
-  setNewPropName,
-  newPropType,
-  setNewPropType,
-  newPropChannels,
-  setNewPropChannels,
-  addProp,
-  removeProp,
+  controllers, channelsPerController, setControllers, setChannelsPerController,
+  propsState, selectedPropId, setSelectedPropId,
+  totalChannels, usedChannels, remainingChannels,
+  newPropName, setNewPropName, newPropType, setNewPropType,
+  newPropChannels, setNewPropChannels,
+  addProp, removeProp, quickAddProp, updatePropColor, moveProp,
+  houseType, onHouseTypeChange,
+  photoUrl, onPhotoReady,
 }: DisplaySetupWorkspaceProps) {
+  const capacityPct = Math.min(100, (usedChannels / Math.max(1, totalChannels)) * 100)
+
+  const viz = useVisualizerState({
+    props: propsState,
+    selectedPropId,
+    houseType,
+    photoUrl,
+    onSelectProp: setSelectedPropId,
+    onPlaceProp: quickAddProp,
+    onRemoveProp: removeProp,
+    onMoveProp: moveProp,
+    onUpdatePropColor: updatePropColor,
+    onHouseTypeChange,
+  })
+
   return (
-    <motion.div
-      key="setup"
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
-      className="space-y-6"
-    >
-      <div className="grid w-full min-w-0 max-w-full gap-6 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
-        <Card>
-          <CardHeader
-            title="Guided Display Setup"
-            description="Define controllers, channel capacity, props, and fake smart recommendations."
-            icon={Cable}
-          />
-          <div className="space-y-6 p-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="mb-2 text-sm font-medium text-slate-700">Controllers</div>
-                <input
-                  type="number"
-                  min={1}
-                  value={controllers}
-                  onChange={(e) => setControllers(Number(e.target.value || 1))}
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2"
-                />
+    <motion.div key="setup" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="w-full min-w-0 max-w-full space-y-6">
+      <VisualizerStage
+        props={viz.placedProps}
+        selectedPropId={selectedPropId}
+        activeTool={viz.activeTool}
+        selectedProp={viz.selectedProp}
+        photoUrl={photoUrl}
+        houseType={houseType}
+        onHouseTypeChange={onHouseTypeChange}
+        onToolChange={viz.setActiveTool}
+        onCanvasClick={viz.handleCanvasClick}
+        onPropClick={viz.handlePropClick}
+        onPropDrag={viz.handlePropDrag}
+        onUpdatePropColor={updatePropColor}
+        onPhotoReady={onPhotoReady}
+      />
+
+      {/* White controls card */}
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-[0_12px_40px_-16px_rgba(15,23,42,0.12)]">
+        <div className="grid gap-10 md:grid-cols-3 md:gap-10">
+          {/* Col 1: Display setup */}
+          <div>
+            <h2 className={colHeading}>Display setup</h2>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-x-5 gap-y-3">
+                <label className="block">
+                  <span className={labelClass}>Controllers</span>
+                  <input type="number" min={1} value={controllers} onChange={(e) => setControllers(Number(e.target.value || 1))} className={fieldClass} />
+                </label>
+                <label className="block">
+                  <span className={labelClass}>Ch / controller</span>
+                  <input type="number" min={1} value={channelsPerController} onChange={(e) => setChannelsPerController(Number(e.target.value || 1))} className={fieldClass} />
+                </label>
               </div>
-              <div>
-                <div className="mb-2 text-sm font-medium text-slate-700">Channels / Controller</div>
-                <input
-                  type="number"
-                  min={1}
-                  value={channelsPerController}
-                  onChange={(e) => setChannelsPerController(Number(e.target.value || 1))}
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2"
-                />
-              </div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium">Capacity usage</div>
-                  <div className="text-sm text-slate-500">Remaining channels: {remainingChannels}</div>
+              <div className="space-y-2">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-xs text-slate-600">Capacity</span>
+                  <span className="text-xs tabular-nums text-slate-600">{usedChannels}/{totalChannels} · {remainingChannels} free</span>
                 </div>
-                <div className="rounded-full bg-brand-green px-3 py-1 text-xs text-white shadow-brand-soft">
-                  {usedChannels}/{totalChannels}
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                  <div className="h-full bg-brand-green transition-[width] duration-300 ease-out" style={{ width: `${capacityPct}%` }} />
                 </div>
-              </div>
-              <div className="mt-4">
-                <Progress value={Math.min(100, (usedChannels / Math.max(1, totalChannels)) * 100)} />
-              </div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="text-sm font-medium text-slate-700">Add a prop</div>
-              <div className="mt-3 grid gap-3 md:grid-cols-3">
-                <input
-                  value={newPropName}
-                  onChange={(e) => setNewPropName(e.target.value)}
-                  placeholder="Prop name"
-                  className="rounded-xl border border-slate-300 px-3 py-2"
-                />
-                <select
-                  value={newPropType}
-                  onChange={(e) => setNewPropType(e.target.value)}
-                  className="rounded-xl border border-slate-300 px-3 py-2"
-                >
-                  {propTypes.map((type) => (
-                    <option key={type}>{type}</option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  min={1}
-                  value={newPropChannels}
-                  onChange={(e) => setNewPropChannels(Number(e.target.value || 1))}
-                  className="rounded-xl border border-slate-300 px-3 py-2"
-                />
-              </div>
-              <div className="mt-3">
-                <Button onClick={addProp}>
-                  <Plus className="h-4 w-4" /> Add Prop
-                </Button>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-7 text-slate-600">
-              <div className="font-medium text-brand-green">Fake scope details</div>
-              <div className="mt-2">
-                This area demonstrates what the real app would eventually handle: controller families,
-                channel banks, prop grouping, recommended output assignments, conflict detection, and
-                suggested sequencing roles for each prop type.
               </div>
             </div>
           </div>
-        </Card>
-        <Card>
-          <CardHeader
-            title="Prop Mapping Suggestions"
-            description="Believable fake detail for what LightCanvas would recommend per prop."
-            icon={Settings2}
-          />
-          <div className="h-[min(520px,65vh)] space-y-3 overflow-y-auto p-6 pr-4">
-            {propsState.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-brand-green/35 bg-brand-green/5 p-8 text-center text-sm leading-6 text-slate-600">
-                <p className="font-medium text-brand-green">No props yet</p>
-                <p className="mt-2">
-                  Add props using the form on the left. Your list is saved to your account automatically.
-                </p>
+
+          {/* Col 2: Selection */}
+          <div>
+            <h2 className={colHeading}>Selection</h2>
+            {viz.selectedProp ? (
+              <div className={`space-y-2 border-l-2 ${SEL_ACCENT} pl-3 text-xs leading-relaxed text-slate-600`}>
+                <div className="text-[1.05rem] font-semibold leading-snug tracking-tight text-slate-900">{viz.selectedProp.name}</div>
+                <div>{viz.selectedProp.type} · {viz.selectedProp.controller} · ch {viz.selectedProp.start}–{viz.selectedProp.start + viz.selectedProp.channels - 1}</div>
+                {viz.selectedProp.notes ? <p className="text-slate-700">{viz.selectedProp.notes}</p> : null}
               </div>
             ) : (
-              propsState.map((prop) => (
-                <button
-                  key={prop.id}
-                  type="button"
-                  onClick={() => setSelectedPropId(prop.id)}
-                  className={`w-full rounded-2xl border p-4 text-left transition ${
-                    selectedPropId === prop.id
-                      ? 'border-brand-green bg-brand-green/5 ring-1 ring-brand-green/25'
-                      : 'border-slate-200 bg-white hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-base font-semibold">{prop.name}</div>
-                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
-                        <span className="rounded-full border border-slate-200 px-2 py-1">{prop.type}</span>
-                        <span className="rounded-full border border-slate-200 px-2 py-1">{prop.controller}</span>
-                        <span className="rounded-full border border-slate-200 px-2 py-1">
-                          Channels {prop.start}-{prop.start + prop.channels - 1}
-                        </span>
-                        <span className="rounded-full border border-slate-200 px-2 py-1">
-                          Priority: {prop.priority}
-                        </span>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        removeProp(prop.id)
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm leading-6 text-slate-600">
-                    {prop.notes}
-                  </div>
-                </button>
-              ))
+              <p className="text-xs leading-relaxed text-slate-500">Click a prop on the display above.</p>
             )}
           </div>
-        </Card>
-      </div>
 
-      <HousePreviewScene
-        props={propsState}
-        selectedPropId={selectedPropId}
-        onSelectProp={(id) => setSelectedPropId(String(id))}
-      />
+          {/* Col 3: Prop list + add prop */}
+          <div>
+            <h2 className={colHeading}>Props</h2>
+            <div className="space-y-4">
+              <div className="max-h-[min(48vh,420px)] overflow-y-auto rounded-lg border border-slate-200 bg-slate-50">
+                {propsState.length === 0 ? (
+                  <div className="px-4 py-8 text-center">
+                    <p className="text-sm font-medium text-slate-800">No props on the display yet</p>
+                    <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                      Use the tools on the canvas or fill out Add prop below to place your first element.
+                    </p>
+                  </div>
+                ) : (
+                  propsState.map((prop) => (
+                    <PropMappingRow key={prop.id} prop={prop} selected={selectedPropId === prop.id} onSelect={() => setSelectedPropId(prop.id)} onRemove={() => removeProp(prop.id)} />
+                  ))
+                )}
+              </div>
+              <div className="border-t border-slate-200 pt-4">
+                <span className={labelClass}>Add prop</span>
+                <input value={newPropName} onChange={(e) => setNewPropName(e.target.value)} placeholder="Name" className={fieldClass} />
+                <select value={newPropType} onChange={(e) => setNewPropType(e.target.value)} className={`${fieldClass} mt-2 cursor-pointer`}>
+                  {propTypes.map((type) => (<option key={type}>{type}</option>))}
+                </select>
+                <input type="number" min={1} value={newPropChannels} onChange={(e) => setNewPropChannels(Number(e.target.value || 1))} className={`${fieldClass} mt-2`} />
+                <button type="button" onClick={addProp}
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white py-2.5 text-sm font-medium text-slate-800 transition hover:border-brand-green/60 hover:text-brand-green focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-green/40">
+                  <Plus className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden /> Add prop
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </motion.div>
+  )
+}
+
+function PropMappingRow({ prop, selected, onSelect, onRemove }: { prop: DisplayProp; selected: boolean; onSelect: () => void; onRemove: () => void }) {
+  return (
+    <div className={`group flex border-b border-slate-200 last:border-b-0 ${selected ? `border-l-2 ${SEL_ACCENT} bg-white` : 'border-l-2 border-l-transparent hover:bg-white'}`}>
+      <button type="button" onClick={onSelect} className="min-w-0 flex-1 py-2.5 pl-2.5 pr-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-green/50">
+        <div className="flex items-center gap-1.5">
+          {prop.color && <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: prop.color }} />}
+          <span className={selected ? 'text-sm font-semibold tracking-tight text-slate-900' : 'text-sm font-normal text-slate-700'}>{prop.name}</span>
+        </div>
+        <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-slate-600">
+          <span>{prop.type}</span><span>{prop.controller}</span><span>ch {prop.start}-{prop.start + prop.channels - 1}</span>
+        </div>
+      </button>
+      <button type="button" aria-label={`Remove ${prop.name}`}
+        className="shrink-0 self-start p-2 text-brand-red transition hover:text-brand-red-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-red/40"
+        onClick={onRemove}>
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
+    </div>
   )
 }

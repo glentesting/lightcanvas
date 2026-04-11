@@ -43,7 +43,7 @@ export function SongWaveform({ song }: { song: Song }) {
 
   if (!song.storagePath || !song.storageBucket) {
     return (
-      <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white px-4 text-center text-sm text-slate-500">
+      <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-900 px-4 text-center text-sm text-zinc-400">
         No uploaded audio file for this track — waveform appears after you add a file from Song Library.
       </div>
     )
@@ -51,7 +51,7 @@ export function SongWaveform({ song }: { song: Song }) {
 
   if (loading) {
     return (
-      <div className="flex h-32 items-center justify-center rounded-2xl bg-white text-sm text-slate-500 shadow-sm">
+      <div className="flex h-32 items-center justify-center rounded-xl bg-zinc-900 text-sm text-zinc-400">
         Decoding waveform…
       </div>
     )
@@ -59,7 +59,7 @@ export function SongWaveform({ song }: { song: Song }) {
 
   if (err) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+      <div className="rounded-xl border border-brand-red/50 bg-brand-red/10 px-4 py-3 text-sm text-brand-red">
         {err}
       </div>
     )
@@ -68,7 +68,7 @@ export function SongWaveform({ song }: { song: Song }) {
   if (!peaks?.length) return null
 
   return (
-    <div className="flex h-32 items-end gap-px rounded-2xl bg-white p-3 shadow-sm">
+    <div className="flex h-32 items-end gap-px rounded-xl border border-zinc-800 bg-zinc-900 p-3">
       {peaks.map((p, i) => (
         <div
           key={i}

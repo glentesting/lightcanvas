@@ -3,6 +3,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import AppShell from './components/AppShell'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
+import MobileUploadPage from './pages/MobileUploadPage'
 
 export default function App() {
   return (
@@ -10,6 +11,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/upload/:token" element={<MobileUploadPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<AppShell />} />
           </Route>

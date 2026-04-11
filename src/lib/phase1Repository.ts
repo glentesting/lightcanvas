@@ -131,12 +131,13 @@ export async function getOrCreateDisplayProfile(userId: string): Promise<{
   id: string
   controllers: number
   channels_per_controller: number
+  photo_url: string | null
 }> {
   if (!supabase) throw new Error('Supabase not configured')
 
   const { data: byDefault, error: e1 } = await supabase
     .from('display_profiles')
-    .select('id, controllers, channels_per_controller')
+    .select('id, controllers, channels_per_controller, photo_url')
     .eq('user_id', userId)
     .eq('is_default', true)
     .maybeSingle()
@@ -147,12 +148,13 @@ export async function getOrCreateDisplayProfile(userId: string): Promise<{
       id: byDefault.id,
       controllers: byDefault.controllers,
       channels_per_controller: byDefault.channels_per_controller,
+      photo_url: byDefault.photo_url ?? null,
     }
   }
 
   const { data: anyProfile, error: e2 } = await supabase
     .from('display_profiles')
-    .select('id, controllers, channels_per_controller')
+    .select('id, controllers, channels_per_controller, photo_url')
     .eq('user_id', userId)
     .limit(1)
     .maybeSingle()
@@ -163,6 +165,7 @@ export async function getOrCreateDisplayProfile(userId: string): Promise<{
       id: anyProfile.id,
       controllers: anyProfile.controllers,
       channels_per_controller: anyProfile.channels_per_controller,
+      photo_url: anyProfile.photo_url ?? null,
     }
   }
 
@@ -175,7 +178,7 @@ export async function getOrCreateDisplayProfile(userId: string): Promise<{
       channels_per_controller: 16,
       is_default: true,
     })
-    .select('id, controllers, channels_per_controller')
+    .select('id, controllers, channels_per_controller, photo_url')
     .single()
 
   if (e3) throw e3
@@ -183,7 +186,20 @@ export async function getOrCreateDisplayProfile(userId: string): Promise<{
     id: created.id,
     controllers: created.controllers,
     channels_per_controller: created.channels_per_controller,
+    photo_url: created.photo_url ?? null,
   }
+}
+
+export async function updateProfilePhotoUrl(
+  profileId: string,
+  photoUrl: string,
+): Promise<{ error: Error | null }> {
+  if (!supabase) return { error: new Error('Supabase not configured') }
+  const { error } = await supabase
+    .from('display_profiles')
+    .update({ photo_url: photoUrl })
+    .eq('id', profileId)
+  return { error: error ? new Error(error.message) : null }
 }
 
 export async function loadDisplayProps(profileId: string): Promise<DisplayProp[]> {

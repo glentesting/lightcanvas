@@ -7,4 +7,10 @@ export interface DisplayProp {
   start: number
   priority: string
   notes: string
+  canvasX?: number
+  canvasY?: number
+  color?: string
+  angle?: number
+  length?: number
+  houseType?: string
 }

@@ -7,7 +7,7 @@ export function Stat({ label, value, sub, valueTruncate = false }: {
   valueTruncate?: boolean
 }) {
   return (
-    <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-4">
       <div className="text-xs uppercase tracking-[0.16em] text-slate-500">{label}</div>
       <div className={`mt-2 text-2xl font-semibold text-slate-900 tabular-nums ${valueTruncate ? 'truncate whitespace-nowrap' : 'break-words'}`} title={typeof value === 'string' ? value : undefined}>
         {value}

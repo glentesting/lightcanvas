@@ -1,11 +1,9 @@
 import { motion } from 'framer-motion'
-import { Download, Sparkles } from 'lucide-react'
+import { Download } from 'lucide-react'
 import type { DisplayProp } from '../../../types/display'
 import type { Song } from '../../../types/song'
 import type { TimelineEvent } from '../types'
 import { Button } from '../shared/Button'
-import { Card } from '../shared/Card'
-import { CardHeader } from '../shared/CardHeader'
 
 export interface ExportWorkspaceProps {
   selectedSong: Song
@@ -15,78 +13,63 @@ export interface ExportWorkspaceProps {
   exportPayload: string
 }
 
+const sectionLabel = 'mb-3 block text-xs font-medium uppercase tracking-[0.14em] text-slate-500'
+
 export function ExportWorkspace({
-  selectedSong,
-  propsState,
-  totalChannels,
-  events,
-  exportPayload,
+  selectedSong, propsState, totalChannels, events, exportPayload,
 }: ExportWorkspaceProps) {
+  const items = [
+    ['Song', selectedSong.title],
+    ['Props mapped', String(propsState.length)],
+    ['Channels', String(totalChannels)],
+    ['Face sync', 'Included'],
+    ['Timeline events', String(events.length)],
+  ]
+
   return (
-    <motion.div
-      key="export"
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -12 }}
-      className="grid w-full min-w-0 max-w-full grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start"
-    >
-      <Card className="min-w-0">
-        <CardHeader
-          title="Export Sequence"
-          description="Fake but concrete handoff settings to show what the real output layer might include."
-          icon={Download}
-        />
-        <div className="min-w-0 space-y-5 p-6">
-          <div className="min-w-0">
-            <div className="mb-2 text-sm font-medium text-slate-700">Export Format</div>
-            <select className="w-full min-w-0 rounded-xl border border-slate-300 px-3 py-2">
-              <option>FSEQ</option>
-              <option>xLights-compatible package</option>
-              <option>LOR-oriented channel map bundle</option>
-            </select>
-          </div>
-          <div className="grid min-w-0 gap-3 text-sm leading-normal text-slate-600">
-            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 break-words">
-              Song: {selectedSong.title}
+    <motion.div key="export" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+      className="w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white p-5">
+
+      <div className="grid gap-8 lg:grid-cols-2 lg:gap-10">
+        {/* Left: Export settings */}
+        <div className="space-y-5">
+          <section>
+            <h2 className={sectionLabel}>Export Settings</h2>
+            <div>
+              <div className="mb-1 text-xs text-slate-500">Format</div>
+              <select className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm text-slate-900">
+                <option>FSEQ</option>
+                <option>xLights-compatible package</option>
+                <option>LOR-oriented channel map bundle</option>
+              </select>
             </div>
-            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
-              Props mapped: {propsState.length}
+          </section>
+
+          <section>
+            <h2 className={sectionLabel}>Export Summary</h2>
+            <div className="space-y-0">
+              {items.map(([label, value]) => (
+                <div key={label} className="flex items-baseline justify-between border-b border-slate-200 py-2.5 last:border-b-0">
+                  <span className="text-sm text-slate-600">{label}</span>
+                  <span className="text-sm font-medium text-slate-900">{value}</span>
+                </div>
+              ))}
             </div>
-            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
-              Controller capacity: {totalChannels} channels
-            </div>
-            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
-              Talking face sync included: Yes
-            </div>
-            <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
-              Timeline events in current draft: {events.length}
-            </div>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-pretty text-sm leading-relaxed text-slate-600">
-            <div className="font-medium text-brand-green">Fake scope details</div>
-            <div className="mt-2 text-pretty leading-relaxed">
-              A real export layer would handle format translation, channel flattening, effect
-              serialization, controller compatibility checks, timing precision, and playback package
-              creation for FPP or xLights workflows.
-            </div>
-          </div>
+          </section>
+
           <Button>
-            <Download className="h-4 w-4" /> Export Mock Sequence
+            <Download className="h-4 w-4" /> Export Sequence
           </Button>
         </div>
-      </Card>
-      <Card className="min-w-0">
-        <CardHeader
-          title="Payload Preview"
-          description="A believable object-model preview of the prototype's exported data."
-          icon={Sparkles}
-        />
-        <div className="min-w-0 p-6">
-          <pre className="max-h-[520px] min-w-0 overflow-auto rounded-2xl border border-brand-green/30 bg-slate-950 p-4 text-xs leading-6 text-slate-100 shadow-[inset_0_0_0_1px_rgba(192,0,0,0.12)]">
+
+        {/* Right: Payload preview */}
+        <div>
+          <h2 className={sectionLabel}>Payload Preview</h2>
+          <pre className="max-h-[520px] overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs leading-6 text-slate-700">
             {exportPayload}
           </pre>
         </div>
-      </Card>
+      </div>
     </motion.div>
   )
 }

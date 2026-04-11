@@ -1,77 +1,74 @@
-import { motion } from 'framer-motion'
-import { Sparkles } from 'lucide-react'
-import type { Song } from '../../types/song'
-import { LightCanvasWordmark } from '../LightCanvasWordmark'
-import { formatTime } from './utils'
-import { Button } from './shared/Button'
-import { Stat } from './shared/Stat'
+import { LogOut, User } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import logoSrc from '../../assets/LightCanvas_Logo_Transparent.png'
 
 export interface SequencerHeaderProps {
-  rebuildAnalyzing: boolean
-  rebuildPhase: 'idle' | 'decode' | 'sequence'
-  runAi: () => void
-  controllers: number
-  channelsPerController: number
-  propsMappedCount: number
-  usedChannels: number
-  totalChannels: number
-  selectedSong: Song
-  analysisProgress: number
+  signOut: () => void | Promise<void>
+  userEmail: string | undefined
 }
 
-export function SequencerHeader({
-  rebuildAnalyzing,
-  rebuildPhase,
-  runAi,
-  controllers,
-  channelsPerController,
-  propsMappedCount,
-  usedChannels,
-  totalChannels,
-  selectedSong,
-  analysisProgress,
-}: SequencerHeaderProps) {
+export function SequencerHeader({ signOut, userEmail }: SequencerHeaderProps) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [])
+
+  const initial = userEmail?.trim().charAt(0).toUpperCase() ?? '?'
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="mb-8 overflow-hidden rounded-[28px] border border-slate-200 bg-white/90 shadow-xl shadow-slate-300/40 backdrop-blur-sm"
-    >
-      <div className="grid gap-8 p-8 md:grid-cols-[1.2fr_0.8fr] md:gap-10 md:p-10">
-        <div className="min-w-0">
-          <div className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-            Full sequencing prototype
-          </div>
-          <LightCanvasWordmark
-            as="h1"
-            className="mt-4 text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl"
-          />
-          <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600 md:text-lg">
-            Playable LightCanvas workspace: display setup, song library, AI sequencing, timeline,
-            and export — with real uploads and account-backed display data where wired.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button disabled={rebuildAnalyzing} onClick={runAi}>
-              <Sparkles className="h-4 w-4" />{' '}
-              {rebuildAnalyzing
-                ? rebuildPhase === 'sequence'
-                  ? 'Generating sequence…'
-                  : 'Analyzing…'
-                : 'Rebuild Sequence'}
-            </Button>
-          </div>
-        </div>
-        <div className="grid min-w-0 grid-cols-2 gap-3 sm:gap-4">
-          <Stat label="Controllers" value={controllers} sub={`${channelsPerController} ch each`} />
-          <Stat label="Props mapped" value={propsMappedCount} sub={`${usedChannels}/${totalChannels} ch used`} />
-          <Stat
-            label="Song"
-            value={selectedSong.bpm != null ? selectedSong.bpm : '—'}
-            sub={`${selectedSong.key} · ${formatTime(selectedSong.duration)}`}
-          />
-          <Stat label="AI readiness" value={`${analysisProgress}%`} sub={selectedSong.status} />
-        </div>
+    <header className="flex min-h-[56px] shrink-0 items-center justify-between gap-4 bg-white">
+      <div className="flex min-w-0 flex-1 items-center justify-start">
+        <img src={logoSrc} alt="LightCanvas" className="shrink-0" style={{ height: 32 }} />
       </div>
-    </motion.div>
+
+      <div className="relative shrink-0" ref={ref}>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-brand-green/40 hover:bg-white md:h-10 md:w-10"
+          aria-expanded={open}
+          aria-haspopup="menu"
+          aria-label="Account menu"
+        >
+          {initial}
+        </button>
+        {open ? (
+          <div
+            className="absolute right-0 z-50 mt-2 w-64 rounded-xl border border-slate-200 bg-white py-2 shadow-lg"
+            role="menu"
+          >
+            <div className="flex items-start gap-3 border-b border-slate-100 px-4 py-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+                <User className="h-5 w-5" aria-hidden />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">Signed in</div>
+                <div className="truncate text-sm text-slate-800" title={userEmail}>
+                  {userEmail ?? 'Account'}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              role="menuitem"
+              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+              onClick={() => {
+                setOpen(false)
+                void signOut()
+              }}
+            >
+              <LogOut className="h-4 w-4 shrink-0" aria-hidden />
+              Sign out
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </header>
   )
 }

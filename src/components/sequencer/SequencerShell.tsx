@@ -1,4 +1,3 @@
-import { AnimatePresence } from 'framer-motion'
 import type { ChangeEvent, ComponentType, Dispatch, MouseEvent, RefObject, SetStateAction } from 'react'
 import type { SongAudioAnalysis } from '../../lib/audioAnalysis'
 import type { DisplayProp } from '../../types/display'
@@ -6,6 +5,7 @@ import type { Song } from '../../types/song'
 import { CopilotPanel } from './CopilotPanel'
 import { SequencerHeader } from './SequencerHeader'
 import { SequencerTabs } from './SequencerTabs'
+import type { HouseTemplateId } from '../HouseTemplates'
 import type { ChatMessage, Section, TabValue, TimelineEvent } from './types'
 import { AISequencingWorkspace } from './workspaces/AISequencingWorkspace'
 import { DisplaySetupWorkspace } from './workspaces/DisplaySetupWorkspace'
@@ -21,11 +21,12 @@ export interface SequencerShellProps {
   runAi: () => void
   controllers: number
   channelsPerController: number
-  propsMappedCount: number
   usedChannels: number
   totalChannels: number
   selectedSong: Song
   analysisProgress: number
+  signOut: () => void | Promise<void>
+  userEmail: string | undefined
   setControllers: (n: number) => void
   setChannelsPerController: (n: number) => void
   propsState: DisplayProp[]
@@ -40,6 +41,9 @@ export interface SequencerShellProps {
   setNewPropChannels: (v: number) => void
   addProp: () => void
   removeProp: (id: string) => void
+  quickAddProp: (type: string, x: number, y: number, houseType: string, opts?: { angle?: number; length?: number }) => void
+  updatePropColor: (id: string, color: string) => void
+  moveProp: (id: string, x: number, y: number) => void
   songs: Song[]
   selectedSongId: string | null
   setSelectedSongId: Dispatch<SetStateAction<string | null>>
@@ -70,7 +74,23 @@ export interface SequencerShellProps {
   chat: ChatMessage[]
   chatInput: string
   setChatInput: Dispatch<SetStateAction<string>>
-  applyCopilot: () => void
+  applyCopilot: () => void | Promise<void>
+  copilotBusy: boolean
+  previewTime: number
+  sequenceEventsForPreview: TimelineEvent[]
+  patchTimelineEvent: (id: string, patch: Partial<TimelineEvent>) => void
+  displayHouseType: HouseTemplateId
+  setDisplayHouseType: (id: HouseTemplateId) => void
+  timelineSong: Song
+  timelineEvents: TimelineEvent[]
+  timelineSongId: string | null
+  setTimelineSongId: Dispatch<SetStateAction<string | null>>
+  timelineSequenceSource: 'formula' | 'stored'
+  setTimelineSequenceSource: Dispatch<SetStateAction<'formula' | 'stored'>>
+  runAudioAnalysis: () => void | Promise<void>
+  songAnalysisBusy: boolean
+  photoUrl: string | null
+  onPhotoReady: (url: string) => void
 }
 
 export function SequencerShell({
@@ -81,11 +101,12 @@ export function SequencerShell({
   runAi,
   controllers,
   channelsPerController,
-  propsMappedCount,
   usedChannels,
   totalChannels,
   selectedSong,
   analysisProgress,
+  signOut,
+  userEmail,
   setControllers,
   setChannelsPerController,
   propsState,
@@ -100,6 +121,9 @@ export function SequencerShell({
   setNewPropChannels,
   addProp,
   removeProp,
+  quickAddProp,
+  updatePropColor,
+  moveProp,
   songs,
   selectedSongId,
   setSelectedSongId,
@@ -131,28 +155,40 @@ export function SequencerShell({
   chatInput,
   setChatInput,
   applyCopilot,
+  copilotBusy,
+  previewTime,
+  sequenceEventsForPreview,
+  patchTimelineEvent,
+  displayHouseType,
+  setDisplayHouseType,
+  timelineSong,
+  timelineEvents,
+  timelineSongId,
+  setTimelineSongId,
+  timelineSequenceSource,
+  setTimelineSequenceSource,
+  runAudioAnalysis,
+  songAnalysisBusy,
+  photoUrl,
+  onPhotoReady,
 }: SequencerShellProps) {
   return (
-    <div className="w-full bg-gradient-to-b from-slate-50 via-white to-slate-100 pb-6 text-slate-900">
-      <div className="mx-auto max-w-7xl p-6 md:p-10">
-        <SequencerHeader
-          rebuildAnalyzing={rebuildAnalyzing}
-          rebuildPhase={rebuildPhase}
-          runAi={runAi}
-          controllers={controllers}
-          channelsPerController={channelsPerController}
-          propsMappedCount={propsMappedCount}
-          usedChannels={usedChannels}
-          totalChannels={totalChannels}
-          selectedSong={selectedSong}
-          analysisProgress={analysisProgress}
-        />
+    <div className="w-full min-h-0 flex-1 bg-[#f4f5f8] pb-12 text-slate-900 antialiased">
+      <div className="border-b border-slate-200/90 bg-white shadow-[0_1px_0_rgba(15,23,42,0.04)]">
+        <div className="mx-auto max-w-7xl px-4 md:px-6">
+          <div className="flex flex-col gap-0.5 py-2 md:py-2.5">
+            <SequencerHeader signOut={signOut} userEmail={userEmail} />
+            <SequencerTabs value={activeTab} onChange={setActiveTab} />
+          </div>
+        </div>
+      </div>
 
+      <div className="mx-auto max-w-7xl px-4 md:px-6">
         <div className="min-w-0 w-full max-w-full space-y-6">
-          <SequencerTabs value={activeTab} onChange={setActiveTab} />
-          <AnimatePresence mode="wait">
+          <>
             {activeTab === 'setup' && (
               <DisplaySetupWorkspace
+                key="setup"
                 controllers={controllers}
                 channelsPerController={channelsPerController}
                 setControllers={setControllers}
@@ -171,9 +207,15 @@ export function SequencerShell({
                 setNewPropChannels={setNewPropChannels}
                 addProp={addProp}
                 removeProp={removeProp}
+                quickAddProp={quickAddProp}
+                updatePropColor={updatePropColor}
+                moveProp={moveProp}
+                houseType={displayHouseType}
+                onHouseTypeChange={setDisplayHouseType}
+                photoUrl={photoUrl}
+                onPhotoReady={onPhotoReady}
               />
             )}
-
             {activeTab === 'songs' && (
               <SongsWorkspace
                 songs={songs}
@@ -193,6 +235,8 @@ export function SequencerShell({
                 SongWorkspaceAudio={SongWorkspaceAudio}
                 AnalysisBeatStrip={AnalysisBeatStrip}
                 AnalysisBandRows={AnalysisBandRows}
+                runAudioAnalysis={runAudioAnalysis}
+                songAnalysisBusy={songAnalysisBusy}
               />
             )}
 
@@ -215,12 +259,18 @@ export function SequencerShell({
                 propsState={propsState}
                 selectedPropId={selectedPropId}
                 setSelectedPropId={setSelectedPropId}
-                selectedSong={selectedSong}
-                sections={sections}
+                selectedSong={timelineSong}
+                songs={songs}
+                timelineSongId={timelineSongId}
+                setTimelineSongId={setTimelineSongId}
+                timelineSequenceSource={timelineSequenceSource}
+                setTimelineSequenceSource={setTimelineSequenceSource}
                 propEvents={propEvents}
+                allEvents={timelineEvents}
                 selectedEventId={selectedEventId}
                 setSelectedEventId={setSelectedEventId}
                 selectedEvent={selectedEvent}
+                patchTimelineEvent={patchTimelineEvent}
               />
             )}
 
@@ -233,16 +283,24 @@ export function SequencerShell({
                 exportPayload={exportPayload}
               />
             )}
-          </AnimatePresence>
-
-          <CopilotPanel
-            playing={playing}
-            setPlaying={setPlaying}
-            chat={chat}
-            chatInput={chatInput}
-            setChatInput={setChatInput}
-            applyCopilot={applyCopilot}
-          />
+            {activeTab === 'ai' && (
+              <CopilotPanel
+                playing={playing}
+                setPlaying={setPlaying}
+                chat={chat}
+                chatInput={chatInput}
+                setChatInput={setChatInput}
+                applyCopilot={applyCopilot}
+                copilotBusy={copilotBusy}
+                propsState={propsState}
+                selectedSong={selectedSong}
+                previewTime={previewTime}
+                sequenceEvents={sequenceEventsForPreview}
+                houseType={displayHouseType}
+                onHouseTypeChange={setDisplayHouseType}
+              />
+            )}
+          </>
         </div>
       </div>
     </div>

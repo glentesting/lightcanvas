@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -12,16 +13,17 @@ import {
   minimalSongAudioAnalysisFromPersisted,
   type SongAudioAnalysis,
 } from '../lib/audioAnalysis'
+import { CopilotApiUnavailableError, requestCopilotApply } from '../lib/copilotApplyApi'
 import { mapClaudeEventsToTimeline, requestClaudeSequence } from '../lib/generateSequenceApi'
 import { getAudioDurationFromFile } from '../lib/getAudioDurationFromFile'
 import {
   deleteSongFromLibrary,
   getOrCreateDisplayProfile,
   getSongAudioSignedUrl,
-  loadDisplayProps,
   loadSongs,
   persistDisplayProfile,
   persistSongAudioAnalysis,
+  updateProfilePhotoUrl,
   updateSongStatus,
   uploadSongFromFile,
 } from '../lib/phase1Repository'
@@ -29,7 +31,9 @@ import { supabase } from '../lib/supabaseClient'
 import type { DisplayProp } from '../types/display'
 import type { Song, SongSectionSnapshot } from '../types/song'
 import type { TabValue } from './sequencer/types'
+import { getDefaultCanvasPlacementForPropType, type HouseTemplateId } from './HouseTemplates'
 import { SequencerShell } from './sequencer/SequencerShell'
+
 const effectOptions = [
   'Mouth Sync',
   'Pulse',
@@ -294,12 +298,17 @@ function SongLibraryInlineAudio({ song }: { song: Song }) {
 }
 
 export default function LightCanvasSequencerPrototype() {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const [activeTab, setActiveTab] = useState<TabValue>('setup')
   const [controllers, setControllers] = useState(3)
   const [channelsPerController, setChannelsPerController] = useState(16)
   const [propsState, setPropsState] = useState<DisplayProp[]>([])
+  const [displayHouseType, setDisplayHouseType] = useState<HouseTemplateId>('two-story')
+  const [timelineSongId, setTimelineSongId] = useState<string | null>(null)
+  const [timelineSequenceSource, setTimelineSequenceSource] = useState<'formula' | 'stored'>('stored')
+  const [songAnalysisBusy, setSongAnalysisBusy] = useState(false)
   const [profileId, setProfileId] = useState<string | null>(null)
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
   const [displayConfigReady, setDisplayConfigReady] = useState(false)
   const [songs, setSongs] = useState<Song[]>([])
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null)
@@ -322,12 +331,14 @@ export default function LightCanvasSequencerPrototype() {
     {},
   )
 
+  const [previewTime, setPreviewTime] = useState(0)
+  const [copilotBusy, setCopilotBusy] = useState(false)
   const [chatInput, setChatInput] = useState('')
   const [chat, setChat] = useState<ChatMessage[]>([
     {
       id: 1,
       role: 'assistant',
-      text: 'Loaded a demo sequence plan. Vocals are prioritized to the talking face, chorus energy goes to the mega tree, and bass pulses are routed to ground stakes.',
+      text: 'Ask for changes in plain English — for example, “make the finale bigger” or “clean up the face track.”',
     },
   ])
 
@@ -350,21 +361,74 @@ export default function LightCanvasSequencerPrototype() {
     () => buildEvents(propsState, complexity, sections),
     [propsState, complexity, sections],
   )
+
   const claudeEventsForSong = sequenceEventsBySong[selectedSong.id]
   const events = useMemo((): TimelineEvent[] => {
     if (claudeEventsForSong?.length) return claudeEventsForSong
     return formulaEvents
   }, [claudeEventsForSong, formulaEvents])
+
+  const timelineSong = useMemo(() => {
+    const id = timelineSongId ?? selectedSongId
+    return songs.find((s) => s.id === id) ?? selectedSong
+  }, [songs, timelineSongId, selectedSongId, selectedSong])
+
+  const sectionsTimeline = useMemo(
+    () => resolveSectionsForSequence(timelineSong, songAnalyses),
+    [timelineSong, songAnalyses],
+  )
+
+  const formulaTimelineEvents = useMemo(
+    () => buildEvents(propsState, complexity, sectionsTimeline),
+    [propsState, complexity, sectionsTimeline],
+  )
+
+  const storedTimeline = sequenceEventsBySong[timelineSong.id]
+  const timelineEvents = useMemo((): TimelineEvent[] => {
+    if (timelineSequenceSource === 'stored' && storedTimeline?.length) return storedTimeline
+    return formulaTimelineEvents
+  }, [timelineSequenceSource, storedTimeline, formulaTimelineEvents])
+
+  const displayEvents = activeTab === 'timeline' ? timelineEvents : events
+
+  const patchTimelineEvent = useCallback(
+    (id: string, patch: Partial<TimelineEvent>) => {
+      const sid = timelineSong.id
+      setSequenceEventsBySong((prev) => {
+        const sections = resolveSectionsForSequence(timelineSong, songAnalyses)
+        const formula = buildEvents(propsState, complexity, sections)
+        const useStored = timelineSequenceSource === 'stored' && prev[sid]?.length
+        const base = useStored ? prev[sid]! : formula
+        const next = base.map((e) => (e.id === id ? { ...e, ...patch } : e))
+        return { ...prev, [sid]: next }
+      })
+    },
+    [timelineSong, songAnalyses, propsState, complexity, timelineSequenceSource],
+  )
+
   const selectedProp =
     propsState.length === 0
       ? undefined
       : (propsState.find((p) => p.id === selectedPropId) ?? propsState[0])
-  const propEvents = events.filter((e) => e.propId === selectedProp?.id)
+  const propEvents = displayEvents.filter((e) => e.propId === selectedProp?.id)
   const selectedEvent =
-    events.find((e) => e.id === selectedEventId) ?? propEvents[0] ?? null
+    displayEvents.find((e) => e.id === selectedEventId) ?? propEvents[0] ?? null
   const totalChannels = controllers * channelsPerController
   const usedChannels = propsState.reduce((sum, p) => sum + p.channels, 0)
   const remainingChannels = totalChannels - usedChannels
+
+  useEffect(() => {
+    if (!playing) return
+    const dur = Math.max(0.001, selectedSong.duration)
+    const t0 = performance.now()
+    let raf = 0
+    const tick = () => {
+      setPreviewTime(((performance.now() - t0) / 1000) % dur)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [playing, selectedSong.duration])
 
   useEffect(() => {
     const uid = user?.id
@@ -387,10 +451,9 @@ export default function LightCanvasSequencerPrototype() {
         setProfileId(profile.id)
         setControllers(profile.controllers)
         setChannelsPerController(profile.channels_per_controller)
+        setPhotoUrl(profile.photo_url)
 
-        const props = await loadDisplayProps(profile.id)
-        if (cancelled) return
-        setPropsState(props)
+        setPropsState([])
 
         const songList = await loadSongs(uid)
         if (cancelled) return
@@ -498,6 +561,7 @@ export default function LightCanvasSequencerPrototype() {
       ? Math.max(...propsState.map((p) => p.start + p.channels))
       : 1
     const controllerIndex = (propsState.length % Math.max(1, controllers)) + 1
+    const placement = getDefaultCanvasPlacementForPropType(newPropType, displayHouseType, propsState.length)
     const created: DisplayProp = {
       id: crypto.randomUUID(),
       name: newPropName,
@@ -507,12 +571,56 @@ export default function LightCanvasSequencerPrototype() {
       start: nextStart,
       priority: 'General',
       notes: `Fake detailed mapping note for ${newPropType}. LightCanvas would recommend how this prop behaves during verses, choruses, and finales.`,
+      canvasX: placement.canvasX,
+      canvasY: placement.canvasY,
+      houseType: placement.houseType,
+      color: '#ffe8c0',
     }
     setPropsState((prev) => [...prev, created])
     setSelectedPropId(created.id)
     setNewPropName('')
     setNewPropType('Smart Pixel')
     setNewPropChannels(8)
+  }
+
+  const quickAddProp = (type: string, x: number, y: number, houseType: string, opts?: { angle?: number; length?: number }) => {
+    const count = propsState.filter((p) => p.type === type).length + 1
+    const name = `${type} ${count}`
+    const defaultChannels: Record<string, number> = {
+      Roofline: 16, Arches: 8, 'Mini Tree': 4, 'Mega Tree': 16,
+      'Talking Face': 8, 'Ground Stakes': 4, Matrix: 16, 'Smart Pixel': 8,
+    }
+    const channels = defaultChannels[type] ?? 8
+    const nextStart = propsState.length
+      ? Math.max(...propsState.map((p) => p.start + p.channels))
+      : 1
+    const controllerIndex = (propsState.length % Math.max(1, controllers)) + 1
+    const created: DisplayProp = {
+      id: crypto.randomUUID(),
+      name,
+      type,
+      controller: `Controller ${String.fromCharCode(64 + controllerIndex)}`,
+      channels,
+      start: nextStart,
+      priority: 'General',
+      notes: '',
+      canvasX: x,
+      canvasY: y,
+      houseType,
+      angle: opts?.angle,
+      length: opts?.length,
+      color: '#ffe8c0',
+    }
+    setPropsState((prev) => [...prev, created])
+    setSelectedPropId(created.id)
+  }
+
+  const updatePropColor = (id: string, color: string) => {
+    setPropsState((prev) => prev.map((p) => (p.id === id ? { ...p, color } : p)))
+  }
+
+  const moveProp = (id: string, x: number, y: number) => {
+    setPropsState((prev) => prev.map((p) => (p.id === id ? { ...p, canvasX: x, canvasY: y } : p)))
   }
 
   const removeProp = (id: string) => {
@@ -570,6 +678,79 @@ export default function LightCanvasSequencerPrototype() {
       setSongUploading(false)
     }
   }
+
+  useEffect(() => {
+    if (activeTab === 'timeline' && selectedSongId) {
+      setTimelineSongId((prev) => prev ?? selectedSongId)
+    }
+  }, [activeTab, selectedSongId])
+
+  const runAudioAnalysis = useCallback(async () => {
+    const song = songs.find((s) => s.id === selectedSongId) ?? selectedSong
+    if (song.id === PLACEHOLDER_SONG.id) return
+    if (!song.storagePath || !song.storageBucket) {
+      setSongUploadError('Upload an audio file for this song before running analysis.')
+      return
+    }
+    const sid = song.id
+    setSongUploadError(null)
+    setSongAnalysisBusy(true)
+    setAnalysisProgress(28)
+    try {
+      const url = await getSongAudioSignedUrl(song)
+      if (!url) throw new Error('No audio URL')
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`Audio fetch failed (${res.status})`)
+      const raw = await res.arrayBuffer()
+      const ctx = new AudioContext()
+      let decoded: AudioBuffer
+      try {
+        decoded = await ctx.decodeAudioData(raw.slice(0))
+      } finally {
+        void ctx.close()
+      }
+      setAnalysisProgress(72)
+      const result = analyzeAudioBuffer(decoded)
+      setSongAnalyses((prev) => ({ ...prev, [sid]: result }))
+      const persistedSections: SongSectionSnapshot[] = result.sections.map((sec) => ({
+        name: sec.name,
+        start: sec.start,
+        end: sec.end,
+        energy: sec.energy,
+        vocals: sec.vocals,
+      }))
+      void persistSongAudioAnalysis(sid, {
+        beat_confidence: result.summary.beat,
+        bass_strength: result.summary.bass,
+        treble_strength: result.summary.treble,
+        vocal_confidence: result.summary.vocals,
+        dynamics: result.summary.dynamics,
+        detected_bpm: result.bpm,
+        sections: result.sections,
+      }).then(({ error }) => {
+        if (error) console.error('persistSongAudioAnalysis', error)
+      })
+      setSongs((prev) =>
+        prev.map((s) =>
+          s.id === sid
+            ? {
+                ...s,
+                bpm: result.bpm,
+                analysis: result.summary,
+                analysisSaved: true,
+                persistedSections,
+              }
+            : s,
+        ),
+      )
+      setAnalysisProgress(100)
+    } catch (e) {
+      console.error(e)
+      setSongUploadError(e instanceof Error ? e.message : 'Analysis failed')
+    } finally {
+      setSongAnalysisBusy(false)
+    }
+  }, [songs, selectedSongId, selectedSong])
 
   const handleDeleteSong = async (song: Song, ev: MouseEvent) => {
     ev.stopPropagation()
@@ -830,30 +1011,84 @@ export default function LightCanvasSequencerPrototype() {
     })()
   }
 
-  const applyCopilot = () => {
-    if (!chatInput.trim()) return
+  const applyCopilot = async () => {
+    if (!chatInput.trim() || copilotBusy) return
     const prompt = chatInput.trim()
-    const lower = prompt.toLowerCase()
-    let reply = 'Adjusted the sequence draft based on your request.'
-    if (lower.includes('finale'))
-      reply = 'Boosted finale density and gave the mega tree a larger finishing sweep pattern.'
-    else if (lower.includes('bass'))
-      reply = 'Increased bass emphasis so ground stakes fire more often in high-energy sections.'
-    else if (lower.includes('face') || lower.includes('vocal'))
-      reply = 'Cleaned up the talking face track and strengthened vocal phrase syncing.'
-    else if (lower.includes('simple') || lower.includes('cleaner')) {
-      setComplexity(44)
-      reply = 'Reduced sequence complexity for a cleaner beginner-friendly result.'
-    } else if (lower.includes('bigger') || lower.includes('intense')) {
-      setComplexity(82)
-      reply = 'Increased sequence density for a more aggressive, higher-energy show.'
+    if (selectedSong.id === PLACEHOLDER_SONG.id) {
+      setChat((prev) => [
+        ...prev,
+        { id: Date.now() + 1, role: 'user', text: prompt },
+        {
+          id: Date.now() + 2,
+          role: 'assistant',
+          text: 'Add a song to the library first so the copilot can target a real track.',
+        },
+      ])
+      setChatInput('')
+      return
     }
-    setChat((prev) => [
-      ...prev,
-      { id: Date.now() + 1, role: 'user', text: prompt },
-      { id: Date.now() + 2, role: 'assistant', text: reply },
-    ])
-    setChatInput('')
+    if (propsState.length === 0) {
+      setChat((prev) => [
+        ...prev,
+        { id: Date.now() + 1, role: 'user', text: prompt },
+        {
+          id: Date.now() + 2,
+          role: 'assistant',
+          text: 'Add at least one display prop in Display Setup before applying sequence changes.',
+        },
+      ])
+      setChatInput('')
+      return
+    }
+
+    setCopilotBusy(true)
+    try {
+      const result = await requestCopilotApply({
+        userMessage: prompt,
+        complexity,
+        songDurationSeconds: selectedSong.duration,
+        bpm: selectedSong.bpm ?? 120,
+        analysis: selectedSong.analysis,
+        sections: sections.map((s) => ({
+          name: s.name,
+          start: s.start,
+          end: s.end,
+          energy: s.energy,
+          vocals: s.vocals,
+        })),
+        props: propsState,
+        currentEvents: events,
+      })
+      if (result.set_complexity != null) setComplexity(result.set_complexity)
+      if (result.events?.length) {
+        const mapped = mapClaudeEventsToTimeline(result.events, propsState)
+        setSequenceEventsBySong((prev) => ({ ...prev, [selectedSong.id]: mapped }))
+      }
+      setChat((prev) => [
+        ...prev,
+        { id: Date.now() + 1, role: 'user', text: prompt },
+        { id: Date.now() + 2, role: 'assistant', text: result.assistant_message },
+      ])
+      setChatInput('')
+    } catch (e) {
+      const hint =
+        e instanceof CopilotApiUnavailableError
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : 'Request failed'
+      setChat((prev) => [
+        ...prev,
+        { id: Date.now() + 1, role: 'user', text: prompt },
+        {
+          id: Date.now() + 2,
+          role: 'assistant',
+          text: hint,
+        },
+      ])
+    } finally {
+      setCopilotBusy(false)
+    }
   }
 
   const exportPayload = useMemo(
@@ -916,11 +1151,12 @@ export default function LightCanvasSequencerPrototype() {
       runAi={runAi}
       controllers={controllers}
       channelsPerController={channelsPerController}
-      propsMappedCount={propsState.length}
       usedChannels={usedChannels}
       totalChannels={totalChannels}
       selectedSong={selectedSong}
       analysisProgress={analysisProgress}
+      signOut={signOut}
+      userEmail={user?.email}
       setControllers={setControllers}
       setChannelsPerController={setChannelsPerController}
       propsState={propsState}
@@ -935,6 +1171,9 @@ export default function LightCanvasSequencerPrototype() {
       setNewPropChannels={setNewPropChannels}
       addProp={addProp}
       removeProp={removeProp}
+      quickAddProp={quickAddProp}
+      updatePropColor={updatePropColor}
+      moveProp={moveProp}
       songs={songs}
       selectedSongId={selectedSongId}
       setSelectedSongId={setSelectedSongId}
@@ -966,6 +1205,25 @@ export default function LightCanvasSequencerPrototype() {
       chatInput={chatInput}
       setChatInput={setChatInput}
       applyCopilot={applyCopilot}
+      copilotBusy={copilotBusy}
+      previewTime={previewTime}
+      sequenceEventsForPreview={events}
+      patchTimelineEvent={patchTimelineEvent}
+      displayHouseType={displayHouseType}
+      setDisplayHouseType={setDisplayHouseType}
+      timelineSong={timelineSong}
+      timelineEvents={timelineEvents}
+      timelineSongId={timelineSongId}
+      setTimelineSongId={setTimelineSongId}
+      timelineSequenceSource={timelineSequenceSource}
+      setTimelineSequenceSource={setTimelineSequenceSource}
+      runAudioAnalysis={runAudioAnalysis}
+      songAnalysisBusy={songAnalysisBusy}
+      photoUrl={photoUrl}
+      onPhotoReady={(url: string) => {
+        setPhotoUrl(url)
+        if (profileId) void updateProfilePhotoUrl(profileId, url)
+      }}
     />
   )
 }
