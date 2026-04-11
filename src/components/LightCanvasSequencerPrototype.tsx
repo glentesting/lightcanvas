@@ -28,6 +28,8 @@ import {
   uploadSongFromFile,
   loadHousePhotos,
   deleteHousePhoto,
+  saveSequence,
+  loadSequence,
   type HousePhotoRow,
 } from '../lib/phase1Repository'
 import { supabase } from '../lib/supabaseClient'
@@ -346,6 +348,19 @@ export default function LightCanvasSequencerPrototype() {
   const [sequenceEventsBySong, setSequenceEventsBySong] = useState<Record<string, TimelineEvent[]>>(
     {},
   )
+  const saveSeqTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const debouncedSaveSequence = useCallback(
+    (songId: string, evts: unknown[]) => {
+      if (saveSeqTimerRef.current) clearTimeout(saveSeqTimerRef.current)
+      saveSeqTimerRef.current = setTimeout(() => {
+        if (!user?.id) return
+        void saveSequence(user.id, songId, profileId, evts).then(({ error }) => {
+          if (error) console.error('saveSequence', error)
+        })
+      }, 500)
+    },
+    [user?.id, profileId],
+  )
 
   const [previewTime, setPreviewTime] = useState(0)
   const [copilotBusy, setCopilotBusy] = useState(false)
@@ -416,10 +431,11 @@ export default function LightCanvasSequencerPrototype() {
         const useStored = timelineSequenceSource === 'stored' && prev[sid]?.length
         const base = useStored ? prev[sid]! : formula
         const next = base.map((e) => (e.id === id ? { ...e, ...patch } : e))
+        debouncedSaveSequence(sid, next)
         return { ...prev, [sid]: next }
       })
     },
-    [timelineSong, songAnalyses, propsState, complexity, timelineSequenceSource],
+    [timelineSong, songAnalyses, propsState, complexity, timelineSequenceSource, debouncedSaveSequence],
   )
 
   const selectedProp =
@@ -446,6 +462,17 @@ export default function LightCanvasSequencerPrototype() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [undo])
+
+  // Load saved sequence when song selection changes
+  useEffect(() => {
+    if (!selectedSongId || !user?.id) return
+    if (sequenceEventsBySong[selectedSongId]?.length) return // already in memory
+    void loadSequence(user.id, selectedSongId, profileId).then((saved) => {
+      if (saved?.length) {
+        setSequenceEventsBySong((prev) => ({ ...prev, [selectedSongId]: saved as TimelineEvent[] }))
+      }
+    })
+  }, [selectedSongId, user?.id, profileId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!playing) return
@@ -937,6 +964,7 @@ export default function LightCanvasSequencerPrototype() {
         })
         const mapped = mapClaudeEventsToTimeline(raw, propsState) as TimelineEvent[]
         setSequenceEventsBySong((prev) => ({ ...prev, [sid]: mapped }))
+        debouncedSaveSequence(sid, mapped)
         setChat((prev) => [
           ...prev,
           {
@@ -1114,6 +1142,7 @@ export default function LightCanvasSequencerPrototype() {
       if (result.events?.length) {
         const mapped = mapClaudeEventsToTimeline(result.events, propsState)
         setSequenceEventsBySong((prev) => ({ ...prev, [selectedSong.id]: mapped }))
+        debouncedSaveSequence(selectedSong.id, mapped)
       }
       setChat((prev) => [
         ...prev,

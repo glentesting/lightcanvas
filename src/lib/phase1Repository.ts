@@ -521,3 +521,42 @@ export async function deleteHousePhoto(
     .eq('id', photoId)
   return { error: error ? new Error(error.message) : null }
 }
+
+// ---------------------------------------------------------------------------
+// Sequences
+// ---------------------------------------------------------------------------
+
+export async function saveSequence(
+  userId: string,
+  songId: string,
+  profileId: string | null,
+  events: unknown[],
+): Promise<{ error: Error | null }> {
+  if (!supabase) return { error: new Error('Supabase not configured') }
+  const { error } = await supabase
+    .from('sequences')
+    .upsert({
+      user_id: userId,
+      song_id: songId,
+      display_profile_id: profileId,
+      events,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,song_id,display_profile_id' })
+  return { error: error ? new Error(error.message) : null }
+}
+
+export async function loadSequence(
+  userId: string,
+  songId: string,
+  profileId: string | null,
+): Promise<unknown[] | null> {
+  if (!supabase) return null
+  const { data, error } = await supabase
+    .from('sequences')
+    .select('events')
+    .eq('user_id', userId)
+    .eq('song_id', songId)
+    .maybeSingle()
+  if (error || !data) return null
+  return data.events as unknown[]
+}
