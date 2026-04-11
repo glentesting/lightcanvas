@@ -548,7 +548,7 @@ export async function saveSequence(
 export async function loadSequence(
   userId: string,
   songId: string,
-  profileId: string | null,
+  _profileId: string | null,
 ): Promise<unknown[] | null> {
   if (!supabase) return null
   const { data, error } = await supabase

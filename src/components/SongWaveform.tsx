@@ -5,7 +5,7 @@ import { getSongAudioSignedUrl } from '../lib/phase1Repository'
 
 const BAR_COUNT = 140
 
-export function SongWaveform({ song }: { song: Song }) {
+export function SongWaveform({ song, compact, height }: { song: Song; compact?: boolean; height?: number }) {
   const [peaks, setPeaks] = useState<number[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -41,23 +41,36 @@ export function SongWaveform({ song }: { song: Song }) {
     }
   }, [song.id, song.storagePath, song.storageBucket])
 
+  const h = height ?? 128
+  const hClass = height ? '' : 'h-32'
+  const hStyle = height ? { height: h } : undefined
+  const borderClass = compact ? '' : 'rounded-xl border border-zinc-800'
+  const padClass = compact ? 'px-1 py-0.5' : 'p-3'
+
   if (!song.storagePath || !song.storageBucket) {
     return (
-      <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-900 px-4 text-center text-sm text-zinc-400">
-        No uploaded audio file for this track — waveform appears after you add a file from Song Library.
+      <div
+        className={`flex items-center justify-center ${borderClass} ${compact ? '' : 'border-dashed border-zinc-700'} bg-zinc-900 px-4 text-center text-sm text-zinc-400 ${hClass}`}
+        style={hStyle}
+      >
+        {compact ? '' : 'No uploaded audio file for this track — waveform appears after you add a file from Song Library.'}
       </div>
     )
   }
 
   if (loading) {
     return (
-      <div className="flex h-32 items-center justify-center rounded-xl bg-zinc-900 text-sm text-zinc-400">
-        Decoding waveform…
+      <div
+        className={`flex items-center justify-center ${borderClass} bg-zinc-900 text-sm text-zinc-400 ${hClass}`}
+        style={hStyle}
+      >
+        {compact ? '…' : 'Decoding waveform…'}
       </div>
     )
   }
 
   if (err) {
+    if (compact) return <div className="h-full bg-zinc-900" style={hStyle} />
     return (
       <div className="rounded-xl border border-brand-red/50 bg-brand-red/10 px-4 py-3 text-sm text-brand-red">
         {err}
@@ -65,10 +78,13 @@ export function SongWaveform({ song }: { song: Song }) {
     )
   }
 
-  if (!peaks?.length) return null
+  if (!peaks?.length) return compact ? <div className="bg-zinc-900" style={hStyle} /> : null
 
   return (
-    <div className="flex h-32 items-end gap-px rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+    <div
+      className={`flex items-end gap-px ${borderClass} bg-zinc-900 ${padClass} ${hClass}`}
+      style={hStyle}
+    >
       {peaks.map((p, i) => (
         <div
           key={i}
