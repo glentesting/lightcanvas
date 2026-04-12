@@ -548,15 +548,18 @@ export async function saveSequence(
 export async function loadSequence(
   userId: string,
   songId: string,
-  _profileId: string | null,
+  profileId: string | null,
 ): Promise<unknown[] | null> {
   if (!supabase) return null
-  const { data, error } = await supabase
+  let query = supabase
     .from('sequences')
     .select('events')
     .eq('user_id', userId)
     .eq('song_id', songId)
-    .maybeSingle()
+  if (profileId) {
+    query = query.eq('display_profile_id', profileId)
+  }
+  const { data, error } = await query.maybeSingle()
   if (error || !data) return null
   return data.events as unknown[]
 }
