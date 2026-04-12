@@ -117,7 +117,7 @@ function drawStake(ctx: CanvasRenderingContext2D, x: number, y: number, color: s
   const capR = 7.5 * anim.scale
   const c = vividPropColor(color, anim.glowIntensity, anim.colorBrightness)
   const shadowBlur = 10 + 70 * anim.glowIntensity ** 1.12
-  const bodyRgba = hexToRgba(c, Math.min(1, 0.18 * anim.glowIntensity))
+  const bodyRgba = hexToRgba(c, 0.4 + 0.6 * anim.glowIntensity)
   ctx.save()
   ctx.shadowBlur = shadowBlur
   ctx.shadowColor = c
@@ -143,7 +143,7 @@ function drawStakeCluster(ctx: CanvasRenderingContext2D, x: number, y: number, c
   const capR = 7.5 * anim.scale
   const c = vividPropColor(color, anim.glowIntensity, anim.colorBrightness)
   const shadowBlur = 10 + 70 * anim.glowIntensity ** 1.12
-  const bodyRgba = hexToRgba(c, Math.min(1, 0.18 * anim.glowIntensity))
+  const bodyRgba = hexToRgba(c, 0.4 + 0.6 * anim.glowIntensity)
   const totalW = (count - 1) * spacing
   const startX = x - totalW / 2
   for (let i = 0; i < count; i++) {
@@ -341,7 +341,7 @@ function drawArch(ctx: CanvasRenderingContext2D, x: number, y: number, color: st
   const dotR = 5.25
   const c = vividPropColor(color, anim.glowIntensity, anim.colorBrightness)
   const shadowBlur = 10 + 70 * anim.glowIntensity ** 1.12
-  const bodyRgba = hexToRgba(c, Math.min(1, 0.18 * anim.glowIntensity))
+  const bodyRgba = hexToRgba(c, 0.4 + 0.6 * anim.glowIntensity)
   ctx.save()
   ctx.shadowBlur = shadowBlur
   ctx.shadowColor = c
