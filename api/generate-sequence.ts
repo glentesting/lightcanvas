@@ -87,63 +87,44 @@ function buildUserMessage(body: SequenceRequestPayload): string {
   const props = Array.isArray(body.props) ? body.props : []
   const stylePreset = body.stylePreset ?? 'standard'
 
-  let msg = `Return ONLY a JSON object. Start your response with { and end with }. No explanation, no markdown, no code blocks.
+  // Summarize props by type for smaller prompt
+  const typeCounts = new Map<string, number>()
+  for (const p of props) {
+    typeCounts.set(p.type, (typeCounts.get(p.type) ?? 0) + 1)
+  }
+  const propSummary = [...typeCounts.entries()]
+    .map(([type, count]) => `${count} ${type}${count > 1 ? 's' : ''}`)
+    .join(', ')
 
-Generate a light show sequence for this song. Return ONLY valid JSON with the shape:
-{
-  "events": [
-    {
-      "propId": "string",
-      "propName": "string",
-      "effect": "Pulse|Chase|Twinkle|Sweep|Shimmer|Mouth Sync|Hold|Color Pop|Fan|Ripple",
-      "start": 0.0,
-      "end": 4.0,
-      "intensity": 0.8,
-      "color": "#ffe8c0"
-    }
-  ]
-}
+  // List props with id and name (compact)
+  const propList = props
+    .map((p) => `"${p.id}":"${p.name}"(${p.type})`)
+    .join(', ')
 
-## Song
-- Duration: ${duration} seconds
-- BPM: ${bpm}
+  // Sections: name, start, end, energy only — rounded to 1 decimal
+  const sectionList = sections
+    .map((s) => `${s.name}:${s.start.toFixed(1)}-${s.end.toFixed(1)}s e${s.energy}`)
+    .join(', ')
 
-## Audio Analysis (0-100)
-- Beat confidence: ${analysis.beat_confidence}
-- Bass strength: ${analysis.bass_strength}
-- Treble strength: ${analysis.treble_strength}
-- Vocal confidence: ${analysis.vocal_confidence}
-- Dynamics: ${analysis.dynamics}
+  let msg = `Return ONLY a JSON object {events:[...]}. No explanation.
 
-## Sections (use exact names and time ranges)
-${sections
-  .map(
-    (s) =>
-      `- "${s.name}": ${s.start.toFixed(2)}s – ${s.end.toFixed(2)}s, energy ${s.energy}, vocals: ${s.vocals ? 'yes' : 'no'}`,
-  )
-  .join('\n')}
+Song: ${duration}s, ${bpm}BPM. Analysis: beat${analysis.beat_confidence} bass${analysis.bass_strength} treble${analysis.treble_strength} vocal${analysis.vocal_confidence} dynamics${analysis.dynamics}
 
-## Display Props (use exact id, name, and type — never invent prop ids)
-${props
-  .map(
-    (p) =>
-      `- id "${p.id}" | name "${p.name}" | type "${p.type}" | channels ${p.channels} | controller "${p.controller}"`,
-  )
-  .join('\n')}
+Sections: ${sectionList}
 
-## Allowed effects (use exactly these names)
-${ALLOWED_EFFECTS.join(', ')}
+Props (${propSummary}): ${propList}
+
+Effects: ${ALLOWED_EFFECTS.join(', ')}
+
+Format: {"events":[{"propId":"id","propName":"name","effect":"Effect","start":0.0,"end":8.0,"intensity":75}]}
 
 ## CRITICAL RULES
-- Generate 2-4 events per prop per section (not 1 giant block)
-- Each event: 4-12 seconds duration maximum
-- Vary effects within each prop — no two consecutive events on the same prop should have the same effect
-- Be concise — total response must fit in 8000 tokens
-- High energy sections: intensity 70-95, faster effects
-- Low energy: intensity 30-60, Hold and Shimmer
+- Generate 1-2 events per prop per section
+- Each event: 8-20 seconds duration
+- Vary effects — no same effect twice in a row per prop
 - Talking Tree Face: Mouth Sync in vocal sections only
 - Finale: all props intensity 85-100
-- Cover full song duration, no gaps per prop
+- Cover full song, no gaps
 - Return ONLY valid JSON, no explanation`
 
   const styleInstructions = STYLE_PRESET_INSTRUCTIONS[stylePreset]
@@ -274,21 +255,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   let textContent = ''
   try {
-    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 8192,
-        stop_sequences: [],
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userMessage }],
-      }),
-    })
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 45000)
+
+    let anthropicRes: Response
+    try {
+      anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 8192,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userMessage }],
+        }),
+      })
+    } catch (fetchErr) {
+      clearTimeout(timeoutId)
+      if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
+        return res.status(504).json({
+          error: 'Sequence generation timed out. Try with fewer props or a shorter song.',
+        })
+      }
+      throw fetchErr
+    }
+    clearTimeout(timeoutId)
 
     const rawBody = await anthropicRes.text()
     let anthropicJson: {
