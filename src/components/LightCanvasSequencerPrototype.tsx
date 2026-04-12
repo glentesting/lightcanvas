@@ -391,6 +391,8 @@ export default function LightCanvasSequencerPrototype() {
     {},
   )
   const saveSeqTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** Which display_profile_id the in-memory sequence for each song was loaded for (or last DB load). */
+  const sequenceLoadProfileRef = useRef<Record<string, string | null>>({})
   const debouncedSaveSequence = useCallback(
     (songId: string, evts: unknown[]) => {
       if (saveSeqTimerRef.current) clearTimeout(saveSeqTimerRef.current)
@@ -533,10 +535,19 @@ export default function LightCanvasSequencerPrototype() {
   // Load saved sequence when song selection changes
   useEffect(() => {
     if (!selectedSongId || !user?.id) return
-    if (sequenceEventsBySong[selectedSongId]?.length) return // already in memory
+    const inMemory = sequenceEventsBySong[selectedSongId]?.length
+    const loadedForProfile = sequenceLoadProfileRef.current[selectedSongId]
+    if (inMemory && loadedForProfile === profileId) return
+    const hadCachedForDifferentProfile =
+      (sequenceEventsBySong[selectedSongId]?.length ?? 0) > 0 &&
+      loadedForProfile !== undefined &&
+      loadedForProfile !== profileId
     void loadSequence(user.id, selectedSongId, profileId).then((saved) => {
+      sequenceLoadProfileRef.current[selectedSongId] = profileId
       if (saved?.length) {
         setSequenceEventsBySong((prev) => ({ ...prev, [selectedSongId]: saved as TimelineEvent[] }))
+      } else if (hadCachedForDifferentProfile) {
+        setSequenceEventsBySong((prev) => ({ ...prev, [selectedSongId]: [] }))
       }
     })
   }, [selectedSongId, user?.id, profileId]) // eslint-disable-line react-hooks/exhaustive-deps

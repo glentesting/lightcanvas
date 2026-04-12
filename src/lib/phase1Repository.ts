@@ -556,8 +556,10 @@ export async function loadSequence(
     .select('events')
     .eq('user_id', userId)
     .eq('song_id', songId)
-  if (profileId) {
+  if (profileId != null) {
     query = query.eq('display_profile_id', profileId)
+  } else {
+    query = query.is('display_profile_id', null)
   }
   const { data, error } = await query.maybeSingle()
   if (error || !data) return null
