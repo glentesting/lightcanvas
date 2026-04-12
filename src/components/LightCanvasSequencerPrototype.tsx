@@ -662,11 +662,8 @@ export default function LightCanvasSequencerPrototype() {
         try {
           await ensureUserPlanExists(uid)
           const plan = await loadUserPlan(uid)
-          const DEV_EMAILS = ['glen@orangecoregroup.com']
-          const effectivePlan = DEV_EMAILS.includes(user?.email ?? '')
-            ? { ...plan, plan: 'pro' as const, subscriptionStatus: 'active', sequenceCreditsRemaining: 999 }
-            : plan
-          if (!cancelled) setUserPlan(effectivePlan)
+          // Dev/test Pro: grant in Supabase only — update the user's row in `user_plans` (e.g. plan = 'pro'); do not override in the client.
+          if (!cancelled) setUserPlan(plan)
         } catch (planErr) {
           console.error('Failed to load user plan', planErr)
         }
