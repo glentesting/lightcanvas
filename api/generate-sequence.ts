@@ -191,6 +191,42 @@ function extractJsonArray(text: string): unknown[] {
   )
 }
 
+const SPLIT_EFFECTS = [
+  'Pulse', 'Chase', 'Twinkle', 'Sweep', 'Shimmer',
+  'Ripple', 'Color Pop', 'Fan', 'Hold', 'Mouth Sync',
+]
+
+function splitLongEvents(events: unknown[], maxDuration = 12): unknown[] {
+  const result: unknown[] = []
+  for (const event of events) {
+    if (!event || typeof event !== 'object') { result.push(event); continue }
+    const o = event as Record<string, unknown>
+    const start = typeof o.start === 'number' ? o.start : Number(o.start)
+    const end = typeof o.end === 'number' ? o.end : Number(o.end)
+    const duration = end - start
+    if (!Number.isFinite(duration) || duration <= maxDuration) {
+      result.push(event)
+      continue
+    }
+    const effect = typeof o.effect === 'string' ? o.effect : 'Hold'
+    const effectIdx = SPLIT_EFFECTS.indexOf(effect)
+    const chunks = Math.ceil(duration / maxDuration)
+    const chunkSize = duration / chunks
+    for (let i = 0; i < chunks; i++) {
+      const newEffect = i % 2 === 0
+        ? effect
+        : SPLIT_EFFECTS[(effectIdx + 1) % SPLIT_EFFECTS.length]
+      result.push({
+        ...o,
+        start: start + i * chunkSize,
+        end: start + (i + 1) * chunkSize,
+        effect: newEffect,
+      })
+    }
+  }
+  return result
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'application/json')
 
@@ -306,13 +342,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(502).json({ error: msg, anthropicBody: null })
   }
 
-  let rawEvents: unknown
+  let rawEvents: unknown[]
   try {
     rawEvents = extractJsonArray(textContent)
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Invalid JSON from Claude'
     return res.status(502).json({ error: msg })
   }
+
+  // Split long events into shorter varied blocks
+  rawEvents = splitLongEvents(rawEvents, 12)
 
   const normalized: Array<{
     propId: string

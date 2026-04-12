@@ -712,10 +712,12 @@ interface VisualizerCanvasProps {
   onPropDrag: (id: string, normX: number, normY: number) => void
   onPropResize: (id: string, length: number, angle: number) => void
   onViewChange?: (zoomed: boolean) => void
+  minHeight?: string | number
+  className?: string
 }
 
 export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCanvasProps>(
-  function VisualizerCanvas({ photoUrl, nightOpacity, props, selectedPropId, activeTool, onCanvasClick, onPropClick, onPropDrag, onPropResize, onViewChange }, ref) {
+  function VisualizerCanvas({ photoUrl, nightOpacity, props, selectedPropId, activeTool, onCanvasClick, onPropClick, onPropDrag, onPropResize, onViewChange, minHeight, className }, ref) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const bgImageRef = useRef<HTMLImageElement | null>(null)
     const rafRef = useRef<number>(0)
@@ -800,7 +802,7 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
         if (prop.canvasX == null || prop.canvasY == null) continue
         const px = prop.canvasX * cw
         const py = prop.canvasY * ch
-        const anim = getAnimState(prop.type, now)
+        const anim = getAnimState(prop.type, now, prop.id)
         const selected = prop.id === selectedPropId
         drawProp(ctx, prop, px, py, anim, selected)
       }
@@ -1011,8 +1013,8 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
     return (
       <canvas
         ref={canvasRef}
-        className="block w-full"
-        style={{ minHeight: '45vh', cursor }}
+        className={`block w-full ${className ?? ''}`}
+        style={{ minHeight: minHeight ?? '45vh', cursor, height: className ? '100%' : undefined }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

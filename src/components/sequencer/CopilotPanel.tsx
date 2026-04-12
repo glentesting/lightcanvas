@@ -96,9 +96,18 @@ export function CopilotPanel({
         return
       }
 
-      const activeEvents = events.filter(e => e.start <= t && e.end > t)
+      const activePropIds = new Set<string>()
+      const effectsByPropId = new Map<string, string>()
+      const intensityByPropId = new Map<string, number>()
+
+      events.filter(e => e.start <= t && e.end > t).forEach(e => {
+        activePropIds.add(e.propId)
+        effectsByPropId.set(e.propId, e.effect)
+        intensityByPropId.set(e.propId, e.intensity / 100)
+      })
+
       const hasEffect = (effects: string[]) =>
-        activeEvents.some(e => effects.includes(e.effect))
+        [...effectsByPropId.values()].some(e => effects.includes(e))
 
       canvasRef.current?.triggerFrame({
         beatStrength: hasEffect(['Pulse', 'Chase', 'Sweep', 'Color Pop']) ? 0.85 : 0.2,
@@ -106,6 +115,9 @@ export function CopilotPanel({
         trebleStrength: hasEffect(['Twinkle', 'Shimmer', 'Ripple']) ? 0.75 : 0.15,
         vocalConfidence: hasEffect(['Mouth Sync']) ? 0.95 : 0.05,
         timestamp: t,
+        activePropIds,
+        effectsByPropId,
+        intensityByPropId,
       })
     }, 50)
     return () => clearInterval(interval)
@@ -160,6 +172,8 @@ export function CopilotPanel({
                   onPropDrag={() => {}}
                   onPropResize={() => {}}
                   onViewChange={() => {}}
+                  minHeight="100%"
+                  className="h-full"
                 />
               </div>
             </div>
