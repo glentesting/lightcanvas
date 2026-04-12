@@ -59,6 +59,11 @@ export function usePropsAnimation() {
 
     // --- Per-prop animation when activePropIds is available ---
     if (propId && snap.activePropIds) {
+      if (snap.activePropIds.size > 0 && now % 2 < 0.02) {
+        console.log('[anim]', propId?.slice(0, 8),
+          snap.activePropIds.has(propId) ? 'ACTIVE' : 'inactive',
+          snap.effectsByPropId?.get(propId))
+      }
       if (!snap.activePropIds.has(propId)) {
         // Prop is not active — dim ambient
         return {
