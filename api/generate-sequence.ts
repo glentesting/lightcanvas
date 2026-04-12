@@ -293,51 +293,63 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     clearTimeout(timeoutId)
 
-    const rawBody = await anthropicRes.text()
-    let anthropicJson: {
-      error?: { type?: string; message?: string }
-      content?: Array<{ type: string; text?: string }>
-    } | null = null
     try {
-      anthropicJson = rawBody ? (JSON.parse(rawBody) as typeof anthropicJson) : null
-    } catch {
-      anthropicJson = null
-    }
-
-    if (!anthropicRes.ok) {
-      const errPayload = anthropicJson ?? { parseError: 'Response was not JSON', rawBody }
-      console.error('[generate-sequence] Anthropic API error', {
+      const rawBody = await anthropicRes.text()
+      console.log('[generate-sequence] got response body', {
         status: anthropicRes.status,
-        statusText: anthropicRes.statusText,
-        model,
-        body: errPayload,
+        contentType: anthropicRes.headers.get('content-type'),
+        bodyLength: rawBody.length,
+        bodyPreview: rawBody.slice(0, 200),
       })
-      const msg =
-        anthropicJson?.error?.message ||
-        (typeof rawBody === 'string' && rawBody.length > 0 ? rawBody.slice(0, 500) : anthropicRes.statusText)
-      return res.status(502).json({
-        error: `Anthropic API error (${anthropicRes.status}): ${msg}`,
-        anthropicStatus: anthropicRes.status,
-        anthropicBody: errPayload,
-      })
-    }
 
-    if (!anthropicJson) {
-      console.error('[generate-sequence] Anthropic success status but invalid JSON', { rawBody: rawBody.slice(0, 2000) })
-      return res.status(502).json({
-        error: 'Anthropic returned non-JSON success body',
-        anthropicBody: { rawBody: rawBody.slice(0, 4000) },
-      })
-    }
+      let anthropicJson: {
+        error?: { type?: string; message?: string }
+        content?: Array<{ type: string; text?: string }>
+      } | null = null
+      try {
+        anthropicJson = rawBody ? (JSON.parse(rawBody) as typeof anthropicJson) : null
+      } catch {
+        anthropicJson = null
+      }
 
-    const block = anthropicJson.content?.find((c) => c.type === 'text')
-    textContent = block?.text ?? ''
-    if (!textContent) {
-      console.error('[generate-sequence] Empty Claude text block', { anthropicJson })
-      return res.status(502).json({
-        error: 'Empty response from Claude (no text content block)',
-        anthropicBody: anthropicJson,
-      })
+      if (!anthropicRes.ok) {
+        const errPayload = anthropicJson ?? { parseError: 'Response was not JSON', rawBody }
+        console.error('[generate-sequence] Anthropic API error', {
+          status: anthropicRes.status,
+          statusText: anthropicRes.statusText,
+          model,
+          body: errPayload,
+        })
+        const msg =
+          anthropicJson?.error?.message ||
+          (typeof rawBody === 'string' && rawBody.length > 0 ? rawBody.slice(0, 500) : anthropicRes.statusText)
+        return res.status(502).json({
+          error: `Anthropic API error (${anthropicRes.status}): ${msg}`,
+          anthropicStatus: anthropicRes.status,
+          anthropicBody: errPayload,
+        })
+      }
+
+      if (!anthropicJson) {
+        console.error('[generate-sequence] Anthropic success status but invalid JSON', { rawBody: rawBody.slice(0, 2000) })
+        return res.status(502).json({
+          error: 'Anthropic returned non-JSON success body',
+          anthropicBody: { rawBody: rawBody.slice(0, 4000) },
+        })
+      }
+
+      const block = anthropicJson.content?.find((c) => c.type === 'text')
+      textContent = block?.text ?? ''
+      if (!textContent) {
+        console.error('[generate-sequence] Empty Claude text block', { anthropicJson })
+        return res.status(502).json({
+          error: 'Empty response from Claude (no text content block)',
+          anthropicBody: anthropicJson,
+        })
+      }
+    } catch (parseErr) {
+      console.error('[generate-sequence] crash in response handling', parseErr)
+      return res.status(502).json({ error: 'Response processing failed' })
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Request failed'
