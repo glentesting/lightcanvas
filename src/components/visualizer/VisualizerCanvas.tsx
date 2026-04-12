@@ -15,6 +15,23 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`
 }
 
+/** Brighter, more saturated hex for stake / cluster / arch when glow is in the active band. */
+function vividPropColor(hex: string, glowIntensity: number, colorBrightness: number): string {
+  if (glowIntensity < 0.38) return hex
+  const h = hex.replace('#', '')
+  if (h.length !== 6) return hex
+  let r = parseInt(h.substring(0, 2), 16)
+  let g = parseInt(h.substring(2, 4), 16)
+  let b = parseInt(h.substring(4, 6), 16)
+  const t = Math.min(1, ((glowIntensity - 0.35) / 0.45) * (0.45 + 0.55 * colorBrightness))
+  const lift = (c: number) => Math.min(255, Math.round(c + (255 - c) * 0.52 * t + 26 * t))
+  r = lift(r)
+  g = lift(g)
+  b = lift(b)
+  const to = (n: number) => n.toString(16).padStart(2, '0')
+  return `#${to(r)}${to(g)}${to(b)}`
+}
+
 function drawMegaTree(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
   const w = 44; const h = 70
   ctx.save()
@@ -95,45 +112,53 @@ function drawMiniTree(ctx: CanvasRenderingContext2D, x: number, y: number, color
 }
 
 function drawStake(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
+  const stemH = 54
+  const lineW = 3
+  const capR = 7.5 * anim.scale
+  const c = vividPropColor(color, anim.glowIntensity, anim.colorBrightness)
+  const shadowBlur = 10 + 70 * anim.glowIntensity ** 1.12
   ctx.save()
-  ctx.shadowBlur = 22 * anim.glowIntensity
-  ctx.shadowColor = color
+  ctx.shadowBlur = shadowBlur
+  ctx.shadowColor = c
   ctx.globalAlpha = selected ? 1.0 : 0.92
-  // Thin vertical line
-  ctx.strokeStyle = color
-  ctx.lineWidth = 2
+  ctx.strokeStyle = c
+  ctx.lineWidth = lineW
   ctx.beginPath()
   ctx.moveTo(x, y)
-  ctx.lineTo(x, y - 36)
+  ctx.lineTo(x, y - stemH)
   ctx.stroke()
-  // Glowing cap
-  ctx.fillStyle = color
+  ctx.fillStyle = c
   ctx.beginPath()
-  ctx.arc(x, y - 36, 5 * anim.scale, 0, Math.PI * 2)
+  ctx.arc(x, y - stemH, capR, 0, Math.PI * 2)
   ctx.fill()
   ctx.restore()
 }
 
 function drawStakeCluster(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
   const count = 5
-  const spacing = 18
+  const spacing = 27
+  const stemH = 54
+  const lineW = 3
+  const capR = 7.5 * anim.scale
+  const c = vividPropColor(color, anim.glowIntensity, anim.colorBrightness)
+  const shadowBlur = 10 + 70 * anim.glowIntensity ** 1.12
   const totalW = (count - 1) * spacing
   const startX = x - totalW / 2
   for (let i = 0; i < count; i++) {
     const sx = startX + i * spacing
     ctx.save()
-    ctx.shadowBlur = 15 * anim.glowIntensity
-    ctx.shadowColor = color
+    ctx.shadowBlur = shadowBlur
+    ctx.shadowColor = c
     ctx.globalAlpha = selected ? 1.0 : 0.92
-    ctx.strokeStyle = color
-    ctx.lineWidth = 2
+    ctx.strokeStyle = c
+    ctx.lineWidth = lineW
     ctx.beginPath()
     ctx.moveTo(sx, y)
-    ctx.lineTo(sx, y - 36)
+    ctx.lineTo(sx, y - stemH)
     ctx.stroke()
-    ctx.fillStyle = color
+    ctx.fillStyle = c
     ctx.beginPath()
-    ctx.arc(sx, y - 36, 5 * anim.scale, 0, Math.PI * 2)
+    ctx.arc(sx, y - stemH, capR, 0, Math.PI * 2)
     ctx.fill()
     ctx.restore()
   }
@@ -309,25 +334,28 @@ function drawRoofline(ctx: CanvasRenderingContext2D, x: number, y: number, color
 
 function drawArch(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
   const count = 13
-  const archW = 50
-  const archH = 55
+  const archW = 75
+  const archH = 83
+  const dotR = 5.25
+  const c = vividPropColor(color, anim.glowIntensity, anim.colorBrightness)
+  const shadowBlur = 10 + 70 * anim.glowIntensity ** 1.12
   ctx.save()
-  ctx.shadowBlur = 14 * anim.glowIntensity
-  ctx.shadowColor = color
-  ctx.fillStyle = color
+  ctx.shadowBlur = shadowBlur
+  ctx.shadowColor = c
+  ctx.fillStyle = c
   ctx.globalAlpha = selected ? 1.0 : 0.92
   for (let i = 0; i < count; i++) {
     const t = (i / (count - 1)) * Math.PI
     const ax = x + Math.cos(Math.PI - t) * archW
     const ay = y - Math.sin(t) * archH
     ctx.beginPath()
-    ctx.arc(ax, ay, 3.5, 0, Math.PI * 2)
+    ctx.arc(ax, ay, dotR, 0, Math.PI * 2)
     ctx.fill()
   }
   // Wire connecting the dots
   ctx.shadowBlur = 0
-  ctx.strokeStyle = hexToRgba(color, 0.15)
-  ctx.lineWidth = 0.5
+  ctx.strokeStyle = hexToRgba(c, 0.22)
+  ctx.lineWidth = 0.75
   ctx.beginPath()
   for (let i = 0; i < count; i++) {
     const t = (i / (count - 1)) * Math.PI
