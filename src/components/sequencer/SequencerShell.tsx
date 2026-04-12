@@ -161,6 +161,7 @@ export function SequencerShell(props: SequencerShellProps) {
   } = props
 
   const [editingDisplay, setEditingDisplay] = useState(false)
+  const [previewNightOpacity, setPreviewNightOpacity] = useState(0.45)
 
   // Visualizer state for edit mode
   const viz = useVisualizerState({
@@ -321,7 +322,7 @@ export function SequencerShell(props: SequencerShellProps) {
                 <VisualizerCanvas
                   ref={previewCanvasRef}
                   photoUrl={photoUrl}
-                  nightOpacity={0.55}
+                  nightOpacity={previewNightOpacity}
                   props={propsState.filter(p => p.canvasX != null && p.canvasY != null)}
                   selectedPropId={null}
                   activeTool={null}
@@ -346,6 +347,18 @@ export function SequencerShell(props: SequencerShellProps) {
                 <span className="rounded-md bg-black/50 px-2 py-1 text-xs tabular-nums text-white/80 backdrop-blur-sm">
                   {formatTime(previewTime)} / {formatTime(duration)}
                 </span>
+                <div className="flex items-center gap-1.5 rounded-md bg-black/50 px-2 py-1 backdrop-blur-sm">
+                  <svg className="h-3 w-3 text-white/60" viewBox="0 0 20 20" fill="currentColor"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" /></svg>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={previewNightOpacity}
+                    onChange={(e) => setPreviewNightOpacity(Number(e.target.value))}
+                    className="h-1 w-16 cursor-pointer appearance-none rounded-full bg-white/30 accent-white/80"
+                  />
+                </div>
               </div>
               <div className="absolute right-5 top-5 flex items-center gap-2">
                 <button
@@ -358,11 +371,11 @@ export function SequencerShell(props: SequencerShellProps) {
               </div>
               {/* Now Playing overlay */}
               {activeEvents.length > 0 && (
-                <div className="absolute bottom-5 right-5 max-h-[160px] w-48 overflow-y-auto rounded-lg bg-black/50 p-3 backdrop-blur-sm">
-                  <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/50">Now playing</div>
-                  <div className="space-y-1">
-                    {activeEvents.slice(0, 8).map(e => (
-                      <div key={e.id} className="flex items-center gap-1.5 text-[11px]">
+                <div className="absolute bottom-5 right-5 max-h-[140px] w-40 overflow-y-auto rounded-lg bg-black/40 p-2.5 backdrop-blur-sm">
+                  <div className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-white/50">Now playing</div>
+                  <div className="space-y-0.5">
+                    {activeEvents.slice(0, 5).map(e => (
+                      <div key={e.id} className="flex items-center gap-1.5 text-[10px]">
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: EFFECT_COLORS[e.effect] ?? '#94a3b8' }} />
                         <span className="truncate text-white/80">{e.propName}</span>
                         <span className="shrink-0 text-white/50">{e.effect}</span>
