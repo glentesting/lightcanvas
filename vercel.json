@@ -4,10 +4,10 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "functions": {
-    "api/generate-sequence.ts": {
+    "api/generate-sequence.js": {
       "maxDuration": 60
     },
-    "api/copilot-message.ts": {
+    "api/copilot-message.js": {
       "maxDuration": 60
     }
   },
