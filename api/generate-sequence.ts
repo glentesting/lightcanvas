@@ -98,7 +98,7 @@ function buildUserMessage(body: SequenceRequestPayload): string {
 
   // List props with id and name (compact)
   const propList = props
-    .map((p) => `"${p.id}":"${p.name}"(${p.type})`)
+    .map((p) => `"${p.id}"(${p.type})`)
     .join(', ')
 
   // Sections: name, start, end, energy only — rounded to 1 decimal
@@ -116,7 +116,7 @@ Props (${propSummary}): ${propList}
 
 Effects: ${ALLOWED_EFFECTS.join(', ')}
 
-Format: {"events":[{"propId":"id","propName":"name","effect":"Effect","start":0.0,"end":8.0,"intensity":75}]}
+Format: {"events":[{"propId":"id","effect":"Effect","start":0.0,"end":8.0,"intensity":75}]}
 
 ## CRITICAL RULES
 - Generate 1-2 events per prop per section
@@ -253,6 +253,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // TODO: Select system prompt based on holidayId parameter (christmas vs halloween)
   const systemPrompt = CHRISTMAS_SYSTEM_PROMPT
 
+  console.log('[generate-sequence] sending request', {
+    propCount: body.props.length,
+    sectionCount: body.sections?.length ?? 0,
+    estimatedEvents: body.props.length * (body.sections?.length ?? 5),
+    maxTokens: 2000,
+  })
+
   let textContent = ''
   try {
     const controller = new AbortController()
@@ -270,7 +277,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
         body: JSON.stringify({
           model,
-          max_tokens: 8192,
+          max_tokens: 2000,
           system: systemPrompt,
           messages: [{ role: 'user', content: userMessage }],
         }),
