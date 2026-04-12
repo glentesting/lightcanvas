@@ -340,6 +340,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const block = anthropicJson.content?.find((c) => c.type === 'text')
       textContent = block?.text ?? ''
+      console.log('[generate-sequence] textContent length', textContent.length, 'preview:', textContent.slice(0, 100))
       if (!textContent) {
         console.error('[generate-sequence] Empty Claude text block', { anthropicJson })
         return res.status(502).json({
@@ -353,6 +354,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Request failed'
+    console.error('[generate-sequence] outer catch', e instanceof Error ? e.message : String(e))
     console.error('[generate-sequence] Fetch/network error', e)
     return res.status(502).json({ error: msg, anthropicBody: null })
   }
