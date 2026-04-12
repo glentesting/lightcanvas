@@ -353,6 +353,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(502).json({ error: msg })
   }
 
+  console.log('[generate-sequence] Claude returned', {
+    rawEventCount: rawEvents.length,
+    firstEvent: rawEvents[0],
+    lastEvent: rawEvents[rawEvents.length - 1],
+  })
+
   // Split long events into shorter varied blocks
   rawEvents = splitLongEvents(rawEvents, 12)
 
@@ -372,7 +378,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!item || typeof item !== 'object') continue
     const o = item as Record<string, unknown>
     const propId = typeof o.propId === 'string' ? o.propId : ''
-    if (!propId || !propIds.has(propId)) continue
+    if (!propId || !propIds.has(propId)) {
+      console.warn('[generate-sequence] dropped event — propId not found', {
+        propId: o.propId,
+        propName: o.propName,
+        availablePropIds: [...propIds].slice(0, 3),
+      })
+      continue
+    }
 
     const propMeta = body.props!.find((p) => p.id === propId)
     const propName =
@@ -410,6 +423,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (normalized.length === 0) {
     return res.status(502).json({ error: 'Claude returned no valid sequence events' })
   }
+
+  console.log('[generate-sequence] success', {
+    normalizedCount: normalized.length,
+  })
 
   return res.status(200).json({ events: normalized })
 }
