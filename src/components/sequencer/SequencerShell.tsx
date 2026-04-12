@@ -217,6 +217,7 @@ export function SequencerShell(props: SequencerShellProps) {
       })
       const hasEffect = (effects: string[]) =>
         [...effectsByPropId.values()].some(e => effects.includes(e))
+      console.log('[SequencerShell] activePropIds', [...activePropIds], 'previewTime', t)
       previewCanvasRef.current?.triggerFrame({
         beatStrength: hasEffect(['Pulse', 'Chase', 'Sweep', 'Color Pop']) ? 0.85 : 0.2,
         bassStrength: hasEffect(['Pulse', 'Sweep', 'Fan']) ? 0.75 : 0.15,
