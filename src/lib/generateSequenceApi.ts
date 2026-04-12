@@ -119,24 +119,68 @@ export function mapClaudeEventsToTimeline(
   props: DisplayProp[],
 ): TimelineEventPayload[] {
   const byId = new Map(props.map((p) => [p.id, p]))
-  return events.map((ev, i) => {
-    const prop = byId.get(ev.propId)
+  // Name-based lookup: lowercase trimmed name → prop
+  const byName = new Map(props.map((p) => [p.name.trim().toLowerCase(), p]))
+
+  let matched = 0
+  let dropped = 0
+
+  const result: TimelineEventPayload[] = []
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i]
+
+    // 1. Try exact ID match
+    let prop = byId.get(ev.propId)
+    let resolvedId = ev.propId
+
+    // 2. If no ID match, try exact name match (case-insensitive, trimmed)
+    if (!prop && ev.propName) {
+      const nameKey = ev.propName.trim().toLowerCase()
+      const byNameMatch = byName.get(nameKey)
+      if (byNameMatch) {
+        prop = byNameMatch
+        resolvedId = byNameMatch.id
+      }
+    }
+
+    // 3. If still no match, try includes() partial match
+    if (!prop && ev.propName) {
+      const nameKey = ev.propName.trim().toLowerCase()
+      for (const p of props) {
+        const pName = p.name.trim().toLowerCase()
+        if (pName.includes(nameKey) || nameKey.includes(pName)) {
+          prop = p
+          resolvedId = p.id
+          break
+        }
+      }
+    }
+
+    // 4. Skip events with no matching prop
+    if (!prop || !resolvedId) {
+      dropped++
+      console.warn(`[mapClaudeEventsToTimeline] No prop match for propId="${ev.propId}" propName="${ev.propName}" — dropping event`)
+      continue
+    }
+
+    matched++
     const smoothness =
-      prop?.type === 'Talking Face' ? 82 : prop?.type === 'Ground Stakes' ? 34 : 58
-    const start = ev.start
-    const end = ev.end
-    const id = `${ev.propId}-${start.toFixed(3)}-${end.toFixed(3)}-${i}`
-    return {
+      prop.type === 'Talking Face' ? 82 : prop.type === 'Ground Stakes' ? 34 : 58
+    const id = `${resolvedId}-${ev.start.toFixed(3)}-${ev.end.toFixed(3)}-${i}`
+    result.push({
       id,
-      propId: ev.propId,
-      propName: ev.propName || prop?.name || 'Prop',
+      propId: resolvedId,
+      propName: prop.name,
       section: ev.section || '—',
-      start,
-      end,
+      start: ev.start,
+      end: ev.end,
       intensity: ev.intensity,
       smoothness,
       effect: ev.effect,
       note: 'Claude-generated sequence event.',
-    }
-  })
+    })
+  }
+
+  console.log(`[mapClaudeEventsToTimeline] ${events.length} from Claude → ${matched} matched, ${dropped} dropped`)
+  return result
 }
