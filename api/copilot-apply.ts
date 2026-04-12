@@ -2,6 +2,7 @@
  * Vercel serverless: POST /api/copilot-apply
  * Interprets natural-language sequence edits via Claude; returns assistant text + optional patches.
  */
+import { createClient } from '@supabase/supabase-js'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 
 type SectionInput = {
@@ -150,6 +151,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
     return res.status(204).end()
+  }
+
+  const authHeader = req.headers.authorization
+  const bearer =
+    typeof authHeader === 'string' && authHeader.toLowerCase().startsWith('bearer ')
+      ? authHeader.slice(7).trim()
+      : Array.isArray(authHeader) &&
+          typeof authHeader[0] === 'string' &&
+          authHeader[0].toLowerCase().startsWith('bearer ')
+        ? authHeader[0].slice(7).trim()
+        : ''
+  if (!bearer) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+  const supabaseUrl = process.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return res.status(500).json({ error: 'Server misconfiguration: Supabase is not configured' })
+  }
+  const supabase = createClient(supabaseUrl, supabaseAnonKey)
+  const { data: authData, error: authError } = await supabase.auth.getUser(bearer)
+  if (authError || !authData?.user) {
+    return res.status(401).json({ error: 'Unauthorized' })
   }
 
   if (req.method !== 'POST') {
