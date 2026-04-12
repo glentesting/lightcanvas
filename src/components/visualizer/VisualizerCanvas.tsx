@@ -613,9 +613,21 @@ function drawProp(ctx: CanvasRenderingContext2D, prop: DisplayProp, x: number, y
   // Scale for non-roofline props: prop.length as percentage (100 = 1x)
   const s = (!isRoof && prop.length != null) ? Math.max(0.3, prop.length / 100) : 1
 
+  // Apply brightness based on animation state
+  // Active props (glowIntensity > 0.5) glow brightly; inactive ones dim to near-invisible
+  const bright = anim.glowIntensity > 0.5
+  ctx.save()
+  if (bright) {
+    ctx.globalAlpha = Math.min(1.0, 0.6 + anim.glowIntensity * 0.5)
+    ctx.shadowColor = color
+    ctx.shadowBlur = 20 * anim.glowIntensity
+  } else {
+    ctx.globalAlpha = Math.max(0.08, anim.glowIntensity * 0.6)
+    ctx.shadowBlur = 0
+  }
+
   // Apply scale transform around anchor point
   if (s !== 1) {
-    ctx.save()
     ctx.translate(x, y)
     ctx.scale(s, s)
     ctx.translate(-x, -y)
@@ -635,7 +647,7 @@ function drawProp(ctx: CanvasRenderingContext2D, prop: DisplayProp, x: number, y
   else if (t.includes('gravestone') || t.includes('grave')) drawGravestone(ctx, x, y, color, anim, selected)
   else drawDefault(ctx, x, y, color, anim, selected)
 
-  if (s !== 1) ctx.restore()
+  ctx.restore()
 
   // Selection box + corner handles (drawn at scaled positions but unscaled stroke)
   if (selected && !isRoof) {

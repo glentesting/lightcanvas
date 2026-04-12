@@ -322,7 +322,7 @@ export function SequencerShell(props: SequencerShellProps) {
                 <VisualizerCanvas
                   ref={previewCanvasRef}
                   photoUrl={photoUrl}
-                  nightOpacity={previewNightOpacity}
+                  nightOpacity={playing ? 0.85 : previewNightOpacity}
                   props={propsState.filter(p => p.canvasX != null && p.canvasY != null)}
                   selectedPropId={null}
                   activeTool={null}
