@@ -3,6 +3,7 @@
 // The prompts live in src/holidays/{christmas,halloween}/prompts.ts
 import type { DisplayProp } from '../types/display'
 import type { SongAnalysis } from '../types/song'
+import { getSupabaseAccessTokenForApi } from './supabaseClient'
 
 export type SequenceSectionPayload = {
   name: string
@@ -63,9 +64,16 @@ export async function requestClaudeSequence(params: {
     sections: params.sections.length,
     props: params.props.length,
   })
+  const accessToken = await getSupabaseAccessTokenForApi()
+  if (!accessToken) {
+    throw new Error('Not authenticated. Sign in to generate sequences.')
+  }
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
     body: JSON.stringify({
       songDurationSeconds: params.songDurationSeconds,
       bpm: params.bpm,

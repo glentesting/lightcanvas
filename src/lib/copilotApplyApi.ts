@@ -1,6 +1,7 @@
 import type { DisplayProp } from '../types/display'
 import type { SongAnalysis } from '../types/song'
 import type { SequenceSectionPayload, ClaudeSequenceEvent } from './generateSequenceApi'
+import { getSupabaseAccessTokenForApi } from './supabaseClient'
 
 // ── Copilot Message API (real Claude calls) ──────────────────────────
 
@@ -39,9 +40,16 @@ function getCopilotMessageUrl(): string {
 
 export async function requestCopilotMessage(payload: CopilotMessagePayload): Promise<CopilotMessageResult> {
   const url = getCopilotMessageUrl()
+  const accessToken = await getSupabaseAccessTokenForApi()
+  if (!accessToken) {
+    throw new Error('Not authenticated. Sign in to use the copilot.')
+  }
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
     body: JSON.stringify({
       message: payload.message,
       currentEvents: payload.currentEvents,
@@ -136,9 +144,16 @@ function looksLikeHtml(body: string): boolean {
 
 export async function requestCopilotApply(payload: CopilotApplyPayload): Promise<CopilotApplyResult> {
   const url = getCopilotApplyUrl()
+  const accessToken = await getSupabaseAccessTokenForApi()
+  if (!accessToken) {
+    throw new Error('Not authenticated. Sign in to use the copilot.')
+  }
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
     body: JSON.stringify({
       userMessage: payload.userMessage,
       complexity: payload.complexity,
