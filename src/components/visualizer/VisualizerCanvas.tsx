@@ -117,17 +117,18 @@ function drawStake(ctx: CanvasRenderingContext2D, x: number, y: number, color: s
   const capR = 7.5 * anim.scale
   const c = vividPropColor(color, anim.glowIntensity, anim.colorBrightness)
   const shadowBlur = 10 + 70 * anim.glowIntensity ** 1.12
+  const bodyRgba = hexToRgba(c, Math.min(1, 0.18 * anim.glowIntensity))
   ctx.save()
   ctx.shadowBlur = shadowBlur
   ctx.shadowColor = c
   ctx.globalAlpha = selected ? 1.0 : 0.92
-  ctx.strokeStyle = c
+  ctx.strokeStyle = bodyRgba
   ctx.lineWidth = lineW
   ctx.beginPath()
   ctx.moveTo(x, y)
   ctx.lineTo(x, y - stemH)
   ctx.stroke()
-  ctx.fillStyle = c
+  ctx.fillStyle = bodyRgba
   ctx.beginPath()
   ctx.arc(x, y - stemH, capR, 0, Math.PI * 2)
   ctx.fill()
@@ -142,6 +143,7 @@ function drawStakeCluster(ctx: CanvasRenderingContext2D, x: number, y: number, c
   const capR = 7.5 * anim.scale
   const c = vividPropColor(color, anim.glowIntensity, anim.colorBrightness)
   const shadowBlur = 10 + 70 * anim.glowIntensity ** 1.12
+  const bodyRgba = hexToRgba(c, Math.min(1, 0.18 * anim.glowIntensity))
   const totalW = (count - 1) * spacing
   const startX = x - totalW / 2
   for (let i = 0; i < count; i++) {
@@ -150,13 +152,13 @@ function drawStakeCluster(ctx: CanvasRenderingContext2D, x: number, y: number, c
     ctx.shadowBlur = shadowBlur
     ctx.shadowColor = c
     ctx.globalAlpha = selected ? 1.0 : 0.92
-    ctx.strokeStyle = c
+    ctx.strokeStyle = bodyRgba
     ctx.lineWidth = lineW
     ctx.beginPath()
     ctx.moveTo(sx, y)
     ctx.lineTo(sx, y - stemH)
     ctx.stroke()
-    ctx.fillStyle = c
+    ctx.fillStyle = bodyRgba
     ctx.beginPath()
     ctx.arc(sx, y - stemH, capR, 0, Math.PI * 2)
     ctx.fill()
@@ -339,10 +341,11 @@ function drawArch(ctx: CanvasRenderingContext2D, x: number, y: number, color: st
   const dotR = 5.25
   const c = vividPropColor(color, anim.glowIntensity, anim.colorBrightness)
   const shadowBlur = 10 + 70 * anim.glowIntensity ** 1.12
+  const bodyRgba = hexToRgba(c, Math.min(1, 0.18 * anim.glowIntensity))
   ctx.save()
   ctx.shadowBlur = shadowBlur
   ctx.shadowColor = c
-  ctx.fillStyle = c
+  ctx.fillStyle = bodyRgba
   ctx.globalAlpha = selected ? 1.0 : 0.92
   for (let i = 0; i < count; i++) {
     const t = (i / (count - 1)) * Math.PI
@@ -354,7 +357,7 @@ function drawArch(ctx: CanvasRenderingContext2D, x: number, y: number, color: st
   }
   // Wire connecting the dots
   ctx.shadowBlur = 0
-  ctx.strokeStyle = hexToRgba(c, 0.22)
+  ctx.strokeStyle = bodyRgba
   ctx.lineWidth = 0.75
   ctx.beginPath()
   for (let i = 0; i < count; i++) {
