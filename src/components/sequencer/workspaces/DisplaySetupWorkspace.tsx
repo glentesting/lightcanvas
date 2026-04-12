@@ -1,10 +1,7 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import { Check, Pencil, Plus, Trash2, X } from 'lucide-react'
 import type { DisplayProp } from '../../../types/display'
 import type { HousePhotoRow } from '../../../lib/phase1Repository'
-import { useVisualizerState } from '../../../hooks/useVisualizerState'
-import { VisualizerStage } from '../../visualizer/VisualizerStage'
 import { propTypes } from '../types'
 
 export interface DisplaySetupWorkspaceProps {
@@ -26,21 +23,13 @@ export interface DisplaySetupWorkspaceProps {
   setNewPropChannels: (v: number) => void
   addProp: () => void
   removeProp: (id: string) => void
-  quickAddProp: (type: string, x: number, y: number, houseType: string, opts?: { angle?: number; length?: number }) => void
-  updatePropColor: (id: string, color: string) => void
-  moveProp: (id: string, x: number, y: number) => void
-  resizeProp: (id: string, length: number, angle: number) => void
   photoUrl: string | null
   onPhotoReady: (url: string) => void
-  userId: string | null
-  profileId: string | null
   housePhotos: HousePhotoRow[]
   onDeletePhoto: (photoId: string, storagePath: string) => void
   onRenameProp?: (id: string, name: string) => void
   onRechannelProp?: (id: string, channels: number) => void
   onClearAllProps: () => void
-  undo: () => void
-  canUndo: boolean
 }
 
 const SEL_ACCENT = 'border-brand-green'
@@ -54,49 +43,18 @@ export function DisplaySetupWorkspace({
   totalChannels, usedChannels, remainingChannels,
   newPropName, setNewPropName, newPropType, setNewPropType,
   newPropChannels, setNewPropChannels,
-  addProp, removeProp, quickAddProp, updatePropColor, moveProp, resizeProp,
+  addProp, removeProp,
   photoUrl, onPhotoReady,
-  userId, profileId,
   housePhotos, onDeletePhoto,
   onRenameProp, onRechannelProp,
-  onClearAllProps, undo, canUndo,
+  onClearAllProps,
 }: DisplaySetupWorkspaceProps) {
   const capacityPct = Math.min(100, (usedChannels / Math.max(1, totalChannels)) * 100)
 
-  const viz = useVisualizerState({
-    props: propsState,
-    selectedPropId,
-    photoUrl,
-    onSelectProp: setSelectedPropId,
-    onPlaceProp: quickAddProp,
-    onRemoveProp: removeProp,
-    onMoveProp: moveProp,
-    onUpdatePropColor: updatePropColor,
-    onResizeProp: resizeProp,
-  })
+  const selectedProp = propsState.find(p => p.id === selectedPropId) ?? null
 
   return (
-    <motion.div key="setup" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="w-full min-w-0 max-w-full space-y-6">
-      <VisualizerStage
-        props={viz.placedProps}
-        selectedPropId={selectedPropId}
-        tools={viz.tools}
-        activeTool={viz.activeTool}
-        selectedProp={viz.selectedProp}
-        photoUrl={photoUrl}
-        onToolChange={viz.setActiveTool}
-        onCanvasClick={viz.handleCanvasClick}
-        onPropClick={viz.handlePropClick}
-        onPropDrag={viz.handlePropDrag}
-        onPropResize={viz.handlePropResize}
-        onUpdatePropColor={updatePropColor}
-        onPhotoReady={onPhotoReady}
-        userId={userId}
-        profileId={profileId}
-        undo={undo}
-        canUndo={canUndo}
-      />
-
+    <div className="w-full min-w-0 max-w-full space-y-4">
       {/* Photo library */}
       {housePhotos.length > 0 && (
         <div className="rounded-xl border border-slate-200/90 bg-white px-4 py-4">
@@ -167,11 +125,11 @@ export function DisplaySetupWorkspace({
           {/* Col 2: Selection */}
           <div>
             <h2 className={colHeading}>Selection</h2>
-            {viz.selectedProp ? (
+            {selectedProp ? (
               <div className={`space-y-2 border-l-2 ${SEL_ACCENT} pl-3 text-xs leading-relaxed text-slate-600`}>
-                <div className="text-[1.05rem] font-semibold leading-snug tracking-tight text-slate-900">{viz.selectedProp.name}</div>
-                <div>{viz.selectedProp.type} · {viz.selectedProp.controller} · ch {viz.selectedProp.start}–{viz.selectedProp.start + viz.selectedProp.channels - 1}</div>
-                {viz.selectedProp.notes ? <p className="text-slate-700">{viz.selectedProp.notes}</p> : null}
+                <div className="text-[1.05rem] font-semibold leading-snug tracking-tight text-slate-900">{selectedProp.name}</div>
+                <div>{selectedProp.type} · {selectedProp.controller} · ch {selectedProp.start}–{selectedProp.start + selectedProp.channels - 1}</div>
+                {selectedProp.notes ? <p className="text-slate-700">{selectedProp.notes}</p> : null}
               </div>
             ) : (
               <p className="text-xs leading-relaxed text-slate-500">Click a prop on the display above.</p>
@@ -227,7 +185,7 @@ export function DisplaySetupWorkspace({
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }
 

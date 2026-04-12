@@ -1,8 +1,11 @@
-import type { ChangeEvent, ComponentType, Dispatch, MouseEvent, RefObject, SetStateAction } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type ComponentType, type Dispatch, type MouseEvent, type RefObject, type SetStateAction } from 'react'
 import type { SongAudioAnalysis } from '../../lib/audioAnalysis'
 import type { DisplayProp } from '../../types/display'
 import type { HousePhotoRow, UserPlan } from '../../lib/phase1Repository'
 import type { Song } from '../../types/song'
+import { useVisualizerState } from '../../hooks/useVisualizerState'
+import { VisualizerStage } from '../visualizer/VisualizerStage'
+import { VisualizerCanvas, type VisualizerCanvasHandle } from '../visualizer/VisualizerCanvas'
 import { CopilotPanel } from './CopilotPanel'
 import { SequencerHeader } from './SequencerHeader'
 import { SequencerTabs } from './SequencerTabs'
@@ -13,6 +16,21 @@ import { ExportWorkspace } from './workspaces/ExportWorkspace'
 import type { LorImportResult } from '../../lib/importLor'
 import { SongsWorkspace } from './workspaces/SongsWorkspace'
 import { TimelineWorkspace } from './workspaces/TimelineWorkspace'
+import { formatTime } from './utils'
+import { Pause, Pencil, Play, X } from 'lucide-react'
+
+const EFFECT_COLORS: Record<string, string> = {
+  'Mouth Sync': '#22c55e',
+  Pulse: '#3b82f6',
+  Sweep: '#a855f7',
+  Twinkle: '#fbbf24',
+  Chase: '#f97316',
+  Hold: '#64748b',
+  'Color Pop': '#ec4899',
+  Shimmer: '#14b8a6',
+  Fan: '#06b6d4',
+  Ripple: '#84cc16',
+}
 
 export interface SequencerShellProps {
   activeTab: TabValue
@@ -109,152 +127,251 @@ export interface SequencerShellProps {
   canUndo: boolean
 }
 
-export function SequencerShell({
-  activeTab,
-  setActiveTab,
-  rebuildAnalyzing,
-  rebuildPhase,
-  runAi,
-  stylePreset,
-  onStylePresetChange,
-  controllers,
-  channelsPerController,
-  usedChannels,
-  totalChannels,
-  selectedSong,
-  analysisProgress,
-  signOut,
-  userEmail,
-  setControllers,
-  setChannelsPerController,
-  propsState,
-  selectedPropId,
-  setSelectedPropId,
-  remainingChannels,
-  newPropName,
-  setNewPropName,
-  newPropType,
-  setNewPropType,
-  newPropChannels,
-  setNewPropChannels,
-  addProp,
-  removeProp,
-  quickAddProp,
-  updatePropColor,
-  moveProp,
-  resizeProp,
-  songs,
-  selectedSongId,
-  setSelectedSongId,
-  songFileInputRef,
-  handleSongFileChange,
-  triggerSongFilePicker,
-  songUploading,
-  songUploadError,
-  songDeleteError,
-  handleDeleteSong,
-  songAnalyses,
-  analysisItems,
-  SongLibraryInlineAudio,
-  SongWorkspaceAudio,
-  AnalysisBeatStrip,
-  AnalysisBandRows,
-  complexity,
-  setComplexity,
-  sections,
-  propEvents,
-  selectedEventId,
-  setSelectedEventId,
-  selectedEvent,
-  events,
-  exportPayload,
-  playing,
-  setPlaying,
-  chat,
-  chatInput,
-  setChatInput,
-  applyCopilot,
-  copilotBusy,
-  previewTime,
-  sequenceEventsForPreview,
-  patchTimelineEvent,
-  onDeleteEvent,
-  onSeek,
-  timelineSong,
-  timelineEvents,
-  timelineSongId,
-  setTimelineSongId,
-  timelineSequenceSource,
-  setTimelineSequenceSource,
-  runAudioAnalysis,
-  songAnalysisBusy,
-  photoUrl,
-  onPhotoReady,
-  userId,
-  profileId,
-  housePhotos,
-  onDeletePhoto,
-  userPlan,
-  onRenameProp,
-  onRechannelProp,
-  onClearAllProps,
-  onImportLor,
-  audioBlob,
-  undo,
-  canUndo,
-}: SequencerShellProps) {
+export function SequencerShell(props: SequencerShellProps) {
+  const {
+    activeTab, setActiveTab,
+    rebuildAnalyzing, rebuildPhase, runAi, stylePreset, onStylePresetChange,
+    controllers, channelsPerController, usedChannels, totalChannels,
+    selectedSong, analysisProgress, signOut, userEmail,
+    setControllers, setChannelsPerController,
+    propsState, selectedPropId, setSelectedPropId, remainingChannels,
+    newPropName, setNewPropName, newPropType, setNewPropType,
+    newPropChannels, setNewPropChannels,
+    addProp, removeProp, quickAddProp, updatePropColor, moveProp, resizeProp,
+    songs, selectedSongId, setSelectedSongId,
+    songFileInputRef, handleSongFileChange, triggerSongFilePicker,
+    songUploading, songUploadError, songDeleteError, handleDeleteSong,
+    songAnalyses, analysisItems,
+    SongLibraryInlineAudio, SongWorkspaceAudio, AnalysisBeatStrip, AnalysisBandRows,
+    complexity, setComplexity, sections, propEvents,
+    selectedEventId, setSelectedEventId, selectedEvent, events, exportPayload,
+    playing, setPlaying,
+    chat, chatInput, setChatInput, applyCopilot, copilotBusy,
+    previewTime, sequenceEventsForPreview,
+    patchTimelineEvent, onDeleteEvent, onSeek,
+    timelineSong, timelineEvents, timelineSongId, setTimelineSongId,
+    timelineSequenceSource, setTimelineSequenceSource,
+    runAudioAnalysis, songAnalysisBusy,
+    photoUrl, onPhotoReady, userId, profileId,
+    housePhotos, onDeletePhoto,
+    userPlan,
+    onRenameProp, onRechannelProp, onClearAllProps,
+    onImportLor, audioBlob,
+    undo, canUndo,
+  } = props
+
+  const [editingDisplay, setEditingDisplay] = useState(false)
+
+  // Visualizer state for edit mode
+  const viz = useVisualizerState({
+    props: propsState,
+    selectedPropId,
+    photoUrl,
+    onSelectProp: setSelectedPropId,
+    onPlaceProp: quickAddProp,
+    onRemoveProp: removeProp,
+    onMoveProp: moveProp,
+    onUpdatePropColor: updatePropColor,
+    onResizeProp: resizeProp,
+  })
+
+  // Preview canvas ref for animation
+  const previewCanvasRef = useRef<VisualizerCanvasHandle>(null)
+  const previewTimeRef = useRef(previewTime)
+  useEffect(() => { previewTimeRef.current = previewTime }, [previewTime])
+  const seqEventsRef = useRef(sequenceEventsForPreview)
+  useEffect(() => { seqEventsRef.current = sequenceEventsForPreview }, [sequenceEventsForPreview])
+
+  // Animation loop — drives the main visualizer
+  useEffect(() => {
+    if (editingDisplay) return // no animation in edit mode
+    if (!playing) {
+      const ambient = setInterval(() => {
+        previewCanvasRef.current?.triggerFrame({
+          beatStrength: 0.3 + Math.sin(Date.now() / 1000) * 0.1,
+          bassStrength: 0.2,
+          trebleStrength: 0.2,
+          vocalConfidence: 0,
+          timestamp: 0,
+        })
+      }, 200)
+      return () => clearInterval(ambient)
+    }
+    const interval = setInterval(() => {
+      const t = previewTimeRef.current
+      const evts = seqEventsRef.current
+      if (!evts.length) {
+        previewCanvasRef.current?.triggerFrame({
+          beatStrength: 0.5, bassStrength: 0.4, trebleStrength: 0.4, vocalConfidence: 0.1, timestamp: t,
+        })
+        return
+      }
+      const active = evts.filter(e => e.start <= t && e.end > t)
+      const hasEffect = (effects: string[]) => active.some(e => effects.includes(e.effect))
+      previewCanvasRef.current?.triggerFrame({
+        beatStrength: hasEffect(['Pulse', 'Chase', 'Sweep', 'Color Pop']) ? 0.85 : 0.2,
+        bassStrength: hasEffect(['Pulse', 'Sweep', 'Fan']) ? 0.75 : 0.15,
+        trebleStrength: hasEffect(['Twinkle', 'Shimmer', 'Ripple']) ? 0.75 : 0.15,
+        vocalConfidence: hasEffect(['Mouth Sync']) ? 0.95 : 0.05,
+        timestamp: t,
+      })
+    }, 50)
+    return () => clearInterval(interval)
+  }, [playing, editingDisplay])
+
+  // Redirect legacy 'setup' tab
+  useEffect(() => {
+    if (activeTab === 'setup') setActiveTab('songs')
+  }, [activeTab, setActiveTab])
+
+  const duration = Math.max(0.001, selectedSong.duration)
+  const activeEvents = sequenceEventsForPreview.filter(e => previewTime >= e.start && previewTime < e.end)
+
   return (
-    <div className="w-full min-h-0 flex-1 bg-[#f4f5f8] pb-12 text-slate-900 antialiased">
+    <div className="flex min-h-0 w-full flex-1 flex-col bg-[#f4f5f8] text-slate-900 antialiased">
+      {/* Header */}
       <div className="border-b border-slate-200/90 bg-white shadow-[0_1px_0_rgba(15,23,42,0.04)]">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <div className="flex flex-col gap-0.5 py-2 md:py-2.5">
             <SequencerHeader signOut={signOut} userEmail={userEmail} />
-            <SequencerTabs value={activeTab} onChange={setActiveTab} />
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 md:px-6">
-        <div className="min-w-0 w-full max-w-full space-y-6">
-          <>
-            {activeTab === 'setup' && (
-              <DisplaySetupWorkspace
-                key="setup"
-                controllers={controllers}
-                channelsPerController={channelsPerController}
-                setControllers={setControllers}
-                setChannelsPerController={setChannelsPerController}
-                propsState={propsState}
-                selectedPropId={selectedPropId}
-                setSelectedPropId={setSelectedPropId}
-                totalChannels={totalChannels}
-                usedChannels={usedChannels}
-                remainingChannels={remainingChannels}
-                newPropName={newPropName}
-                setNewPropName={setNewPropName}
-                newPropType={newPropType}
-                setNewPropType={setNewPropType}
-                newPropChannels={newPropChannels}
-                setNewPropChannels={setNewPropChannels}
-                addProp={addProp}
-                removeProp={removeProp}
-                quickAddProp={quickAddProp}
-                updatePropColor={updatePropColor}
-                moveProp={moveProp}
-                resizeProp={resizeProp}
-                photoUrl={photoUrl}
-                onPhotoReady={onPhotoReady}
-                userId={userId}
-                profileId={profileId}
-                housePhotos={housePhotos}
-                onDeletePhoto={onDeletePhoto}
-                onRenameProp={onRenameProp}
-                onRechannelProp={onRechannelProp}
-                onClearAllProps={onClearAllProps}
-                undo={undo}
-                canUndo={canUndo}
-              />
-            )}
+      {/* TOP: Always-visible visualizer */}
+      <div className="w-full border-b border-slate-200">
+        <div className="mx-auto max-w-7xl px-4 md:px-6">
+          {editingDisplay ? (
+            /* Edit mode: full VisualizerStage with toolbar + prop list sidebar */
+            <div className="py-4">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Edit Display</span>
+                <button
+                  type="button"
+                  onClick={() => setEditingDisplay(false)}
+                  className="flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-slate-800"
+                >
+                  <X className="h-3.5 w-3.5" /> Done editing
+                </button>
+              </div>
+              <div className="grid gap-5 lg:grid-cols-[1fr_minmax(260px,320px)]">
+                <VisualizerStage
+                  props={viz.placedProps}
+                  selectedPropId={selectedPropId}
+                  tools={viz.tools}
+                  activeTool={viz.activeTool}
+                  selectedProp={viz.selectedProp}
+                  photoUrl={photoUrl}
+                  onToolChange={viz.setActiveTool}
+                  onCanvasClick={viz.handleCanvasClick}
+                  onPropClick={viz.handlePropClick}
+                  onPropDrag={viz.handlePropDrag}
+                  onPropResize={viz.handlePropResize}
+                  onUpdatePropColor={updatePropColor}
+                  onPhotoReady={onPhotoReady}
+                  userId={userId}
+                  profileId={profileId}
+                  undo={undo}
+                  canUndo={canUndo}
+                />
+                <DisplaySetupWorkspace
+                  controllers={controllers}
+                  channelsPerController={channelsPerController}
+                  setControllers={setControllers}
+                  setChannelsPerController={setChannelsPerController}
+                  propsState={propsState}
+                  selectedPropId={selectedPropId}
+                  setSelectedPropId={setSelectedPropId}
+                  totalChannels={totalChannels}
+                  usedChannels={usedChannels}
+                  remainingChannels={remainingChannels}
+                  newPropName={newPropName}
+                  setNewPropName={setNewPropName}
+                  newPropType={newPropType}
+                  setNewPropType={setNewPropType}
+                  newPropChannels={newPropChannels}
+                  setNewPropChannels={setNewPropChannels}
+                  addProp={addProp}
+                  removeProp={removeProp}
+                  photoUrl={photoUrl}
+                  onPhotoReady={onPhotoReady}
+                  housePhotos={housePhotos}
+                  onDeletePhoto={onDeletePhoto}
+                  onRenameProp={onRenameProp}
+                  onRechannelProp={onRechannelProp}
+                  onClearAllProps={onClearAllProps}
+                />
+              </div>
+            </div>
+          ) : (
+            /* Preview mode: full-width canvas with overlay controls */
+            <div className="relative py-3">
+              <div className="overflow-hidden rounded-xl border border-zinc-800" style={{ maxHeight: '50vh' }}>
+                <VisualizerCanvas
+                  ref={previewCanvasRef}
+                  photoUrl={photoUrl}
+                  nightOpacity={0.55}
+                  props={propsState.filter(p => p.canvasX != null && p.canvasY != null)}
+                  selectedPropId={null}
+                  activeTool={null}
+                  onCanvasClick={() => {}}
+                  onPropClick={() => {}}
+                  onPropDrag={() => {}}
+                  onPropResize={() => {}}
+                  onViewChange={() => {}}
+                  minHeight="35vh"
+                />
+              </div>
+              {/* Overlay controls */}
+              <div className="absolute bottom-5 left-5 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPlaying(p => !p)}
+                  disabled={propsState.length === 0}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition hover:bg-black/80 disabled:opacity-40"
+                >
+                  {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                </button>
+                <span className="rounded-md bg-black/50 px-2 py-1 text-xs tabular-nums text-white/80 backdrop-blur-sm">
+                  {formatTime(previewTime)} / {formatTime(duration)}
+                </span>
+              </div>
+              <div className="absolute right-5 top-5 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingDisplay(true)}
+                  className="flex items-center gap-1.5 rounded-lg bg-black/50 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur-sm transition hover:bg-black/70"
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Edit Display
+                </button>
+              </div>
+              {/* Now Playing overlay */}
+              {activeEvents.length > 0 && (
+                <div className="absolute bottom-5 right-5 max-h-[160px] w-48 overflow-y-auto rounded-lg bg-black/50 p-3 backdrop-blur-sm">
+                  <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-white/50">Now playing</div>
+                  <div className="space-y-1">
+                    {activeEvents.slice(0, 8).map(e => (
+                      <div key={e.id} className="flex items-center gap-1.5 text-[11px]">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: EFFECT_COLORS[e.effect] ?? '#94a3b8' }} />
+                        <span className="truncate text-white/80">{e.propName}</span>
+                        <span className="shrink-0 text-white/50">{e.effect}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* BOTTOM: Tabbed workspace panel */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-7xl px-4 md:px-6">
+          <div className="sticky top-0 z-10 -mx-4 bg-[#f4f5f8] px-4 pb-1 pt-3 md:-mx-6 md:px-6">
+            <SequencerTabs value={activeTab === 'setup' ? 'songs' : activeTab} onChange={setActiveTab} />
+          </div>
+          <div className="min-w-0 w-full max-w-full space-y-6 pb-12">
             {activeTab === 'songs' && (
               <SongsWorkspace
                 songs={songs}
@@ -281,19 +398,28 @@ export function SequencerShell({
             )}
 
             {activeTab === 'ai' && (
-              <AISequencingWorkspace
-                analysisProgress={analysisProgress}
-                complexity={complexity}
-                setComplexity={setComplexity}
-                runAi={runAi}
-                rebuildAnalyzing={rebuildAnalyzing}
-                rebuildPhase={rebuildPhase}
-                selectedSong={selectedSong}
-                sections={sections}
-                propsState={propsState}
-                stylePreset={stylePreset}
-                onStylePresetChange={onStylePresetChange}
-              />
+              <>
+                <AISequencingWorkspace
+                  analysisProgress={analysisProgress}
+                  complexity={complexity}
+                  setComplexity={setComplexity}
+                  runAi={runAi}
+                  rebuildAnalyzing={rebuildAnalyzing}
+                  rebuildPhase={rebuildPhase}
+                  selectedSong={selectedSong}
+                  sections={sections}
+                  propsState={propsState}
+                  stylePreset={stylePreset}
+                  onStylePresetChange={onStylePresetChange}
+                />
+                <CopilotPanel
+                  chat={chat}
+                  chatInput={chatInput}
+                  setChatInput={setChatInput}
+                  applyCopilot={applyCopilot}
+                  copilotBusy={copilotBusy}
+                />
+              </>
             )}
 
             {activeTab === 'timeline' && (
@@ -336,23 +462,7 @@ export function SequencerShell({
                 userPlan={userPlan}
               />
             )}
-            {activeTab === 'ai' && (
-              <CopilotPanel
-                playing={playing}
-                setPlaying={setPlaying}
-                chat={chat}
-                chatInput={chatInput}
-                setChatInput={setChatInput}
-                applyCopilot={applyCopilot}
-                copilotBusy={copilotBusy}
-                propsState={propsState}
-                selectedSong={selectedSong}
-                previewTime={previewTime}
-                sequenceEvents={sequenceEventsForPreview}
-                photoUrl={photoUrl}
-              />
-            )}
-          </>
+          </div>
         </div>
       </div>
     </div>

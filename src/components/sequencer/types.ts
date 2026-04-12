@@ -31,7 +31,6 @@ export interface ChatMessage {
 export type TabValue = 'setup' | 'songs' | 'ai' | 'timeline' | 'export'
 
 export const sequencerTabs: { value: TabValue; label: string }[] = [
-  { value: 'setup', label: 'Display Setup' },
   { value: 'songs', label: 'Music' },
   { value: 'ai', label: 'Sequencing' },
   { value: 'timeline', label: 'Timeline' },
