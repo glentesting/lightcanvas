@@ -119,7 +119,7 @@ Effects: ${ALLOWED_EFFECTS.join(', ')}
 Format: {"events":[{"propId":"id","effect":"Effect","start":0.0,"end":8.0,"intensity":75}]}
 
 ## CRITICAL RULES
-- Generate 1-2 events per prop per section
+- Generate 1 event per prop per section only
 - Each event: 8-20 seconds duration
 - Vary effects — no same effect twice in a row per prop
 - Talking Tree Face: Mouth Sync in vocal sections only
@@ -277,7 +277,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
         body: JSON.stringify({
           model,
-          max_tokens: 2000,
+          max_tokens: 4096,
           system: systemPrompt,
           messages: [{ role: 'user', content: userMessage }],
         }),
@@ -363,7 +363,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     rawEvents = extractJsonArray(textContent)
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Invalid JSON from Claude'
+    const msg = e instanceof Error ? e.message : 'Parse failed'
+    console.error('[generate-sequence] extractJsonArray failed', {
+      error: msg,
+      textContentLength: textContent.length,
+      textContentEnd: textContent.slice(-200),
+    })
     return res.status(502).json({ error: msg })
   }
 
