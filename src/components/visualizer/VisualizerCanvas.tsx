@@ -738,6 +738,8 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
     const scaleRef = useRef(1)
     const offsetRef = useRef({ x: 0, y: 0 })
     const panRef = useRef<{ lastX: number; lastY: number } | null>(null)
+    /** Throttle debug: log per-prop anim at draw time at most once per second. */
+    const drawAnimLogLastMsRef = useRef(0)
     const { updateSnapshot, getAnimState } = usePropsAnimation()
 
     // Expose triggerFrame and view controls
@@ -810,13 +812,38 @@ export const VisualizerCanvas = forwardRef<VisualizerCanvasHandle, VisualizerCan
 
       // Draw props (coords are in canvas-space, ctx transform handles zoom/pan)
       const now = performance.now() / 1000
+      const tMs = performance.now()
+      const shouldLogAnim = tMs - drawAnimLogLastMsRef.current >= 1000
+      if (shouldLogAnim) drawAnimLogLastMsRef.current = tMs
+      let animLogSamples:
+        | Array<{
+            id: string
+            type: string
+            glowIntensity: number
+            colorBrightness: number
+            scale: number
+          }>
+        | undefined
+      if (shouldLogAnim) animLogSamples = []
       for (const prop of props) {
         if (prop.canvasX == null || prop.canvasY == null) continue
         const px = prop.canvasX * cw
         const py = prop.canvasY * ch
         const anim = getAnimState(prop.type, now, prop.id)
+        if (animLogSamples) {
+          animLogSamples.push({
+            id: String(prop.id),
+            type: prop.type,
+            glowIntensity: anim.glowIntensity,
+            colorBrightness: anim.colorBrightness,
+            scale: anim.scale,
+          })
+        }
         const selected = prop.id === selectedPropId
         drawProp(ctx, prop, px, py, anim, selected)
+      }
+      if (shouldLogAnim && animLogSamples) {
+        console.log('[VisualizerCanvas] draw anim @ 1/s (per prop)', animLogSamples)
       }
 
       ctx.restore()
