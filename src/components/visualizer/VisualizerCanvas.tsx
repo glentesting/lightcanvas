@@ -32,6 +32,80 @@ function vividPropColor(hex: string, glowIntensity: number, colorBrightness: num
   return `#${to(r)}${to(g)}${to(b)}`
 }
 
+/**
+ * Physical LED look: soft colored radial bloom (radius scales with glowIntensity),
+ * then a tight opaque core on top. No canvas shadow — bloom is the gradient only.
+ */
+function drawLedGlowAndCore(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  vividHex: string,
+  glowIntensity: number,
+  coreRadius: number,
+  minGlowRadius: number,
+  maxGlowRadius: number,
+) {
+  const t = Math.min(1, Math.max(0, glowIntensity))
+  const glowR = minGlowRadius + (maxGlowRadius - minGlowRadius) * t
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowR)
+  g.addColorStop(0, hexToRgba(vividHex, 0.95))
+  g.addColorStop(0.22, hexToRgba(vividHex, 0.5))
+  g.addColorStop(0.5, hexToRgba(vividHex, 0.12))
+  g.addColorStop(1, hexToRgba(vividHex, 0))
+  ctx.save()
+  ctx.shadowBlur = 0
+  ctx.fillStyle = g
+  ctx.beginPath()
+  ctx.arc(cx, cy, glowR, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = hexToRgba(vividHex, 0.88)
+  ctx.beginPath()
+  ctx.arc(cx, cy, Math.max(0.6, coreRadius * 0.92), 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = '#ffffff'
+  ctx.beginPath()
+  ctx.arc(cx, cy, Math.max(0.5, coreRadius * 0.52), 0, Math.PI * 2)
+  ctx.fill()
+  ctx.restore()
+}
+
+/** Lit tube / wire: outer colored bloom pulses; bright center line stays fully visible. */
+function drawLedStemStroke(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  yBottom: number,
+  yTop: number,
+  vividHex: string,
+  glowIntensity: number,
+  lineW: number,
+) {
+  const t = Math.min(1, Math.max(0, glowIntensity))
+  const bloomExtra = 4 + 16 * t
+  ctx.save()
+  ctx.shadowBlur = 0
+  ctx.lineCap = 'round'
+  ctx.strokeStyle = hexToRgba(vividHex, 0.12 + 0.38 * t)
+  ctx.lineWidth = lineW + bloomExtra
+  ctx.beginPath()
+  ctx.moveTo(x, yBottom)
+  ctx.lineTo(x, yTop)
+  ctx.stroke()
+  ctx.strokeStyle = hexToRgba(vividHex, 0.88)
+  ctx.lineWidth = lineW + 1.25
+  ctx.beginPath()
+  ctx.moveTo(x, yBottom)
+  ctx.lineTo(x, yTop)
+  ctx.stroke()
+  ctx.strokeStyle = 'rgba(255,255,255,0.96)'
+  ctx.lineWidth = Math.max(1, lineW * 0.38)
+  ctx.beginPath()
+  ctx.moveTo(x, yBottom)
+  ctx.lineTo(x, yTop)
+  ctx.stroke()
+  ctx.restore()
+}
+
 function drawMegaTree(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
   const w = 44; const h = 70
   ctx.save()
@@ -116,22 +190,14 @@ function drawStake(ctx: CanvasRenderingContext2D, x: number, y: number, color: s
   const lineW = 3
   const capR = 7.5 * anim.scale
   const c = vividPropColor(color, anim.glowIntensity, anim.colorBrightness)
-  const shadowBlur = 10 + 70 * anim.glowIntensity ** 1.12
-  const bodyRgba = hexToRgba(c, 0.4 + 0.6 * anim.glowIntensity)
+  const capY = y - stemH
+  const coreR = Math.max(1.55, capR * 0.26)
+  const minGlowR = capR * 1.75
+  const maxGlowR = capR * 3.45
   ctx.save()
-  ctx.shadowBlur = shadowBlur
-  ctx.shadowColor = c
   ctx.globalAlpha = selected ? 1.0 : 0.92
-  ctx.strokeStyle = bodyRgba
-  ctx.lineWidth = lineW
-  ctx.beginPath()
-  ctx.moveTo(x, y)
-  ctx.lineTo(x, y - stemH)
-  ctx.stroke()
-  ctx.fillStyle = bodyRgba
-  ctx.beginPath()
-  ctx.arc(x, y - stemH, capR, 0, Math.PI * 2)
-  ctx.fill()
+  drawLedStemStroke(ctx, x, y, capY, c, anim.glowIntensity, lineW)
+  drawLedGlowAndCore(ctx, x, capY, c, anim.glowIntensity, coreR, minGlowR, maxGlowR)
   ctx.restore()
 }
 
@@ -142,28 +208,20 @@ function drawStakeCluster(ctx: CanvasRenderingContext2D, x: number, y: number, c
   const lineW = 3
   const capR = 7.5 * anim.scale
   const c = vividPropColor(color, anim.glowIntensity, anim.colorBrightness)
-  const shadowBlur = 10 + 70 * anim.glowIntensity ** 1.12
-  const bodyRgba = hexToRgba(c, 0.4 + 0.6 * anim.glowIntensity)
+  const capY = y - stemH
+  const coreR = Math.max(1.55, capR * 0.26)
+  const minGlowR = capR * 1.75
+  const maxGlowR = capR * 3.45
   const totalW = (count - 1) * spacing
   const startX = x - totalW / 2
+  ctx.save()
+  ctx.globalAlpha = selected ? 1.0 : 0.92
   for (let i = 0; i < count; i++) {
     const sx = startX + i * spacing
-    ctx.save()
-    ctx.shadowBlur = shadowBlur
-    ctx.shadowColor = c
-    ctx.globalAlpha = selected ? 1.0 : 0.92
-    ctx.strokeStyle = bodyRgba
-    ctx.lineWidth = lineW
-    ctx.beginPath()
-    ctx.moveTo(sx, y)
-    ctx.lineTo(sx, y - stemH)
-    ctx.stroke()
-    ctx.fillStyle = bodyRgba
-    ctx.beginPath()
-    ctx.arc(sx, y - stemH, capR, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.restore()
+    drawLedStemStroke(ctx, sx, y, capY, c, anim.glowIntensity, lineW)
+    drawLedGlowAndCore(ctx, sx, capY, c, anim.glowIntensity, coreR, minGlowR, maxGlowR)
   }
+  ctx.restore()
 }
 
 function drawFace(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, anim: PropAnimState, selected: boolean) {
@@ -340,24 +398,14 @@ function drawArch(ctx: CanvasRenderingContext2D, x: number, y: number, color: st
   const archH = 83
   const dotR = 5.25
   const c = vividPropColor(color, anim.glowIntensity, anim.colorBrightness)
-  const shadowBlur = 10 + 70 * anim.glowIntensity ** 1.12
-  const bodyRgba = hexToRgba(c, 0.4 + 0.6 * anim.glowIntensity)
+  const coreR = Math.max(1.15, dotR * 0.28)
+  const minGlowR = dotR * 1.55
+  const maxGlowR = dotR * 3.25
   ctx.save()
-  ctx.shadowBlur = shadowBlur
-  ctx.shadowColor = c
-  ctx.fillStyle = bodyRgba
   ctx.globalAlpha = selected ? 1.0 : 0.92
-  for (let i = 0; i < count; i++) {
-    const t = (i / (count - 1)) * Math.PI
-    const ax = x + Math.cos(Math.PI - t) * archW
-    const ay = y - Math.sin(t) * archH
-    ctx.beginPath()
-    ctx.arc(ax, ay, dotR, 0, Math.PI * 2)
-    ctx.fill()
-  }
-  // Wire connecting the dots
+  // Wire behind bulbs — steady (does not pulse with glowIntensity)
   ctx.shadowBlur = 0
-  ctx.strokeStyle = bodyRgba
+  ctx.strokeStyle = hexToRgba(c, 0.32)
   ctx.lineWidth = 0.75
   ctx.beginPath()
   for (let i = 0; i < count; i++) {
@@ -368,6 +416,12 @@ function drawArch(ctx: CanvasRenderingContext2D, x: number, y: number, color: st
     else ctx.lineTo(ax, ay)
   }
   ctx.stroke()
+  for (let i = 0; i < count; i++) {
+    const t = (i / (count - 1)) * Math.PI
+    const ax = x + Math.cos(Math.PI - t) * archW
+    const ay = y - Math.sin(t) * archH
+    drawLedGlowAndCore(ctx, ax, ay, c, anim.glowIntensity, coreR, minGlowR, maxGlowR)
+  }
   ctx.restore()
 }
 
