@@ -87,18 +87,19 @@ Also: `fixture_templates` table with 6 built-in fixture types.
 - [x] Timeline: render existing blocks on tracks
 - [x] Timeline: drag effect from palette onto track (creates block, snaps to beat)
 - [x] Timeline: click to select blocks (shift/cmd for multi-select toggle)
+- [x] Timeline: drag existing blocks to move (snaps to beats, hold Alt to disable)
+- [x] Timeline: resize blocks via edge handles (left/right, min 0.1s)
+- [x] Timeline: selection toolbar with Delete and Duplicate buttons
+- [x] Timeline: keyboard shortcuts (Cmd+Z undo, Cmd+Shift+Z redo, Cmd+A select all, Cmd+D duplicate, Escape deselect)
 - [x] Lumen design system (CSS custom properties, light mode only)
 - [x] Database migration to single-table JSONB model
 - [x] RLS policies for project ownership
 - [x] Fixture templates seeded (6 built-in types)
 
 ### In Progress
-- [ ] Timeline: drag existing blocks to move them
-- [ ] Timeline: resize blocks (edge handles)
-- [ ] Timeline: multi-select marquee
-- [ ] Timeline: context menu (right-click)
-- [ ] Timeline: keyboard shortcuts (Cmd+Z, Delete, Cmd+D, etc.)
-- [ ] Timeline: parameter panel for selected block
+- [ ] Timeline: marquee rectangle selection (drag on empty area)
+- [ ] Timeline: right-click context menu (Cut/Copy/Paste)
+- [ ] Timeline: parameter panel for editing selected block's effect params
 
 ### Not Started
 - [ ] Layout view (place fixtures on house SVG)
@@ -136,13 +137,10 @@ The `handoff/handoff/` folder contains the full implementation spec (files 00-10
 
 ## What's Next
 
-Finishing handoff slice 05 (Timeline). Remaining items in order:
-1. Drag existing blocks to reposition them
-2. Resize blocks via edge handles
-3. Multi-select (shift-click, marquee drag, Cmd+A)
-4. Context menu (right-click → Cut/Copy/Paste/Duplicate/Delete)
-5. Keyboard shortcuts (Cmd+Z undo, Delete, Space play, arrow keys seek)
-6. Parameter panel for editing selected block's effect params
+Finishing handoff slice 05 (Timeline). Remaining items:
+1. Marquee rectangle selection (drag on empty timeline area)
+2. Right-click context menu (Cut/Copy/Paste)
+3. Parameter panel for editing selected block's effect params (color, intensity, speed)
 
 After that: slice 06 (Fixtures & Layout view), then 07 (Preview engine).
 

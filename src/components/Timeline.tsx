@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useState } from "react";
+import { useRef, useCallback, useState, useEffect } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -26,6 +26,7 @@ interface TimelineProps {
 const ROW_HEIGHT = 42;
 const LABEL_WIDTH = 160;
 const DEFAULT_BLOCK_DURATION = 2;
+const HANDLE_WIDTH = 6;
 
 export default function Timeline({ analysis }: TimelineProps) {
   const tracks = useEditorStore((s) => s.sequence.tracks);
@@ -33,17 +34,66 @@ export default function Timeline({ analysis }: TimelineProps) {
   const fixtures = useEditorStore((s) => s.fixtures);
   const selectedBlockIds = useEditorStore((s) => s.selectedBlockIds);
   const setSelection = useEditorStore((s) => s.setSelection);
+  const clearSelection = useEditorStore((s) => s.clearSelection);
 
   const zoom = useTransportStore((s) => s.zoom);
-
-  const trackAreaRef = useRef<HTMLDivElement>(null);
 
   const duration = analysis?.duration ?? 180;
   const totalWidth = secondsToPx(duration, zoom);
 
+  const deleteBlocks = useEditorStore((s) => s.deleteBlocks);
+  const duplicateBlocks = useEditorStore((s) => s.duplicateBlocks);
+
   return (
-    <div className="flex-1 flex flex-col min-h-0" style={{ background: "var(--bg)" }}>
-      <div ref={trackAreaRef} className="flex-1 overflow-auto">
+    <div
+      className="flex-1 flex flex-col min-h-0"
+      style={{ background: "var(--bg)" }}
+      onMouseDown={(e) => {
+        // Clear selection if clicking on empty timeline area (not on a block)
+        const target = e.target as HTMLElement;
+        if (!target.closest("[data-block]")) {
+          clearSelection();
+        }
+      }}
+    >
+      {/* Selection toolbar */}
+      {selectedBlockIds.length > 0 && (
+        <div
+          className="flex items-center gap-2 px-3.5 shrink-0"
+          style={{ height: 32, background: "var(--accent-50)", borderBottom: "1px solid var(--accent-200)" }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span className="text-xs font-medium" style={{ color: "var(--accent-ink)" }}>
+            {selectedBlockIds.length} selected
+          </span>
+          <div className="flex-1" />
+          <button
+            onClick={() => duplicateBlocks(selectedBlockIds)}
+            className="inline-flex items-center gap-1 h-6 px-2 rounded text-xs font-medium transition-colors"
+            style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink-2)" }}
+            title="Duplicate (Ctrl+D)"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            Duplicate
+          </button>
+          <button
+            onClick={() => deleteBlocks(selectedBlockIds)}
+            className="inline-flex items-center gap-1 h-6 px-2 rounded text-xs font-medium transition-colors"
+            style={{ background: "#fee2e2", border: "1px solid #fca5a5", color: "#b91c1c" }}
+            title="Delete (Del)"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+            Delete
+          </button>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-auto">
         <div style={{ minWidth: LABEL_WIDTH + totalWidth + 40, position: "relative" }}>
           {/* Header row */}
           <div className="flex sticky top-0 z-10" style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)" }}>
@@ -98,13 +148,7 @@ export default function Timeline({ analysis }: TimelineProps) {
                   selectedBlockIds={selectedBlockIds}
                   zoom={zoom}
                   totalWidth={totalWidth}
-                  onSelectBlock={(id, e) => {
-                    if (e.shiftKey || e.metaKey) {
-                      setSelection([id], "toggle");
-                    } else {
-                      setSelection([id]);
-                    }
-                  }}
+                  analysis={analysis}
                 />
               );
             })
@@ -125,7 +169,7 @@ function TrackRow({
   selectedBlockIds,
   zoom,
   totalWidth,
-  onSelectBlock,
+  analysis,
 }: {
   trackId: string;
   trackIndex: number;
@@ -135,7 +179,7 @@ function TrackRow({
   selectedBlockIds: string[];
   zoom: number;
   totalWidth: number;
-  onSelectBlock: (id: string, e: React.MouseEvent) => void;
+  analysis: AudioAnalysis | null;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `track:${trackId}`,
@@ -178,43 +222,207 @@ function TrackRow({
         className="relative"
         style={{ width: totalWidth, height: ROW_HEIGHT, flexShrink: 0 }}
       >
-        {blocks.map((block) => {
-          const left = secondsToPx(block.start, zoom);
-          const width = secondsToPx(block.duration, zoom);
-          const selected = selectedBlockIds.includes(block.id);
-          const color = EFFECT_COLORS[block.effectId];
-
-          return (
-            <div
-              key={block.id}
-              className="absolute flex items-center overflow-hidden cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectBlock(block.id, e);
-              }}
-              style={{
-                left: left + 1,
-                top: 4,
-                height: ROW_HEIGHT - 8,
-                width: Math.max(width - 2, 8),
-                borderRadius: 5,
-                padding: "0 6px",
-                fontSize: 11,
-                fontWeight: 600,
-                color: "#fff",
-                background: color,
-                boxShadow: selected
-                  ? "0 0 0 2px var(--accent), 0 1px 3px rgba(20,22,28,.15)"
-                  : "0 1px 2px rgba(20,22,28,.12)",
-              }}
-            >
-              <span className="truncate">{EFFECT_NAMES[block.effectId]}</span>
-            </div>
-          );
-        })}
+        {blocks.map((block) => (
+          <EffectBlockComponent
+            key={block.id}
+            block={block}
+            selected={selectedBlockIds.includes(block.id)}
+            zoom={zoom}
+            analysis={analysis}
+          />
+        ))}
       </div>
     </div>
   );
+}
+
+/* ─── Effect Block with drag + resize ────────────────────── */
+function EffectBlockComponent({
+  block,
+  selected,
+  zoom,
+  analysis,
+}: {
+  block: EffectBlock;
+  selected: boolean;
+  zoom: number;
+  analysis: AudioAnalysis | null;
+}) {
+  const setSelection = useEditorStore((s) => s.setSelection);
+  const moveBlocks = useEditorStore((s) => s.moveBlocks);
+  const resizeBlock = useEditorStore((s) => s.resizeBlock);
+  const selectedBlockIds = useEditorStore((s) => s.selectedBlockIds);
+
+  const beats = analysis?.beats ?? [];
+  const [dragging, setDragging] = useState<"move" | "resize-left" | "resize-right" | null>(null);
+  const dragStartRef = useRef<{ x: number; blockStart: number; blockDuration: number } | null>(null);
+
+  const left = secondsToPx(block.start, zoom);
+  const width = secondsToPx(block.duration, zoom);
+  const color = EFFECT_COLORS[block.effectId];
+
+  const handleMouseDown = (e: React.MouseEvent, action: "move" | "resize-left" | "resize-right") => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    // Select on mousedown
+    if (action === "move") {
+      if (e.shiftKey || e.metaKey) {
+        setSelection([block.id], "toggle");
+      } else if (!selected) {
+        setSelection([block.id]);
+      }
+    }
+
+    setDragging(action);
+    dragStartRef.current = {
+      x: e.clientX,
+      blockStart: block.start,
+      blockDuration: block.duration,
+    };
+  };
+
+  useEffect(() => {
+    if (!dragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!dragStartRef.current) return;
+      const deltaX = e.clientX - dragStartRef.current.x;
+      const deltaSeconds = pxToSeconds(deltaX, zoom);
+
+      if (dragging === "move") {
+        const ids = selected ? selectedBlockIds : [block.id];
+        const newStart = Math.max(0, dragStartRef.current.blockStart + deltaSeconds);
+        const snapped = e.altKey ? newStart : snapToBeat(newStart, beats);
+        const actualDelta = snapped - block.start;
+        if (Math.abs(actualDelta) > 0.001) {
+          moveBlocks(ids, actualDelta, 0);
+          dragStartRef.current.x = e.clientX;
+          dragStartRef.current.blockStart = snapped;
+        }
+      } else if (dragging === "resize-left") {
+        let newStart = dragStartRef.current.blockStart + deltaSeconds;
+        newStart = e.altKey ? newStart : snapToBeat(newStart, beats);
+        resizeBlock(block.id, "start", newStart);
+      } else if (dragging === "resize-right") {
+        let newEnd = dragStartRef.current.blockStart + dragStartRef.current.blockDuration + deltaSeconds;
+        newEnd = e.altKey ? newEnd : snapToBeat(newEnd, beats);
+        resizeBlock(block.id, "end", newEnd);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setDragging(null);
+      dragStartRef.current = null;
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [dragging, block, selected, selectedBlockIds, zoom, beats, moveBlocks, resizeBlock]);
+
+  return (
+    <div
+      className="absolute flex items-center overflow-hidden group"
+      style={{
+        left: left + 1,
+        top: 4,
+        height: ROW_HEIGHT - 8,
+        width: Math.max(width - 2, 16),
+        borderRadius: 5,
+        fontSize: 11,
+        fontWeight: 600,
+        color: "#fff",
+        background: color,
+        cursor: dragging === "move" ? "grabbing" : "grab",
+        boxShadow: selected
+          ? "0 0 0 2px var(--accent), 0 1px 3px rgba(20,22,28,.15)"
+          : "0 1px 2px rgba(20,22,28,.12)",
+        userSelect: "none",
+      }}
+      data-block={block.id}
+      onMouseDown={(e) => handleMouseDown(e, "move")}
+      onClick={(e) => e.stopPropagation()}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!selected) setSelection([block.id]);
+      }}
+    >
+      {/* Left resize handle */}
+      <div
+        className="absolute left-0 top-0 bottom-0 opacity-0 group-hover:opacity-100 transition-opacity"
+        style={{ width: HANDLE_WIDTH, cursor: "ew-resize", background: "rgba(255,255,255,0.3)", borderRadius: "5px 0 0 5px" }}
+        onMouseDown={(e) => handleMouseDown(e, "resize-left")}
+      />
+
+      {/* Label */}
+      <span className="truncate px-1.5 pointer-events-none">
+        {EFFECT_NAMES[block.effectId]}
+      </span>
+
+      {/* Right resize handle */}
+      <div
+        className="absolute right-0 top-0 bottom-0 opacity-0 group-hover:opacity-100 transition-opacity"
+        style={{ width: HANDLE_WIDTH, cursor: "ew-resize", background: "rgba(255,255,255,0.3)", borderRadius: "0 5px 5px 0" }}
+        onMouseDown={(e) => handleMouseDown(e, "resize-right")}
+      />
+    </div>
+  );
+}
+
+/* ─── Keyboard shortcuts hook ─────────────────────────────── */
+export function useTimelineShortcuts() {
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      const state = useEditorStore.getState();
+      const { selectedBlockIds } = state;
+
+      // Delete / Backspace — delete selected blocks
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedBlockIds.length > 0) {
+        e.preventDefault();
+        state.deleteBlocks(selectedBlockIds);
+      }
+
+      // Cmd+D — duplicate
+      if ((e.metaKey || e.ctrlKey) && e.key === "d" && selectedBlockIds.length > 0) {
+        e.preventDefault();
+        state.duplicateBlocks(selectedBlockIds);
+      }
+
+      // Cmd+A — select all
+      if ((e.metaKey || e.ctrlKey) && e.key === "a") {
+        e.preventDefault();
+        state.setSelection(state.sequence.blocks.map((b) => b.id));
+      }
+
+      // Escape — clear selection
+      if (e.key === "Escape") {
+        state.clearSelection();
+      }
+
+      // Cmd+Z — undo
+      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        useEditorStore.temporal.getState().undo();
+      }
+
+      // Cmd+Shift+Z or Cmd+Y — redo
+      if (((e.metaKey || e.ctrlKey) && e.key === "z" && e.shiftKey) || ((e.metaKey || e.ctrlKey) && e.key === "y")) {
+        e.preventDefault();
+        useEditorStore.temporal.getState().redo();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 }
 
 /* ─── DnD wrapper — wraps the entire editor body ──────────── */
@@ -251,11 +459,9 @@ export function TimelineDndProvider({ children }: { children: React.ReactNode })
         const trackId = overData.trackId as string;
         const effectId = activeData.effectId as EffectId;
 
-        // Calculate drop time from the delta
         const deltaX = event.delta.x;
         let dropTime = pxToSeconds(Math.max(0, deltaX), zoom);
         dropTime = snapToBeat(dropTime, beats);
-        // Ensure non-negative
         dropTime = Math.max(0, dropTime);
 
         const newBlock: EffectBlock = {
