@@ -21,40 +21,34 @@ export async function POST(request: Request) {
     .from("projects")
     .select("id")
     .eq("id", projectId)
-    .eq("user_id", userId)
+    .eq("owner_id", userId)
     .single();
 
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   // Upload to Supabase Storage
+  const bucket = "songs"; // Use existing bucket; switch to "lumen-audio" once created
   const fileExt = file.name.split(".").pop();
   const filePath = `${userId}/${projectId}/${Date.now()}.${fileExt}`;
 
   const { error: uploadError } = await supabase.storage
-    .from("songs")
+    .from(bucket)
     .upload(filePath, file, { contentType: file.type });
 
   if (uploadError) {
     return NextResponse.json({ error: uploadError.message }, { status: 500 });
   }
 
-  // Get public URL
-  const { data: urlData } = supabase.storage.from("songs").getPublicUrl(filePath);
+  // Store the bucket path (not the public URL) so we can generate signed URLs on demand
+  const storagePath = `${bucket}/${filePath}`;
 
-  // Save metadata to database
-  const { data: song, error: dbError } = await supabase
-    .from("songs")
-    .insert({
-      project_id: projectId,
-      file_url: urlData.publicUrl,
-      duration_seconds: null,
-      bpm: null,
-      analysis_json: null,
-    })
-    .select()
-    .single();
+  // Update project row with audio info
+  const { error: dbError } = await supabase
+    .from("projects")
+    .update({ audio_url: storagePath, audio_file: file.name })
+    .eq("id", projectId);
 
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
-  return NextResponse.json(song, { status: 201 });
+  return NextResponse.json({ file_url: storagePath, file_name: file.name }, { status: 201 });
 }

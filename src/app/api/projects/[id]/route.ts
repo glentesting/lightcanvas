@@ -15,7 +15,7 @@ export async function GET(
     .from("projects")
     .select("*")
     .eq("id", id)
-    .eq("user_id", userId)
+    .eq("owner_id", userId)
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 404 });

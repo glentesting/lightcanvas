@@ -8,8 +8,10 @@ import { useEffect, useState } from "react";
 interface Project {
   id: string;
   name: string;
-  description: string | null;
+  audio_file: string | null;
+  fixtures: unknown[];
   created_at: string;
+  updated_at: string;
 }
 
 export default function DashboardPage() {
@@ -18,7 +20,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newDesc, setNewDesc] = useState("");
 
   useEffect(() => {
     fetchProjects();
@@ -38,22 +39,24 @@ export default function DashboardPage() {
     const res = await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName, description: newDesc }),
+      body: JSON.stringify({ name: newName }),
     });
     if (res.ok) {
       setNewName("");
-      setNewDesc("");
       setShowCreate(false);
       fetchProjects();
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">LightShow AI</h1>
+    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+      <header
+        className="px-6 py-3.5 flex items-center justify-between"
+        style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)" }}
+      >
+        <h1 className="text-lg font-bold">LightShow AI</h1>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-600">
+          <span className="text-sm" style={{ color: "var(--ink-3)" }}>
             {user?.firstName || user?.emailAddresses[0]?.emailAddress}
           </span>
           <UserButton />
@@ -65,7 +68,8 @@ export default function DashboardPage() {
           <h2 className="text-2xl font-semibold">Projects</h2>
           <button
             onClick={() => setShowCreate(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+            style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)" }}
           >
             New Project
           </button>
@@ -74,7 +78,8 @@ export default function DashboardPage() {
         {showCreate && (
           <form
             onSubmit={createProject}
-            className="bg-white border border-gray-200 rounded-lg p-6 mb-6"
+            className="rounded-lg p-6 mb-6"
+            style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}
           >
             <h3 className="text-lg font-medium mb-4">Create New Project</h3>
             <input
@@ -82,27 +87,23 @@ export default function DashboardPage() {
               placeholder="Project name"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-md px-4 py-2 mb-3 text-sm focus:outline-none focus:ring-2"
+              style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
               required
-            />
-            <textarea
-              placeholder="Description (optional)"
-              value={newDesc}
-              onChange={(e) => setNewDesc(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={2}
             />
             <div className="flex gap-3">
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                className="px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)" }}
               >
                 Create
               </button>
               <button
                 type="button"
                 onClick={() => setShowCreate(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                className="px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}
               >
                 Cancel
               </button>
@@ -111,10 +112,22 @@ export default function DashboardPage() {
         )}
 
         {loading ? (
-          <p className="text-gray-500">Loading projects...</p>
+          <p style={{ color: "var(--ink-4)" }}>Loading projects...</p>
         ) : projects.length === 0 ? (
-          <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
-            <p className="text-gray-500 mb-4">No projects yet. Create your first light show!</p>
+          <div
+            className="rounded-lg p-12 text-center"
+            style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
+          >
+            <div
+              className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: "var(--accent-50)", color: "var(--accent-ink)" }}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
+              </svg>
+            </div>
+            <p className="text-sm mb-1" style={{ color: "var(--ink-3)" }}>No projects yet</p>
+            <p className="text-xs" style={{ color: "var(--ink-4)" }}>Create your first light show to get started!</p>
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -122,14 +135,20 @@ export default function DashboardPage() {
               <Link
                 key={project.id}
                 href={`/project/${project.id}`}
-                className="bg-white border border-gray-200 rounded-lg p-6 hover:border-blue-300 hover:shadow-sm transition"
+                className="rounded-lg p-5 transition-all"
+                style={{
+                  background: "var(--surface)",
+                  border: "1px solid var(--line)",
+                  boxShadow: "var(--shadow-sm)",
+                }}
               >
-                <h3 className="font-semibold text-gray-900 mb-1">{project.name}</h3>
-                {project.description && (
-                  <p className="text-sm text-gray-500 mb-3">{project.description}</p>
-                )}
-                <p className="text-xs text-gray-400">
-                  Created {new Date(project.created_at).toLocaleDateString()}
+                <h3 className="font-semibold text-sm mb-1">{project.name}</h3>
+                <p className="text-xs mb-1" style={{ color: "var(--ink-3)" }}>
+                  {(project.fixtures as unknown[])?.length || 0} fixtures
+                  {project.audio_file ? ` · ${project.audio_file}` : ""}
+                </p>
+                <p className="text-xs" style={{ color: "var(--ink-4)" }}>
+                  Updated {new Date(project.updated_at).toLocaleDateString()}
                 </p>
               </Link>
             ))}

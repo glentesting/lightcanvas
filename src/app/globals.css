@@ -1,19 +1,73 @@
 @import "tailwindcss";
 
+/* Lumen — light-mode design system
+   Warm-friendly direction. Sky-blue accent.
+   Light mode ONLY. */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Neutrals — warm-tinted whites/grays */
+  --bg: #fbfbfa;
+  --surface: #ffffff;
+  --panel: #f6f5f2;
+  --panel-2: #efeeea;
+  --line: #e7e5df;
+  --line-2: #d8d5cd;
+  --ink: #1c1d1f;
+  --ink-2: #3c3d40;
+  --ink-3: #6b6c70;
+  --ink-4: #9a9a9d;
+
+  /* Sky accent */
+  --accent-h: 210;
+  --accent: oklch(62% 0.16 210);
+  --accent-50: oklch(96% 0.04 210);
+  --accent-100: oklch(92% 0.07 210);
+  --accent-200: oklch(85% 0.1 210);
+  --accent-600: oklch(54% 0.18 210);
+  --accent-700: oklch(46% 0.18 210);
+  --accent-ink: oklch(32% 0.1 210);
+
+  /* Effect colors */
+  --fx-twinkle: oklch(78% 0.16 90);
+  --fx-chase: oklch(65% 0.18 250);
+  --fx-fade: oklch(70% 0.13 320);
+  --fx-strobe: oklch(72% 0.16 30);
+  --fx-sparkle: oklch(80% 0.14 70);
+  --fx-wave: oklch(67% 0.15 200);
+  --fx-pulse: oklch(63% 0.17 350);
+  --fx-wash: oklch(72% 0.13 170);
+  --fx-meteor: oklch(60% 0.18 280);
+  --fx-firework: oklch(68% 0.18 10);
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+
+  --shadow-sm: 0 1px 2px rgba(20, 22, 28, 0.04), 0 1px 1px rgba(20, 22, 28, 0.03);
+  --shadow: 0 1px 2px rgba(20, 22, 28, 0.04), 0 4px 14px rgba(20, 22, 28, 0.06);
+  --shadow-lg: 0 8px 28px rgba(20, 22, 28, 0.10), 0 2px 6px rgba(20, 22, 28, 0.05);
+
+  --font-sans: var(--font-geist-sans), "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), "JetBrains Mono", ui-monospace, monospace;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
+
+/* Scrollbar styling */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.22); border: 2px solid transparent; background-clip: content-box; }
