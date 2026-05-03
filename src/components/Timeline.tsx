@@ -43,16 +43,25 @@ export default function Timeline({ analysis }: TimelineProps) {
 
   const deleteBlocks = useEditorStore((s) => s.deleteBlocks);
   const duplicateBlocks = useEditorStore((s) => s.duplicateBlocks);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   return (
     <div
       className="flex-1 flex flex-col min-h-0"
       style={{ background: "var(--bg)" }}
       onMouseDown={(e) => {
-        // Clear selection if clicking on empty timeline area (not on a block)
         const target = e.target as HTMLElement;
         if (!target.closest("[data-block]")) {
           clearSelection();
+        }
+        setContextMenu(null);
+      }}
+      onContextMenu={(e) => {
+        // Show context menu on right-click if blocks are selected
+        const target = e.target as HTMLElement;
+        if (target.closest("[data-block]")) {
+          e.preventDefault();
+          setContextMenu({ x: e.clientX, y: e.clientY });
         }
       }}
     >
@@ -155,6 +164,14 @@ export default function Timeline({ analysis }: TimelineProps) {
           )}
         </div>
       </div>
+
+      {/* Parameter panel */}
+      <ParameterPanel />
+
+      {/* Context menu */}
+      {contextMenu && (
+        <TimelineContextMenu x={contextMenu.x} y={contextMenu.y} onClose={() => setContextMenu(null)} />
+      )}
     </div>
   );
 }
@@ -498,6 +515,174 @@ export function TimelineDndProvider({ children }: { children: React.ReactNode })
         )}
       </DragOverlay>
     </DndContext>
+  );
+}
+
+/* ─── Context Menu ─────────────────────────────────────── */
+export function TimelineContextMenu({
+  x,
+  y,
+  onClose,
+}: {
+  x: number;
+  y: number;
+  onClose: () => void;
+}) {
+  const state = useEditorStore.getState();
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    window.addEventListener("mousedown", handleClick);
+    return () => window.removeEventListener("mousedown", handleClick);
+  }, [onClose]);
+
+  const items = [
+    { label: "Duplicate", shortcut: "Ctrl+D", action: () => { state.duplicateBlocks(state.selectedBlockIds); onClose(); } },
+    { label: "Delete", shortcut: "Del", action: () => { state.deleteBlocks(state.selectedBlockIds); onClose(); }, danger: true },
+    { type: "separator" as const },
+    { label: "Select All", shortcut: "Ctrl+A", action: () => { state.setSelection(state.sequence.blocks.map(b => b.id)); onClose(); } },
+  ];
+
+  return (
+    <div
+      ref={menuRef}
+      className="fixed z-50 py-1 rounded-lg overflow-hidden"
+      style={{
+        left: x,
+        top: y,
+        background: "var(--surface)",
+        border: "1px solid var(--line)",
+        boxShadow: "var(--shadow-lg)",
+        minWidth: 160,
+      }}
+    >
+      {items.map((item, i) =>
+        "type" in item && item.type === "separator" ? (
+          <div key={i} className="my-1" style={{ height: 1, background: "var(--line)" }} />
+        ) : (
+          <button
+            key={i}
+            onClick={"action" in item ? item.action : undefined}
+            className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-left transition-colors hover:bg-[var(--panel)]"
+            style={{ color: "danger" in item && item.danger ? "#b91c1c" : "var(--ink)" }}
+          >
+            <span>{"label" in item ? item.label : ""}</span>
+            {"shortcut" in item && (
+              <span className="text-xs font-mono" style={{ color: "var(--ink-4)" }}>
+                {"shortcut" in item ? item.shortcut : ""}
+              </span>
+            )}
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
+/* ─── Parameter Panel ──────────────────────────────────── */
+export function ParameterPanel() {
+  const selectedBlockIds = useEditorStore((s) => s.selectedBlockIds);
+  const blocks = useEditorStore((s) => s.sequence.blocks);
+  const updateBlock = useEditorStore((s) => s.updateBlock);
+
+  const selectedBlock = blocks.find((b) => b.id === selectedBlockIds[0]);
+
+  if (!selectedBlock || selectedBlockIds.length !== 1) return null;
+
+  const params = selectedBlock.params;
+
+  return (
+    <div
+      className="shrink-0 px-4 py-3 flex items-center gap-4 flex-wrap"
+      style={{
+        borderTop: "1px solid var(--line)",
+        background: "var(--surface)",
+        minHeight: 48,
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center gap-2">
+        <label className="text-xs font-medium" style={{ color: "var(--ink-3)" }}>Color</label>
+        <input
+          type="color"
+          value={params.color1}
+          onChange={(e) =>
+            updateBlock(selectedBlock.id, {
+              params: { ...params, color1: e.target.value },
+            })
+          }
+          className="w-7 h-7 rounded border-none cursor-pointer"
+          style={{ background: "none" }}
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="text-xs font-medium" style={{ color: "var(--ink-3)" }}>Intensity</label>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          value={params.intensity}
+          onChange={(e) =>
+            updateBlock(selectedBlock.id, {
+              params: { ...params, intensity: parseFloat(e.target.value) },
+            })
+          }
+          className="w-20"
+        />
+        <span className="text-xs font-mono w-8" style={{ color: "var(--ink-4)" }}>
+          {Math.round(params.intensity * 100)}%
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="text-xs font-medium" style={{ color: "var(--ink-3)" }}>Speed</label>
+        <input
+          type="range"
+          min="0.25"
+          max="4"
+          step="0.25"
+          value={params.speed}
+          onChange={(e) =>
+            updateBlock(selectedBlock.id, {
+              params: { ...params, speed: parseFloat(e.target.value) },
+            })
+          }
+          className="w-20"
+        />
+        <span className="text-xs font-mono w-8" style={{ color: "var(--ink-4)" }}>
+          {params.speed}x
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="text-xs font-medium" style={{ color: "var(--ink-3)" }}>Easing</label>
+        <select
+          value={params.easing}
+          onChange={(e) =>
+            updateBlock(selectedBlock.id, {
+              params: { ...params, easing: e.target.value as typeof params.easing },
+            })
+          }
+          className="h-6 px-2 rounded text-xs"
+          style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+        >
+          <option value="linear">Linear</option>
+          <option value="ease-in">Ease In</option>
+          <option value="ease-out">Ease Out</option>
+          <option value="ease-in-out">Ease In-Out</option>
+        </select>
+      </div>
+      <span
+        className="text-xs px-2 py-0.5 rounded"
+        style={{ background: EFFECT_COLORS[selectedBlock.effectId], color: "#fff" }}
+      >
+        {EFFECT_NAMES[selectedBlock.effectId]}
+      </span>
+    </div>
   );
 }
 

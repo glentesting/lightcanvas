@@ -96,12 +96,11 @@ Also: `fixture_templates` table with 6 built-in fixture types.
 - [x] RLS policies for project ownership
 - [x] Fixture templates seeded (6 built-in types)
 
-### In Progress
-- [ ] Timeline: marquee rectangle selection (drag on empty area)
-- [ ] Timeline: right-click context menu (Cut/Copy/Paste)
-- [ ] Timeline: parameter panel for editing selected block's effect params
+- [x] Timeline: right-click context menu (Duplicate, Delete, Select All)
+- [x] Timeline: parameter panel (color, intensity, speed, easing) for selected block
 
 ### Not Started
+- [ ] Timeline: marquee rectangle selection (drag on empty area) — low priority
 - [ ] Layout view (place fixtures on house SVG)
 - [ ] Preview engine (render pixels per fixture at time t)
 - [ ] AI panel (mock provider, generate-from-music)
@@ -137,12 +136,12 @@ The `handoff/handoff/` folder contains the full implementation spec (files 00-10
 
 ## What's Next
 
-Finishing handoff slice 05 (Timeline). Remaining items:
-1. Marquee rectangle selection (drag on empty timeline area)
-2. Right-click context menu (Cut/Copy/Paste)
-3. Parameter panel for editing selected block's effect params (color, intensity, speed)
-
-After that: slice 06 (Fixtures & Layout view), then 07 (Preview engine).
+Slice 05 (Timeline) is complete. Next slices in order:
+1. **Slice 06** — Fixtures & Layout view (place fixtures on house SVG, drag-to-place, anchor snapping)
+2. **Slice 07** — Preview engine (render per-pixel colors at time t, SVG + canvas modes)
+3. **Slice 08** — AI panel (mock provider, generate-from-music, streamed patches)
+4. **Slice 09** — Export (Lumen JSON, xLights .xsq, WebM video)
+5. Marquee rectangle selection on timeline (low priority, can add anytime)
 
 ## Commands
 
