@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
+      "Bash(npx create-next-app@latest lightshow-app --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack)",
+      "Bash(shopt -s dotglob)",
+      "Bash(mv lightshow-app/* .)",
+      "Bash(mv lightshow-app/.* .)",
+      "Bash(rmdir lightshow-app:*)",
+      "Bash(rm:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node -e \"const c = require\\('@clerk/nextjs'\\); console.log\\(Object.keys\\(c\\).filter\\(k => k.startsWith\\('Sign'\\)\\).join\\(', '\\)\\)\")",
+      "Bash(unzip -l \"Lightshow AI Design.zip\")",
+      "Bash(unzip -o \"Lightshow AI Design.zip\" -d design-ref)",
+      "Bash(mkdir:*)",
+      "Bash(npx next:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)"
+    ]
+  }
+}

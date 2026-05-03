@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useEffect, useState, useCallback, useRef } from "react";
 import AudioUpload from "@/components/AudioUpload";
 import WaveformViewer from "@/components/WaveformViewer";
-import Timeline, { PaletteEffectChip, TimelineDndProvider } from "@/components/Timeline";
+import Timeline, { PaletteEffectChip, TimelineDndProvider, useTimelineShortcuts } from "@/components/Timeline";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
@@ -35,6 +35,9 @@ export default function ProjectEditorPage() {
 
   // Autosave hook
   useAutosave(projectId);
+
+  // Timeline keyboard shortcuts (Delete, Cmd+D, Cmd+A, Cmd+Z, Esc)
+  useTimelineShortcuts();
 
   // Load project from API into store (once)
   useEffect(() => {
