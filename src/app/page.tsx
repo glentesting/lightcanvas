@@ -1,8 +1,10 @@
-import Link from "next/link";
-import { auth } from "@clerk/nextjs/server";
+"use client";
 
-export default async function Home() {
-  const { userId } = await auth();
+import Link from "next/link";
+import { useAuth } from "@clerk/nextjs";
+
+export default function Home() {
+  const { isSignedIn, isLoaded } = useAuth();
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen px-4">
@@ -10,7 +12,7 @@ export default async function Home() {
       <p className="text-gray-600 mb-8 text-center max-w-md">
         Create stunning synchronized light shows with AI-assisted sequencing.
       </p>
-      {userId ? (
+      {!isLoaded ? null : isSignedIn ? (
         <Link
           href="/dashboard"
           className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
