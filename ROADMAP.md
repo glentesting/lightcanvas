@@ -109,7 +109,7 @@ Goal: working editor → export → runs in xLights. Everything below is require
 | Feature | Status |
 |---------|--------|
 | 3-step onboarding wizard (creative track) | ✅ Done |
-| Empty / loading / error states (all screens) | ❌ Not started |
+| Empty / loading / error states (all screens) | ✅ Done |
 | Design polish pass (match prototype exactly) | ✅ Done |
 | Full smoke test (sign up → export) | ✅ Done (build + type check) |
 

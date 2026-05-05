@@ -182,7 +182,10 @@ export default function DashboardPage() {
         )}
 
         {loading ? (
-          <p style={{ color: "var(--ink-4)" }}>Loading projects...</p>
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--line)", borderTopColor: "transparent" }} />
+            <p className="text-sm" style={{ color: "var(--ink-4)" }}>Loading projects...</p>
+          </div>
         ) : projects.length === 0 ? (
           <div
             className="rounded-lg p-12 text-center"

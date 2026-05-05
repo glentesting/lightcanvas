@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Inter_Tight, JetBrains_Mono } from "next/font/google";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import "./globals.css";
 
 const interTight = Inter_Tight({
@@ -39,7 +40,9 @@ export default function RootLayout({
           />
         </head>
         <body className="min-h-full flex flex-col" style={{ background: "var(--bg)", color: "var(--ink)" }}>
-          {children}
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
         </body>
       </html>
     </ClerkProvider>

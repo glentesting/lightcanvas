@@ -28,6 +28,7 @@ export default function ProjectEditorPage() {
   const [showAI, setShowAI] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const loadedRef = useRef(false);
 
   // Store selectors
@@ -51,7 +52,10 @@ export default function ProjectEditorPage() {
     if (loadedRef.current) return;
     loadedRef.current = true;
     fetch(`/api/projects/${projectId}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(res.status === 404 ? "Project not found" : "Failed to load project");
+        return res.json();
+      })
       .then((row) => {
         const project = projectFromRow(row);
         // Upgrade legacy projects that have fewer than 6 fixtures
@@ -65,7 +69,8 @@ export default function ProjectEditorPage() {
         }
         loadProject(project);
         setLoaded(true);
-      });
+      })
+      .catch((err) => setLoadError(err.message));
   }, [projectId, loadProject]);
 
   const handleAudioUploaded = useCallback(
@@ -81,9 +86,28 @@ export default function ProjectEditorPage() {
     { id: "preview", label: "Preview" },
   ];
 
+  if (loadError) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center gap-4" style={{ background: "var(--bg)" }}>
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "var(--panel)", color: "var(--ink-3)" }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+        <p className="text-sm font-medium">{loadError}</p>
+        <Link href="/dashboard" className="text-sm px-4 py-2 rounded-md" style={{ background: "var(--accent)", color: "#fff" }}>
+          Back to Dashboard
+        </Link>
+      </div>
+    );
+  }
+
   if (!loaded) {
     return (
-      <div className="h-screen flex items-center justify-center" style={{ background: "var(--bg)" }}>
+      <div className="h-screen flex flex-col items-center justify-center gap-3" style={{ background: "var(--bg)" }}>
+        <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--line)", borderTopColor: "transparent" }} />
         <p className="text-sm" style={{ color: "var(--ink-3)" }}>Loading project...</p>
       </div>
     );

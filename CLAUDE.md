@@ -121,7 +121,7 @@ fixture_templates: id, name, kind, default_pixel_count, default_color (seeded �
 ### Not Started
 - ~~Dashboard: delete / rename / duplicate project actions not wired.~~ Done.
 - ~~Onboarding flow — 3-step creative wizard for new users.~~ Done.
-- Empty / loading / error states (per handoff doc 13).
+- ~~Empty / loading / error states (per handoff doc 13).~~ Done.
 - Marquee selection on timeline — low priority.
 - Hardware Bridge desktop app (doc 11) — v2.
 - Hardware onboarding wizard (doc 12) — v2.
