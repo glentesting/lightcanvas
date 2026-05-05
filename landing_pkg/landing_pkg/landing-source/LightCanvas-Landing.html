@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>LightCanvas — Light shows, without the spreadsheet.</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,500;9..144,1,400&family=JetBrains+Mono:wght@400;500&display=swap"/>
+  <link rel="stylesheet" href="styles.css"/>
+  <link rel="stylesheet" href="landing-styles.css"/>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" src="hero-house.jsx"></script>
+  <script type="text/babel" src="landing-pricing.jsx"></script>
+  <script type="text/babel" src="landing-marketplace.jsx"></script>
+  <script type="text/babel" src="landing-sections.jsx"></script>
+
+  <script type="text/babel">
+    const Nav = () => (
+      <nav className="lp-nav">
+        <div className="lp-nav-inner">
+          <div className="lp-logo">
+            <div className="lp-logo-mark">✦</div>
+            LightCanvas
+          </div>
+          <div className="lp-nav-links" style={{display:'flex'}}>
+            <a href="#features">Features</a>
+            <a href="#marketplace">Marketplace</a>
+            <a href="#pricing">Pricing</a>
+            <a href="#faq">FAQ</a>
+          </div>
+          <div className="lp-nav-cta">
+            <button className="btn ghost sm">Sign in</button>
+            <button className="btn primary sm">Start free</button>
+          </div>
+        </div>
+      </nav>
+    );
+
+    const Hero = () => (
+      <section className="lp-hero lp-section">
+        <div className="lp-hero-bg"/>
+        <div className="lp-hero-grid">
+          <div>
+            <span className="lp-eyebrow">✦ Now in early access</span>
+            <h1 className="lp-h1">Light shows, <em>without</em> the spreadsheet.</h1>
+            <p className="lp-lead">Drop in a song. LightCanvas finds the beats, drops, and quiet moments — then helps you choreograph thousands of lights to them. The show your neighbors will stop their cars for, made in an afternoon, not a winter.</p>
+            <div className="lp-hero-cta">
+              <button className="btn primary lg">Start designing — free</button>
+              <button className="btn lg">Watch the 90-second tour</button>
+            </div>
+            <div className="lp-trust">
+              <div className="lp-avatars">
+                <div className="av"/><div className="av"/><div className="av"/><div className="av"/>
+              </div>
+              <div>
+                <div className="stars">★★★★★</div>
+                <div>Loved by 2,400+ home decorators and pros</div>
+              </div>
+            </div>
+          </div>
+          <div className="lp-hero-stage">
+            <HeroHouse/>
+            <div className="lp-hero-overlay">
+              <div className="lp-pill"><span className="dot"/>Live preview · 142 BPM</div>
+              <div className="lp-pill" style={{marginLeft:'auto'}}>Wizards in Winter</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="lp-stats">
+          <div><div className="lp-stat-num">2,400+</div><div className="lp-stat-lbl">Active light designers</div></div>
+          <div><div className="lp-stat-num">38 min</div><div className="lp-stat-lbl">Avg. time to first show</div></div>
+          <div><div className="lp-stat-num">14M+</div><div className="lp-stat-lbl">Pixels rendered nightly</div></div>
+          <div><div className="lp-stat-num">$0</div><div className="lp-stat-lbl">To make your first show</div></div>
+        </div>
+      </section>
+    );
+
+    const LogoStrip = () => (
+      <div className="lp-logos">
+        <span style={{fontSize:11, letterSpacing:'.1em', textTransform:'uppercase', marginRight: 12}}>Works with</span>
+        <span className="logo-item">xLights</span>
+        <span className="logo-item">Falcon</span>
+        <span className="logo-item">Pixlite</span>
+        <span className="logo-item">Kulp</span>
+        <span className="logo-item">FPP</span>
+        <span className="logo-item">Hinkspix</span>
+      </div>
+    );
+
+    const App = () => (
+      <div className="landing">
+        <Nav/>
+        <Hero/>
+        <LogoStrip/>
+        <FeatureSection/>
+        <MarketplaceSection/>
+        <TestimonialSection/>
+        <PricingSection/>
+        <FAQSection/>
+        <FinalCTA/>
+        <Footer/>
+      </div>
+    );
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>
