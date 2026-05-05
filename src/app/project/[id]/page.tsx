@@ -9,6 +9,7 @@ import WaveformViewer from "@/components/WaveformViewer";
 import Timeline, { PaletteEffectChip, TimelineDndProvider, useTimelineShortcuts } from "@/components/Timeline";
 import LayoutEditor from "@/components/LayoutEditor";
 import PreviewPanel from "@/components/PreviewPanel";
+import AIPanel from "@/components/AIPanel";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
@@ -23,6 +24,7 @@ export default function ProjectEditorPage() {
   const params = useParams();
   const projectId = params.id as string;
   const [tab, setTab] = useState<Tab>("timeline");
+  const [showAI, setShowAI] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const loadedRef = useRef(false);
 
@@ -143,6 +145,7 @@ export default function ProjectEditorPage() {
 
         {/* AI Actions with kbd hint */}
         <button
+          onClick={() => setShowAI(true)}
           className="inline-flex items-center gap-2 h-7 px-2.5 rounded-md text-xs font-medium transition-colors"
           style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}
         >
@@ -235,6 +238,7 @@ export default function ProjectEditorPage() {
             <SidebarSection title="AI Actions">
               <div className="flex flex-col gap-1.5">
                 <button
+                  onClick={() => setShowAI(true)}
                   className="flex items-center gap-2 w-full h-8 px-2.5 rounded-md text-xs font-medium justify-start transition-colors"
                   style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)" }}
                 >
@@ -312,6 +316,9 @@ export default function ProjectEditorPage() {
         </div>
       </div>
       </TimelineDndProvider>
+
+      {/* AI Panel (slides in from right) */}
+      <AIPanel open={showAI} onClose={() => setShowAI(false)} />
     </div>
   );
 }

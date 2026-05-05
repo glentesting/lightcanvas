@@ -113,12 +113,16 @@ Also: `fixture_templates` table with 6 built-in fixture types.
 - [x] UI rename: Fixtures → Props, Sequence → Effects
 - [x] Top bar polish: logo, breadcrumb, pencil rename, ⌘K hint, song chip with duration
 - [x] AI Actions visual hierarchy (primary Generate + secondary outlined buttons)
+- [x] AI Panel: slide-in panel with vibe/intensity config
+- [x] AI Panel: mock provider generates dense, layered shows (3-layer composition: base + accent + transition)
+- [x] AI Panel: SSE streaming with progress bar and thought bubbles
+- [x] AI Panel: Undo/Keep after generation, Cancel mid-stream
+- [x] AI Panel: /api/ai/generate endpoint with zod validation
 
 ### Known Bug
 - [ ] **Preview tab not rendering** — The House SVG and transport controls exist in the component but nothing visually appears on the Preview tab. Suspected flex layout collapse or runtime error. Needs browser DevTools debugging (check computed height + console errors). SVG gradient ID collision was fixed but issue persists.
 
 ### Not Started
-- [ ] AI panel (mock provider, generate-from-music, streamed patches)
 - [ ] Export (Lumen JSON, xLights .xsq, WebM video)
 - [ ] Onboarding flow
 - [ ] Timeline: marquee rectangle selection — low priority
@@ -150,12 +154,10 @@ The `handoff/handoff/` folder contains the full implementation spec (files 00-10
 
 ## What's Next
 
-Slice 05 (Timeline) is complete. Next slices in order:
-1. **Slice 06** — Fixtures & Layout view (place fixtures on house SVG, drag-to-place, anchor snapping)
-2. **Slice 07** — Preview engine (render per-pixel colors at time t, SVG + canvas modes)
-3. **Slice 08** — AI panel (mock provider, generate-from-music, streamed patches)
-4. **Slice 09** — Export (Lumen JSON, xLights .xsq, WebM video)
-5. Marquee rectangle selection on timeline (low priority, can add anytime)
+Slices 01-08 complete. Remaining:
+1. **Slice 09** — Export (Lumen JSON, xLights .xsq, WebM video)
+2. **Preview tab bug** — Debug why the component renders nothing visible (check flex collapse + console errors in browser DevTools)
+3. **Onboarding flow** — 3-step wizard for new users
 
 ## Commands
 
