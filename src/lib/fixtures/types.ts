@@ -13,6 +13,8 @@ export interface Fixture {
   name: string;
   pixelCount: number;
   startChannel: number;
+  universe?: number;
+  direction?: "ltr" | "rtl";
   layout?: {
     points: Array<{ x: number; y: number }>;
     closed?: boolean;

@@ -95,9 +95,11 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
                       .map((b) => ({
                         ...b,
                         start: Math.max(0, b.start - customStart),
-                        duration:
+                        duration: Math.max(
+                          0,
                           Math.min(b.start + b.duration, customEnd) -
-                          Math.max(b.start, customStart),
+                            Math.max(b.start, customStart)
+                        ),
                       })),
                   },
                   audio: project.audio

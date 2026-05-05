@@ -150,8 +150,13 @@ export default function LayoutEditor() {
                 </div>
                 <div>
                   <label className="text-xs mb-1 block" style={{ color: "var(--ink-3)" }}>Universe</label>
-                  <input type="number" defaultValue={1} className="w-full h-7 px-2 rounded text-xs"
-                    style={{ border: "1px solid var(--line)", background: "var(--surface)", fontVariantNumeric: "tabular-nums" }} />
+                  <input
+                    type="number"
+                    value={selected.universe ?? 1}
+                    onChange={(e) => updateFixture(selected.id, { universe: parseInt(e.target.value) || 1 })}
+                    className="w-full h-7 px-2 rounded text-xs"
+                    style={{ border: "1px solid var(--line)", background: "var(--surface)", fontVariantNumeric: "tabular-nums" }}
+                  />
                 </div>
                 <div>
                   <label className="text-xs mb-1 block" style={{ color: "var(--ink-3)" }}>Start ch.</label>
@@ -165,8 +170,12 @@ export default function LayoutEditor() {
                 </div>
                 <div>
                   <label className="text-xs mb-1 block" style={{ color: "var(--ink-3)" }}>Direction</label>
-                  <select defaultValue="ltr" className="w-full h-7 px-1.5 rounded text-xs"
-                    style={{ border: "1px solid var(--line)", background: "var(--surface)" }}>
+                  <select
+                    value={selected.direction ?? "ltr"}
+                    onChange={(e) => updateFixture(selected.id, { direction: e.target.value as "ltr" | "rtl" })}
+                    className="w-full h-7 px-1.5 rounded text-xs"
+                    style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+                  >
                     <option value="ltr">L → R</option>
                     <option value="rtl">R → L</option>
                   </select>

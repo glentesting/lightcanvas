@@ -17,7 +17,7 @@ Positioning: "Canva for Christmas lights." Beginner-friendly alternative to xLig
 - **WaveSurfer.js v7** — audio playback + waveform rendering
 - **Meyda** — client-side beat detection (BPM, onsets, beat grid)
 - **@dnd-kit/core** — drag-and-drop on timeline + layout
-- **Tailwind CSS 4** — light mode only, Lumen design tokens
+- **Tailwind CSS 4** — light mode only, LightCanvas design tokens
 - **zod** — API validation
 - **Vercel** — hosting (auto-deploys from GitHub on push to main)
 

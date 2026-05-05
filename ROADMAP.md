@@ -200,7 +200,7 @@ Real AI, hardware integration, broader platform features.
 
 - Max audio file size? Recommend 30MB / 15 min cap.
 - Per-track effect layering? Single layer in v1 recommended.
-- App name — "LightCanvas" is the current working name (formerly "Lumen").
+- App name — "LightCanvas" is the official product name.
 - Tauri vs Electron for Bridge? Tauri preferred (size), Electron has more UDP examples.
 - Free vs paid tier specifics — deferred.
 - Audio rights checkbox at upload — confirm liability posture with counsel before launch.

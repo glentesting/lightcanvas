@@ -1,13 +1,13 @@
 # Layout view — correction prompt for Claude Code
 
 The current build of the Layout tab has drifted from the approved
-design (`Lumen Prototype.html` in the design project). Use this
+design (`LightCanvas Prototype.html` in the design project). Use this
 document to bring it back in line. Do **not** invent new features
 or visual elements that aren't called out below.
 
 ## Ground truth
 
-The single source of truth is the prototype: `Lumen Prototype.html`
+The single source of truth is the prototype: `LightCanvas Prototype.html`
 plus `editor-layout.jsx`, `house.jsx`, and `editor-data.jsx` in the
 design project. If anything in this document conflicts with the
 prototype, **the prototype wins**.
@@ -89,7 +89,7 @@ secondary — outlined buttons, left-aligned with their icons.
 Right now they're all the same flat style.
 
 ### 9. Top bar polish
-- Lumen logo (sky-blue mark) at the very left, before the back
+- LightCanvas logo (sky-blue mark) at the very left, before the back
   arrow… actually after the back arrow per the prototype. Order:
   back arrow · vertical divider · logo · breadcrumb.
 - Breadcrumb: `My shows / [project name] [pencil icon to rename]

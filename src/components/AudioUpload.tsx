@@ -32,8 +32,12 @@ export default function AudioUpload({ projectId, onUploaded }: AudioUploadProps)
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Upload failed");
+        let message = "Upload failed";
+        try {
+          const data = await res.json();
+          message = data.error || message;
+        } catch { /* response wasn't JSON */ }
+        throw new Error(message);
       }
 
       const song = await res.json();
