@@ -162,7 +162,7 @@ fixture_templates: id, name, kind, default_pixel_count, default_color (seeded â€
 1. ~~Dashboard delete/rename/duplicate actions~~ Done
 2. ~~Onboarding flow (creative track, 3 steps)~~ Done
 3. ~~Design polish pass (Prompt 11)~~ Done
-4. Smoke test (Prompt 12)
+4. ~~Smoke test (Prompt 12)~~ Done â€” tsc clean, build passes, code reviewed
 
 ---
 

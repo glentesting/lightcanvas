@@ -6,14 +6,17 @@ export async function POST(request: Request) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { decorating, lightCount } = body;
+  const validDecorating = ["house", "yard", "both"];
+  const decorating = validDecorating.includes(body.decorating) ? body.decorating : "house";
+  const lightCount = typeof body.lightCount === "number" && body.lightCount >= 100 && body.lightCount <= 10000
+    ? body.lightCount : 500;
 
   const client = await clerkClient();
   await client.users.updateUser(userId, {
     publicMetadata: {
       onboardingComplete: true,
-      decorating: decorating || "house",
-      lightCount: lightCount || 500,
+      decorating,
+      lightCount,
     },
   });
 

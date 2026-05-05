@@ -21,35 +21,42 @@ export default function OnboardingPage() {
   async function handleFinish() {
     setSubmitting(true);
 
-    // 1. Mark onboarding complete via Clerk metadata
-    await fetch("/api/onboarding", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ decorating, lightCount }),
-    });
-
-    // 2. If user uploaded audio, create a project with it
-    if (audioFile) {
-      const createRes = await fetch("/api/projects", {
+    try {
+      // 1. Mark onboarding complete via Clerk metadata
+      const onboardRes = await fetch("/api/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "My First Show" }),
+        body: JSON.stringify({ decorating, lightCount }),
       });
-      if (createRes.ok) {
-        const project = await createRes.json();
-
-        // Upload the audio file
-        const formData = new FormData();
-        formData.append("file", audioFile);
-        formData.append("projectId", project.id);
-        await fetch("/api/upload-audio", { method: "POST", body: formData });
-
-        router.push(`/project/${project.id}`);
-        return;
+      if (!onboardRes.ok) {
+        throw new Error("Failed to save onboarding preferences");
       }
-    }
 
-    router.push("/dashboard");
+      // 2. If user uploaded audio, create a project with it
+      if (audioFile) {
+        const createRes = await fetch("/api/projects", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "My First Show" }),
+        });
+        if (createRes.ok) {
+          const project = await createRes.json();
+
+          // Upload the audio file
+          const formData = new FormData();
+          formData.append("file", audioFile);
+          formData.append("projectId", project.id);
+          await fetch("/api/upload-audio", { method: "POST", body: formData });
+
+          router.push(`/project/${project.id}`);
+          return;
+        }
+      }
+
+      router.push("/dashboard");
+    } catch {
+      setSubmitting(false);
+    }
   }
 
   const lightLabels = [
