@@ -146,8 +146,8 @@ fixture_templates: id, name, kind, default_pixel_count, default_color (seeded â€
 4. **Storage RLS**: References `auth.jwt() ->> 'sub'` for Clerk JWT. Requires Supabase
    configured with Clerk as JWT issuer.
 
-5. **OneDrive conflict**: Project in `C:/Users/glenh/OneDrive/Lightshow`. OneDrive has
-   tried to delete node_modules. Long-term: move to `C:/Projects/Lightshow`.
+5. **Moved from OneDrive**: Project relocated to `C:/Users/glenh/Documents/Lightshow/AppRepo`
+   to avoid OneDrive sync conflicts with node_modules. Personal docs stay in parent folder.
 
 6. **Windows path issues**: Always `cd` to project folder first before any bash command.
 
@@ -207,7 +207,7 @@ v2 handoff covers docs 00â€“19. Currently up to Prompt 10 done; next is Prompt 1
 ## Claude Code Workflow
 
 ```bash
-cd "C:/Users/glenh/OneDrive/Lightshow"
+cd "C:/Users/glenh/Documents/Lightshow/AppRepo"
 claude
 ```
 
