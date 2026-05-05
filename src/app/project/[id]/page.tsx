@@ -218,24 +218,6 @@ export default function ProjectEditorPage() {
               </div>
             </SidebarSection>
 
-            {/* Edit Layout — navigation button, visually distinct */}
-            <div style={{ padding: "12px 10px", borderTop: "2px solid var(--line)", borderBottom: "1px solid var(--line)" }}>
-              <Link
-                href={`/project/${projectId}/layout`}
-                className="flex items-center gap-2.5 w-full h-9 px-3 rounded-lg text-xs font-semibold justify-start transition-colors"
-                style={{ background: "var(--panel)", border: "1px solid var(--line-2)", color: "var(--ink-2)" }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
-                  <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
-                </svg>
-                Edit Layout
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="ml-auto" style={{ opacity: 0.4 }}>
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </Link>
-            </div>
-
             <SidebarSection title="AI Actions">
               <div className="flex flex-col gap-1.5">
                 <button onClick={() => setShowAI(true)} className="flex items-center gap-2 w-full h-8 px-2.5 rounded-md text-xs font-medium justify-start transition-colors" style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)" }}>
@@ -257,7 +239,7 @@ export default function ProjectEditorPage() {
         <div ref={containerRef} className="flex-1 flex flex-col min-w-0 min-h-0">
           {/* Preview region */}
           <div style={{ height: `${splitPct}%`, minHeight: 120 }} className="flex flex-col min-h-0">
-            <PreviewPanel />
+            <PreviewPanel projectId={projectId} />
           </div>
 
           {/* Resizable divider */}

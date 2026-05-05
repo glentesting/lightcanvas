@@ -69,7 +69,7 @@ export default function LayoutPage() {
         <span className="text-sm font-semibold">{name || "Untitled"}</span>
         <span className="text-xs" style={{ color: "var(--ink-3)" }}>· Layout Editor</span>
       </header>
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 flex flex-col">
         <LayoutEditor />
       </div>
     </div>

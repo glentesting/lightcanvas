@@ -48,7 +48,11 @@ export async function analyzeAudio(file: File): Promise<AudioAnalysis> {
   }
 
   // --- BPM estimation via onset interval autocorrelation ---
-  const bpm = estimateBpm(onsets, duration);
+  let bpm = estimateBpm(onsets, duration);
+
+  // Tempo octave correction — common heuristic for double/half-time errors
+  if (bpm > 160) bpm = Math.round(bpm / 2);
+  if (bpm < 60) bpm = Math.round(bpm * 2);
 
   // --- Generate beat grid from BPM ---
   const beatInterval = 60 / bpm;

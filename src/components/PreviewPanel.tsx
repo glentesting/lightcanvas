@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { useTransportStore } from "@/lib/store/transport-store";
 import { renderFrame } from "@/lib/render/engine";
@@ -12,7 +13,7 @@ import House from "@/components/editor/house";
  * No transport controls — those live in WaveformViewer.
  * Uses ResizeObserver to scale House to fill available space.
  */
-export default function PreviewPanel() {
+export default function PreviewPanel({ projectId }: { projectId: string }) {
   const sequence = useEditorStore((s) => s.sequence);
   const fixtures = useEditorStore((s) => s.fixtures);
   const audio = useEditorStore((s) => s.audio);
@@ -82,6 +83,31 @@ export default function PreviewPanel() {
 
         {/* House — dynamically sized to fill container */}
         <House width={size.w} height={size.h} lights={lights} time={effectiveTime} />
+
+        {/* Edit Layout — floating overlay button */}
+        <Link
+          href={`/project/${projectId}/layout`}
+          className="absolute z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-[1.02]"
+          style={{
+            bottom: 12,
+            right: 12,
+            background: "rgba(255,255,255,0.88)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            border: "1px solid rgba(255,255,255,0.4)",
+            color: "var(--ink)",
+            boxShadow: "0 4px 12px rgba(0,0,0,.15)",
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
+          </svg>
+          Edit Layout
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ opacity: 0.5 }}>
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </Link>
       </div>
     </div>
   );
