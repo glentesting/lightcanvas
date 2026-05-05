@@ -82,6 +82,7 @@ fixture_templates: id, name, kind, default_pixel_count, default_color (seeded â€
 | `/` | Landing page |
 | `/sign-in`, `/sign-up` | Clerk auth |
 | `/dashboard` | Project list + create |
+| `/onboarding` | 3-step onboarding wizard |
 | `/project/[id]` | Editor (sidebar + tabs + timeline) |
 
 ---
@@ -119,7 +120,7 @@ fixture_templates: id, name, kind, default_pixel_count, default_color (seeded â€
 
 ### Not Started
 - ~~Dashboard: delete / rename / duplicate project actions not wired.~~ Done.
-- Onboarding flow â€” 3-step creative wizard for new users.
+- ~~Onboarding flow â€” 3-step creative wizard for new users.~~ Done.
 - Empty / loading / error states (per handoff doc 13).
 - Marquee selection on timeline â€” low priority.
 - Hardware Bridge desktop app (doc 11) â€” v2.
@@ -159,7 +160,7 @@ fixture_templates: id, name, kind, default_pixel_count, default_color (seeded â€
 ## What's Next (Priority Order)
 
 1. ~~Dashboard delete/rename/duplicate actions~~ Done
-2. Onboarding flow (creative track, 3 steps)
+2. ~~Onboarding flow (creative track, 3 steps)~~ Done
 3. Design polish pass (Prompt 11)
 4. Smoke test (Prompt 12)
 

@@ -108,7 +108,7 @@ Goal: working editor → export → runs in xLights. Everything below is require
 ### Onboarding & Polish
 | Feature | Status |
 |---------|--------|
-| 3-step onboarding wizard (creative track) | ❌ Not started |
+| 3-step onboarding wizard (creative track) | ✅ Done |
 | Empty / loading / error states (all screens) | ❌ Not started |
 | Design polish pass (match prototype exactly) | ⚠️ Partial |
 | Full smoke test (sign up → export) | ❌ Not started |

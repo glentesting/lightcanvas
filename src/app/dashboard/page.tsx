@@ -3,6 +3,7 @@
 import { useUser } from "@clerk/nextjs";
 import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useCallback } from "react";
 
 interface Project {
@@ -15,7 +16,8 @@ interface Project {
 }
 
 export default function DashboardPage() {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -25,6 +27,13 @@ export default function DashboardPage() {
   const [renameValue, setRenameValue] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Redirect to onboarding if not completed
+  useEffect(() => {
+    if (isLoaded && user && !user.publicMetadata?.onboardingComplete) {
+      router.push("/onboarding");
+    }
+  }, [isLoaded, user, router]);
 
   useEffect(() => {
     fetchProjects();
