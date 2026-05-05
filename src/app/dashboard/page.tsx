@@ -29,7 +29,9 @@ export default function DashboardPage() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Redirect to onboarding if not completed
+  // Skip if "from=onboarding" param is present (session may still be refreshing)
   useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("from") === "onboarding") return;
     if (isLoaded && user && !user.publicMetadata?.onboardingComplete) {
       router.push("/onboarding");
     }

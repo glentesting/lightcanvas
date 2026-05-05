@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "@clerk/nextjs";
 
 const DECORATING_OPTIONS = [
   { value: "house", label: "House", icon: "🏠", desc: "Rooflines, windows, arches" },
@@ -11,6 +12,7 @@ const DECORATING_OPTIONS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { session } = useSession();
   const [step, setStep] = useState(1);
   const [decorating, setDecorating] = useState("house");
   const [lightCount, setLightCount] = useState(500);
@@ -31,6 +33,9 @@ export default function OnboardingPage() {
       if (!onboardRes.ok) {
         throw new Error("Failed to save onboarding preferences");
       }
+
+      // Refresh Clerk session so dashboard sees updated publicMetadata
+      await session?.reload();
 
       // 2. If user uploaded audio, create a project with it
       if (audioFile) {
@@ -53,7 +58,7 @@ export default function OnboardingPage() {
         }
       }
 
-      router.push("/dashboard");
+      router.push("/dashboard?from=onboarding");
     } catch {
       setSubmitting(false);
     }
