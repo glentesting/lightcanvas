@@ -16,7 +16,11 @@
       "Bash(mkdir:*)",
       "Bash(npx next:*)",
       "Bash(cp:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(unzip -o \"Lightshow AI Design.zip\" house.jsx editor-layout.jsx editor-data.jsx -d design-ref)",
+      "Bash(python3 fix_editor.py)",
+      "Bash(rm fix_editor.py)",
+      "Bash(python3 -c ':*)"
     ]
   }
 }

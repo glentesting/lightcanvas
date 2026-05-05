@@ -7,9 +7,12 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import AudioUpload from "@/components/AudioUpload";
 import WaveformViewer from "@/components/WaveformViewer";
 import Timeline, { PaletteEffectChip, TimelineDndProvider, useTimelineShortcuts } from "@/components/Timeline";
+import LayoutEditor from "@/components/LayoutEditor";
+import PreviewPanel from "@/components/PreviewPanel";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
+import { createDefaultFixtures } from "@/lib/fixtures/defaults";
 import type { AudioAnalysis } from "@/lib/audio/types";
 import { EFFECT_COLORS, EFFECT_NAMES } from "@/lib/timeline/constants";
 import type { EffectId } from "@/lib/timeline/types";
@@ -46,7 +49,17 @@ export default function ProjectEditorPage() {
     fetch(`/api/projects/${projectId}`)
       .then((res) => res.json())
       .then((row) => {
-        loadProject(projectFromRow(row));
+        const project = projectFromRow(row);
+        // Upgrade legacy projects that have fewer than 6 fixtures
+        if (project.fixtures.length < 6) {
+          const defaults = createDefaultFixtures();
+          project.fixtures = defaults;
+          project.sequence = {
+            ...project.sequence,
+            tracks: defaults.map((f) => ({ id: f.id, kind: "fixture" as const })),
+          };
+        }
+        loadProject(project);
         setLoaded(true);
       });
   }, [projectId, loadProject]);
@@ -92,69 +105,66 @@ export default function ProjectEditorPage() {
           </svg>
         </Link>
         <div className="w-px h-5" style={{ background: "var(--line)" }} />
+        {/* Logo mark */}
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--accent)" }}>
+          <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
+        </svg>
+        {/* Breadcrumb */}
         <div className="flex items-center gap-1.5">
           <span className="text-xs" style={{ color: "var(--ink-3)" }}>My shows /</span>
           <span className="text-sm font-semibold">{name || "Untitled"}</span>
-        </div>
-
-        {/* Save status */}
-        <div className="ml-2">
+          <button className="p-0.5" style={{ color: "var(--ink-4)", background: "none", border: "none", cursor: "pointer" }} title="Rename">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </button>
           {saveStatus === "saving" && (
-            <span className="text-xs" style={{ color: "var(--ink-4)" }}>Saving...</span>
-          )}
-          {saveStatus === "saved" && (
-            <span className="text-xs" style={{ color: "var(--accent)" }}>Saved</span>
+            <span className="text-xs ml-1" style={{ color: "var(--ink-4)" }}>· saving...</span>
           )}
           {saveStatus === "error" && (
-            <span className="text-xs" style={{ color: "#d44" }}>Save failed</span>
+            <span className="text-xs ml-1" style={{ color: "#d44" }}>· unsaved</span>
           )}
         </div>
 
         <div className="flex-1" />
 
-        {/* Song info chip */}
+        {/* Song chip */}
         <div
           className="flex items-center gap-2 px-2.5 py-1 rounded-md text-xs"
           style={{ background: "var(--panel)", color: "var(--ink-3)" }}
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
           </svg>
-          <span>{audioFile || "No song uploaded"}</span>
+          <span>{audioFile || "No song"}</span>
+          {audioAnalysis && <span style={{ color: "var(--ink-4)" }}>· {Math.floor(audioAnalysis.duration / 60)}:{String(Math.floor(audioAnalysis.duration % 60)).padStart(2, "0")}</span>}
         </div>
 
+        {/* AI Actions with kbd hint */}
         <button
           className="inline-flex items-center gap-2 h-7 px-2.5 rounded-md text-xs font-medium transition-colors"
-          style={{
-            background: "var(--accent)",
-            color: "#fff",
-            border: "1px solid var(--accent)",
-          }}
+          style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
           </svg>
           AI Actions
+          <span className="inline-flex items-center justify-center px-1.5 rounded font-mono" style={{ height: 18, background: "var(--panel)", border: "1px solid var(--line)", color: "var(--ink-4)", fontSize: 10 }}>⌘K</span>
         </button>
 
+        {/* Save */}
         <button
           className="inline-flex items-center gap-2 h-7 px-2.5 rounded-md text-xs font-medium transition-colors"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--line)",
-            color: "var(--ink)",
-          }}
+          style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}
         >
           Save
         </button>
 
+        {/* Export (primary) */}
         <button
           className="inline-flex items-center gap-2 h-7 px-2.5 rounded-md text-xs font-medium transition-colors"
-          style={{
-            background: "var(--accent)",
-            color: "#fff",
-            border: "1px solid var(--accent)",
-          }}
+          style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)" }}
         >
           Export
         </button>
@@ -165,7 +175,7 @@ export default function ProjectEditorPage() {
       {/* Main body */}
       <TimelineDndProvider>
       <div className="flex flex-1 min-h-0">
-        {/* Left Sidebar */}
+        {/* Left Sidebar — tab-aware */}
         <aside
           className="flex flex-col shrink-0 overflow-hidden"
           style={{
@@ -175,92 +185,83 @@ export default function ProjectEditorPage() {
           }}
         >
           <div className="flex-1 overflow-y-auto">
-            {/* Song Upload Section */}
-            <SidebarSection title="Song Upload">
+            {/* Song — always visible */}
+            <SidebarSection title="Song">
               <AudioUpload projectId={projectId} onUploaded={handleAudioUploaded} />
             </SidebarSection>
 
-            {/* Fixtures Section */}
-            <SidebarSection title="Fixtures">
-              <p className="text-xs mb-2" style={{ color: "var(--ink-3)" }}>
-                {fixtures.length} fixture{fixtures.length !== 1 ? "s" : ""} defined
-              </p>
-              {fixtures.map((f) => (
-                <div
-                  key={f.id}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs mb-0.5"
-                  style={{ color: "var(--ink-2)" }}
-                >
-                  <span
-                    className="w-4 h-4 rounded flex items-center justify-center text-xs shrink-0"
-                    style={{ background: "var(--accent-50)", color: "var(--accent-ink)", fontSize: 9 }}
+            {/* Fixtures — on timeline and layout tabs */}
+            {(tab === "timeline" || tab === "layout") && (
+              <SidebarSection title="Props">
+                <p className="text-xs mb-2" style={{ color: "var(--ink-3)" }}>
+                  {fixtures.length} props · {fixtures.reduce((s, f) => s + f.pixelCount, 0)} px
+                </p>
+                {fixtures.map((f) => (
+                  <div
+                    key={f.id}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs mb-0.5 hover:bg-[var(--panel)] transition-colors cursor-default"
+                    style={{ color: "var(--ink-2)" }}
                   >
-                    {f.kind[0].toUpperCase()}
-                  </span>
-                  <span className="truncate flex-1">{f.name}</span>
-                  <span className="text-xs" style={{ color: "var(--ink-4)" }}>{f.pixelCount}px</span>
-                </div>
-              ))}
-            </SidebarSection>
-
-            {/* Effects Palette */}
-            <SidebarSection title="Effects">
-              <p className="text-xs mb-2" style={{ color: "var(--ink-3)" }}>
-                Drag onto a track
-              </p>
-              <div className="grid grid-cols-2 gap-1">
-                {(Object.keys(EFFECT_NAMES) as EffectId[]).map((id) => (
-                  <PaletteEffectChip
-                    key={id}
-                    effectId={id}
-                    name={EFFECT_NAMES[id]}
-                    color={EFFECT_COLORS[id]}
-                  />
+                    <span
+                      className="rounded flex items-center justify-center shrink-0"
+                      style={{ width: 18, height: 18, background: "var(--accent-50)", color: "var(--accent-ink)" }}
+                    >
+                      <FixtureKindIcon kind={f.kind} />
+                    </span>
+                    <span className="truncate flex-1">{f.name}</span>
+                  </div>
                 ))}
-              </div>
-            </SidebarSection>
+              </SidebarSection>
+            )}
 
-            {/* AI Actions */}
+            {/* Effects palette — only on Audio Timeline tab */}
+            {tab === "timeline" && (
+              <SidebarSection title="Effects">
+                <p className="text-xs mb-2" style={{ color: "var(--ink-3)" }}>Drag onto a track</p>
+                <div className="grid grid-cols-2 gap-1">
+                  {(Object.keys(EFFECT_NAMES) as EffectId[]).map((id) => (
+                    <PaletteEffectChip
+                      key={id}
+                      effectId={id}
+                      name={EFFECT_NAMES[id]}
+                      color={EFFECT_COLORS[id]}
+                    />
+                  ))}
+                </div>
+              </SidebarSection>
+            )}
+
+            {/* AI Actions — always visible */}
             <SidebarSection title="AI Actions">
               <div className="flex flex-col gap-1.5">
                 <button
-                  className="flex items-center gap-2 w-full h-7 px-2.5 rounded-md text-xs font-medium text-left transition-colors"
-                  style={{
-                    background: "var(--accent)",
-                    color: "#fff",
-                    border: "1px solid var(--accent)",
-                  }}
+                  className="flex items-center gap-2 w-full h-8 px-2.5 rounded-md text-xs font-medium justify-start transition-colors"
+                  style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)" }}
                 >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
+                  </svg>
                   Generate sequence
                 </button>
                 <button
-                  className="flex items-center gap-2 w-full h-7 px-2.5 rounded-md text-xs font-medium text-left transition-colors"
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--line)",
-                    color: "var(--ink)",
-                  }}
+                  className="flex items-center gap-2 w-full h-7 px-2.5 rounded-md text-xs font-medium justify-start transition-colors"
+                  style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}
                 >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12h4l3-9 4 18 3-9h4" /></svg>
                   Analyze audio
                 </button>
                 <button
-                  className="flex items-center gap-2 w-full h-7 px-2.5 rounded-md text-xs font-medium text-left transition-colors"
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--line)",
-                    color: "var(--ink)",
-                  }}
+                  className="flex items-center gap-2 w-full h-7 px-2.5 rounded-md text-xs font-medium justify-start transition-colors"
+                  style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}
                 >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
                   Refine timing
                 </button>
                 <button
-                  className="flex items-center gap-2 w-full h-7 px-2.5 rounded-md text-xs font-medium text-left transition-colors"
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--line)",
-                    color: "var(--ink)",
-                  }}
+                  className="flex items-center gap-2 w-full h-7 px-2.5 rounded-md text-xs font-medium justify-start transition-colors"
+                  style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}
                 >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="13.5" cy="6.5" r="2.5" /><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
                   Generate palette
                 </button>
               </div>
@@ -312,6 +313,20 @@ export default function ProjectEditorPage() {
       </div>
       </TimelineDndProvider>
     </div>
+  );
+}
+
+/* ─── Fixture Kind Icon (tiny SVG for sidebar) ─────────── */
+function FixtureKindIcon({ kind }: { kind: string }) {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      {kind === "roofline" && <line x1="2" y1="12" x2="22" y2="12" />}
+      {kind === "window-outline" && <rect x="4" y="6" width="16" height="12" rx="1" />}
+      {kind === "mega-tree" && <><polygon points="12,2 3,18 21,18" /><line x1="12" y1="18" x2="12" y2="22" /></>}
+      {kind === "mini-tree" && <><polygon points="12,4 5,17 19,17" /><line x1="12" y1="17" x2="12" y2="21" /></>}
+      {kind === "arch" && <path d="M4 20 Q12 2 20 20" />}
+      {kind === "bush" && <ellipse cx="12" cy="13" rx="9" ry="6" />}
+    </svg>
   );
 }
 
@@ -434,198 +449,5 @@ function TimelinePanel({ audioUrl, analysis }: { audioUrl: string | null; analys
 
 /* ─── Layout Panel ───────────────────────────────────────────── */
 function LayoutPanel() {
-  const fixtures = useEditorStore((s) => s.fixtures);
-
-  return (
-    <div className="flex-1 flex min-h-0">
-      {/* Canvas */}
-      <div className="flex-1 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #f7f6f2, #ecebe6)" }}>
-        {/* Tool strip */}
-        <div
-          className="absolute top-3.5 left-1/2 -translate-x-1/2 flex gap-0.5 p-1 rounded-lg z-10"
-          style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow)" }}
-        >
-          {["Select", "Draw", "Rect", "Circle"].map((t) => (
-            <button
-              key={t}
-              className="w-8 h-7 rounded-md flex items-center justify-center text-xs font-medium"
-              style={{ background: "transparent", color: "var(--ink-2)", border: "none", cursor: "pointer" }}
-            >
-              {t[0]}
-            </button>
-          ))}
-        </div>
-
-        {/* Canvas empty state */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <div
-              className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-3"
-              style={{ background: "var(--accent-50)", color: "var(--accent-ink)" }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-            </div>
-            <p className="text-sm font-medium mb-1" style={{ color: "var(--ink-2)" }}>
-              Upload a house photo
-            </p>
-            <p className="text-xs" style={{ color: "var(--ink-4)" }}>
-              Then draw fixtures on top to define your light layout
-            </p>
-          </div>
-        </div>
-
-        {/* Zoom control */}
-        <div
-          className="absolute bottom-3.5 right-3.5 flex items-center gap-1 p-1 rounded-lg"
-          style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}
-        >
-          <button className="w-6 h-6 flex items-center justify-center rounded text-xs" style={{ color: "var(--ink-3)" }}>-</button>
-          <span className="text-xs font-semibold px-1.5" style={{ color: "var(--ink-2)", fontVariantNumeric: "tabular-nums" }}>100%</span>
-          <button className="w-6 h-6 flex items-center justify-center rounded text-xs" style={{ color: "var(--ink-3)" }}>+</button>
-        </div>
-      </div>
-
-      {/* Right panel — fixture list */}
-      <div
-        className="flex flex-col shrink-0"
-        style={{ width: 260, borderLeft: "1px solid var(--line)", background: "var(--surface)" }}
-      >
-        <div className="p-3.5 pb-2.5" style={{ borderBottom: "1px solid var(--line)" }}>
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-sm font-semibold">Fixtures</span>
-            <span className="inline-flex items-center px-2 rounded-full text-xs" style={{ height: 20, background: "var(--panel)", color: "var(--ink-3)", border: "1px solid var(--line)" }}>
-              {fixtures.length}
-            </span>
-          </div>
-          <p className="text-xs" style={{ color: "var(--ink-3)" }}>Click to select. Drag to reorder.</p>
-        </div>
-        <div className="flex-1 overflow-y-auto p-2">
-          {fixtures.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-xs text-center" style={{ color: "var(--ink-4)" }}>
-                No fixtures yet. Use the draw tools to add fixtures to your layout.
-              </p>
-            </div>
-          ) : (
-            fixtures.map((f) => (
-              <div
-                key={f.id}
-                className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg mb-0.5 cursor-pointer"
-                style={{ border: "1px solid transparent" }}
-              >
-                <span
-                  className="w-6 h-6 rounded-md flex items-center justify-center text-xs shrink-0"
-                  style={{ background: "var(--accent-50)", color: "var(--accent-ink)" }}
-                >
-                  {f.kind[0].toUpperCase()}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium truncate">{f.name}</div>
-                  <div className="text-xs" style={{ color: "var(--ink-4)" }}>{f.pixelCount} px</div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-        {/* Properties */}
-        <div className="p-3.5" style={{ borderTop: "1px solid var(--line)", background: "var(--panel)" }}>
-          <div className="text-xs font-semibold uppercase tracking-wide mb-2.5" style={{ color: "var(--ink-3)", letterSpacing: "0.06em" }}>
-            Properties
-          </div>
-          <p className="text-xs" style={{ color: "var(--ink-4)" }}>Select a fixture to edit properties</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Preview Panel ──────────────────────────────────────────── */
-function PreviewPanel() {
-  return (
-    <div className="flex-1 flex flex-col min-h-0" style={{ background: "var(--bg)" }}>
-      {/* Preview canvas */}
-      <div
-        className="flex-1 flex items-center justify-center relative"
-        style={{ background: "linear-gradient(135deg, #f0eee9, #e6e3dc)" }}
-      >
-        {/* Status chips */}
-        <div className="absolute top-4 left-4 flex gap-2">
-          <span className="inline-flex items-center gap-1.5 px-2 rounded-full text-xs" style={{ height: 22, background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink-3)" }}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--ink-4)" }} />
-            Paused
-          </span>
-          <span className="inline-flex items-center gap-1.5 px-2 rounded-full text-xs" style={{ height: 22, background: "var(--panel)", border: "1px solid var(--line)", color: "var(--ink-3)" }}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--ink-4)" }} />
-            0 effects active
-          </span>
-        </div>
-
-        {/* Fullscreen button */}
-        <button
-          className="absolute top-4 right-4 inline-flex items-center gap-2 px-2.5 rounded-md text-xs font-medium"
-          style={{ height: 28, background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}
-        >
-          Fullscreen
-        </button>
-
-        {/* Preview empty state */}
-        <div className="text-center">
-          <div
-            className="w-20 h-20 rounded-xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow)" }}
-          >
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: "var(--ink-3)" }}>
-              <circle cx="12" cy="12" r="10" />
-              <polygon points="10 8 16 12 10 16 10 8" />
-            </svg>
-          </div>
-          <p className="text-sm font-medium mb-1" style={{ color: "var(--ink-2)" }}>
-            Preview will appear here
-          </p>
-          <p className="text-xs" style={{ color: "var(--ink-4)" }}>
-            Add a layout and create a sequence to see your light show in action
-          </p>
-        </div>
-      </div>
-
-      {/* Transport controls */}
-      <div
-        className="flex flex-col gap-2 px-4 py-3 shrink-0"
-        style={{ height: 80, borderTop: "1px solid var(--line)", background: "var(--surface)" }}
-      >
-        <div className="flex items-center gap-2.5">
-          <button className="inline-flex items-center justify-center w-7 h-7 rounded-md" style={{ border: "1px solid var(--line)", background: "var(--surface)" }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="19 20 9 12 19 4 19 20" /><line x1="5" y1="19" x2="5" y2="5" /></svg>
-          </button>
-          <button
-            className="inline-flex items-center justify-center w-9 h-8 rounded-md"
-            style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)" }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3" /></svg>
-          </button>
-          <button className="inline-flex items-center justify-center w-7 h-7 rounded-md" style={{ border: "1px solid var(--line)", background: "var(--surface)" }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="12" height="16" rx="1" /></svg>
-          </button>
-          <div
-            className="px-2.5 py-1 rounded-md text-xs font-mono"
-            style={{ background: "var(--panel)", color: "var(--ink-2)", fontVariantNumeric: "tabular-nums", minWidth: 130 }}
-          >
-            00:00.00 <span style={{ color: "var(--ink-4)" }}>/ 00:00</span>
-          </div>
-          <div className="flex-1" />
-          <span className="inline-flex items-center gap-1.5 px-2 rounded-full text-xs" style={{ height: 22, background: "var(--panel)", color: "var(--ink-3)", border: "1px solid var(--line)" }}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--ink-4)" }} />
-            1x
-          </span>
-        </div>
-        {/* Scrubber bar */}
-        <div className="relative rounded cursor-pointer" style={{ height: 18, background: "var(--panel)" }}>
-          <div className="absolute left-0 top-1 bottom-1 w-0.5 rounded" style={{ background: "var(--accent)" }} />
-        </div>
-      </div>
-    </div>
-  );
+  return <LayoutEditor />;
 }

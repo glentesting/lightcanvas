@@ -1,15 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
-
-const DEFAULT_FIXTURES = [
-  { id: crypto.randomUUID(), kind: "roofline", name: "Roofline strip", pixelCount: 220, startChannel: 1 },
-  { id: crypto.randomUUID(), kind: "mega-tree", name: "Mega tree", pixelCount: 480, startChannel: 661 },
-  { id: crypto.randomUUID(), kind: "mini-tree", name: "Mini tree", pixelCount: 50, startChannel: 2101 },
-  { id: crypto.randomUUID(), kind: "arch", name: "Arch", pixelCount: 50, startChannel: 2251 },
-  { id: crypto.randomUUID(), kind: "bush", name: "Bush wrap", pixelCount: 60, startChannel: 2401 },
-  { id: crypto.randomUUID(), kind: "window-outline", name: "Window outline", pixelCount: 32, startChannel: 2581 },
-];
+import { createDefaultFixtures } from "@/lib/fixtures/defaults";
 
 export async function GET() {
   const { userId } = await auth();
@@ -35,7 +27,7 @@ export async function POST(request: Request) {
 
   if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
-  const fixtures = DEFAULT_FIXTURES.map((f) => ({ ...f, id: crypto.randomUUID() }));
+  const fixtures = createDefaultFixtures();
   const tracks = fixtures.map((f) => ({ id: f.id, kind: "fixture" as const }));
 
   const supabase = createServiceClient();

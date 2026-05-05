@@ -99,15 +99,29 @@ Also: `fixture_templates` table with 6 built-in fixture types.
 - [x] Timeline: right-click context menu (Duplicate, Delete, Select All)
 - [x] Timeline: parameter panel (color, intensity, speed, easing) for selected block
 
+- [x] Layout editor: stylized house illustration from prototype
+- [x] Layout editor: draggable prop shapes on canvas (roofline, tree, arch, bush, window)
+- [x] Layout editor: Add Prop dialog with 6 templates, auto-naming, channel allocation
+- [x] Layout editor: properties panel (pixels, universe, start ch, direction)
+- [x] Layout editor: toolstrip (Select, Pen, Rect, Circle, Snap toggle, Freeform/Grid)
+- [x] Layout → Timeline connection (adding props creates timeline tracks)
+- [x] Preview engine: 10 effect functions (twinkle, chase, fade, strobe, sparkle, wave, pulse, wash, meteor, firework)
+- [x] Preview engine: render engine (sequence + fixtures + t → pixel colors)
+- [x] Preview engine: House with animated lights, transport, scrubber
+- [x] Default 6-prop starter pack (988 pixels, pre-placed on house)
+- [x] Tab-aware sidebar (Props/Effects only shown on relevant tabs)
+- [x] UI rename: Fixtures → Props, Sequence → Effects
+- [x] Top bar polish: logo, breadcrumb, pencil rename, ⌘K hint, song chip with duration
+- [x] AI Actions visual hierarchy (primary Generate + secondary outlined buttons)
+
+### Known Bug
+- [ ] **Preview tab not rendering** — The House SVG and transport controls exist in the component but nothing visually appears on the Preview tab. Suspected flex layout collapse or runtime error. Needs browser DevTools debugging (check computed height + console errors). SVG gradient ID collision was fixed but issue persists.
+
 ### Not Started
-- [ ] Timeline: marquee rectangle selection (drag on empty area) — low priority
-- [ ] Layout view (place fixtures on house SVG)
-- [ ] Preview engine (render pixels per fixture at time t)
-- [ ] AI panel (mock provider, generate-from-music)
+- [ ] AI panel (mock provider, generate-from-music, streamed patches)
 - [ ] Export (Lumen JSON, xLights .xsq, WebM video)
 - [ ] Onboarding flow
-- [ ] Custom house SVG upload
-- [ ] Fixture add/remove UI in editor
+- [ ] Timeline: marquee rectangle selection — low priority
 
 ## Known Issues / Quirks
 
