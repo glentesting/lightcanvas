@@ -1,26 +1,64 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { createServiceClient } from "@/lib/supabase";
+import { projectFromRow } from "@/types/domain";
+import { exportLightCanvasJson } from "@/lib/exports/lightcanvas-json";
+import { exportXlights } from "@/lib/exports/xlights";
 
 export async function POST(request: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { sequenceId, format } = body;
+  const { projectId, format } = body;
 
-  if (!sequenceId) {
-    return NextResponse.json({ error: "sequenceId required" }, { status: 400 });
+  if (!projectId) {
+    return NextResponse.json({ error: "projectId required" }, { status: 400 });
   }
 
-  // TODO: Implement real export logic
-  // This would fetch the sequence + effect blocks, convert them to the target
-  // hardware format (e.g., xLights FSEQ, Vixen sequence, DMX, or custom format),
-  // save the file to Supabase storage, and return the download URL
-  const dummyResponse = {
-    downloadUrl: `https://placeholder.storage/exports/${sequenceId}.${format || "fseq"}`,
-    format: format || "fseq",
-    message: "Export generated successfully (stub)",
-  };
+  if (!format || !["lightcanvas-json", "xlights"].includes(format)) {
+    return NextResponse.json(
+      { error: "format must be 'lightcanvas-json' or 'xlights'" },
+      { status: 400 }
+    );
+  }
 
-  return NextResponse.json(dummyResponse);
+  const supabase = createServiceClient();
+  const { data: row, error } = await supabase
+    .from("projects")
+    .select("*")
+    .eq("id", projectId)
+    .eq("owner_id", userId)
+    .single();
+
+  if (error || !row) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+
+  const project = projectFromRow(row);
+
+  if (format === "lightcanvas-json") {
+    const blob = exportLightCanvasJson(project);
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    return new NextResponse(buffer, {
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Disposition": `attachment; filename="${project.name || "project"}.lightcanvas.json"`,
+      },
+    });
+  }
+
+  if (format === "xlights") {
+    const frameRate = body.frameRate === 40 ? 40 : 20;
+    const blob = exportXlights(project, { frameRate });
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    return new NextResponse(buffer, {
+      headers: {
+        "Content-Type": "application/xml",
+        "Content-Disposition": `attachment; filename="${project.name || "project"}.xsq"`,
+      },
+    });
+  }
+
+  return NextResponse.json({ error: "Unknown format" }, { status: 400 });
 }

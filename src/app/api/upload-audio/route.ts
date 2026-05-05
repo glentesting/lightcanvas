@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   // Upload to Supabase Storage
-  const bucket = "songs"; // Use existing bucket; switch to "lumen-audio" once created
+  const bucket = "songs"; // Use existing bucket; switch to "lightcanvas-audio" once created
   const fileExt = file.name.split(".").pop();
   const filePath = `${userId}/${projectId}/${Date.now()}.${fileExt}`;
 

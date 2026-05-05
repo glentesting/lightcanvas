@@ -10,6 +10,7 @@ import Timeline, { PaletteEffectChip, TimelineDndProvider, useTimelineShortcuts 
 import LayoutEditor from "@/components/LayoutEditor";
 import PreviewPanel from "@/components/PreviewPanel";
 import AIPanel from "@/components/AIPanel";
+import ExportDialog from "@/components/ExportDialog";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
@@ -25,6 +26,7 @@ export default function ProjectEditorPage() {
   const projectId = params.id as string;
   const [tab, setTab] = useState<Tab>("timeline");
   const [showAI, setShowAI] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const loadedRef = useRef(false);
 
@@ -166,6 +168,7 @@ export default function ProjectEditorPage() {
 
         {/* Export (primary) */}
         <button
+          onClick={() => setShowExport(true)}
           className="inline-flex items-center gap-2 h-7 px-2.5 rounded-md text-xs font-medium transition-colors"
           style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)" }}
         >
@@ -274,7 +277,7 @@ export default function ProjectEditorPage() {
         </aside>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
           {/* Tab bar */}
           <div
             className="flex items-end gap-0.5 px-3.5 shrink-0"
@@ -319,6 +322,9 @@ export default function ProjectEditorPage() {
 
       {/* AI Panel (slides in from right) */}
       <AIPanel open={showAI} onClose={() => setShowAI(false)} />
+
+      {/* Export Dialog */}
+      <ExportDialog open={showExport} onClose={() => setShowExport(false)} />
     </div>
   );
 }
