@@ -18,6 +18,7 @@ export function useAutosave(projectId: string) {
         groups: state.groups,
         sequence: state.sequence,
         houseTemplate: state.houseTemplate,
+        houseCustomSvg: state.houseCustomSvg,
       }),
       (slice) => {
         const serialized = JSON.stringify(slice);

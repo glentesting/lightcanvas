@@ -73,7 +73,7 @@ Goal: working editor → export → runs in xLights. Everything below is require
 | Toolstrip (Select, Pen, Rect, Circle, Snap) | ✅ Done |
 | Freeform / Grid snap toggle | ✅ Done |
 | Layout → Timeline connection | ✅ Done |
-| Upload custom house photo | ❌ Not started |
+| Upload custom house photo | ✅ Done |
 
 ### Preview Engine
 | Feature | Status |

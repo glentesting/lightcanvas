@@ -44,6 +44,7 @@ export interface EditorState {
   deleteFixture: (id: string) => void;
   reorderTracks: (fromIndex: number, toIndex: number) => void;
 
+  setHousePhoto: (url: string | undefined) => void;
   setSelection: (ids: string[], mode?: "replace" | "add" | "toggle") => void;
   clearSelection: () => void;
   setSaveStatus: (status: EditorState["saveStatus"]) => void;
@@ -179,6 +180,11 @@ export const useEditorStore = create<EditorState>()(
           set((state) => {
             const [track] = state.sequence.tracks.splice(fromIndex, 1);
             state.sequence.tracks.splice(toIndex, 0, track);
+          }),
+
+        setHousePhoto: (url: string | undefined) =>
+          set((state) => {
+            state.houseCustomSvg = url;
           }),
 
         setSelection: (ids: string[], mode: "replace" | "add" | "toggle" = "replace") =>

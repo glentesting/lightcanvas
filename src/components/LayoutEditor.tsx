@@ -21,11 +21,16 @@ export default function LayoutEditor() {
   const addFixture = useEditorStore((s) => s.addFixture);
   const updateFixture = useEditorStore((s) => s.updateFixture);
   const deleteFixture = useEditorStore((s) => s.deleteFixture);
+  const houseCustomSvg = useEditorStore((s) => s.houseCustomSvg);
+  const setHousePhoto = useEditorStore((s) => s.setHousePhoto);
+  const projectId = useEditorStore((s) => s.projectId);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{ id: string; startMX: number; startMY: number; origX: number; origY: number } | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const selected = fixtures.find((f) => f.id === selectedId) ?? null;
 
@@ -76,14 +81,70 @@ export default function LayoutEditor() {
     }
   }, []);
 
+  const handlePhotoUpload = useCallback(async (file: File) => {
+    setUploadingPhoto(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("projectId", projectId);
+    try {
+      const res = await fetch("/api/upload-house-photo", { method: "POST", body: formData });
+      if (res.ok) {
+        const { url } = await res.json();
+        setHousePhoto(url);
+      }
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }, [projectId, setHousePhoto]);
+
   return (
     <div className="flex-1 flex min-h-0">
+      {/* Hidden file input for house photo */}
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handlePhotoUpload(f);
+          e.target.value = "";
+        }}
+      />
+
       {/* Canvas */}
       <div className="flex-1 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #f7f6f2, #ecebe6)" }}>
+        {/* Replace photo button */}
+        <div className="absolute top-3 right-3 z-20 flex gap-1.5">
+          {houseCustomSvg && (
+            <button
+              onClick={() => setHousePhoto(undefined)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors"
+              style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink-3)" }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              Remove photo
+            </button>
+          )}
+          <button
+            onClick={() => photoInputRef.current?.click()}
+            disabled={uploadingPhoto}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors"
+            style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            {uploadingPhoto ? "Uploading..." : houseCustomSvg ? "Replace photo" : "Upload house photo"}
+          </button>
+        </div>
+
         {/* House + interactive prop overlay */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div style={{ position: "relative", borderRadius: 6, overflow: "hidden", boxShadow: "0 8px 40px rgba(20,22,28,.15)" }}>
-            <House width={720} height={420} id="layout-house" />
+            {houseCustomSvg ? (
+              <img src={houseCustomSvg} alt="Custom house" width={720} height={420} style={{ width: 720, height: 420, objectFit: "cover" }} />
+            ) : (
+              <House width={720} height={420} id="layout-house" />
+            )}
             {/* Interactive prop overlay */}
             <svg
               ref={svgRef}
