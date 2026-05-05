@@ -118,7 +118,7 @@ fixture_templates: id, name, kind, default_pixel_count, default_color (seeded �
 - Export API route: server-side JSON and xLights export with auth + Content-Disposition
 
 ### Not Started
-- Dashboard: delete / rename / duplicate project actions not wired.
+- ~~Dashboard: delete / rename / duplicate project actions not wired.~~ Done.
 - Onboarding flow — 3-step creative wizard for new users.
 - Empty / loading / error states (per handoff doc 13).
 - Marquee selection on timeline — low priority.
@@ -158,7 +158,7 @@ fixture_templates: id, name, kind, default_pixel_count, default_color (seeded �
 
 ## What's Next (Priority Order)
 
-1. Dashboard delete/rename/duplicate actions
+1. ~~Dashboard delete/rename/duplicate actions~~ Done
 2. Onboarding flow (creative track, 3 steps)
 3. Design polish pass (Prompt 11)
 4. Smoke test (Prompt 12)
@@ -174,7 +174,7 @@ v2 handoff covers docs 00–19. Currently up to Prompt 10 done; next is Prompt 1
 |-----|--------|
 | 00-architecture.md | Done |
 | 01-supabase.md | Done |
-| 02-projects-and-dashboard.md | Partial — CRUD missing delete/rename/dup |
+| 02-projects-and-dashboard.md | Done — delete/rename/duplicate wired |
 | 03-editor-shell.md | Done |
 | 04-audio-engine.md | Done |
 | 05-timeline.md | Done |

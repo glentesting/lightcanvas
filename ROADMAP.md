@@ -21,9 +21,9 @@ Goal: working editor → export → runs in xLights. Everything below is require
 |---------|--------|
 | Project list with cards | ✅ Done |
 | Create new project (dialog) | ✅ Done |
-| Delete project | ❌ Not started |
-| Rename project | ❌ Not started |
-| Duplicate project | ❌ Not started |
+| Delete project | ✅ Done |
+| Rename project | ✅ Done |
+| Duplicate project | ✅ Done |
 
 ### Editor Shell
 | Feature | Status |
