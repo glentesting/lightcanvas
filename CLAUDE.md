@@ -161,7 +161,7 @@ fixture_templates: id, name, kind, default_pixel_count, default_color (seeded �
 
 1. ~~Dashboard delete/rename/duplicate actions~~ Done
 2. ~~Onboarding flow (creative track, 3 steps)~~ Done
-3. Design polish pass (Prompt 11)
+3. ~~Design polish pass (Prompt 11)~~ Done
 4. Smoke test (Prompt 12)
 
 ---
@@ -183,7 +183,7 @@ v2 handoff covers docs 00–19. Currently up to Prompt 10 done; next is Prompt 1
 | 07-preview-engine.md | Done (rendering bug fixed) |
 | 08-ai-panel.md | Done (mock provider) |
 | 09-exports.md | Done — LightCanvas JSON, xLights .xsq, WebM video |
-| 10-design-system.md | Partial — no full polish pass yet |
+| 10-design-system.md | Done — fonts, tokens, polish applied |
 | 11-hardware-bridge.md | Not started — v2 |
 | 12-onboarding-hardware-setup.md | Not started — v2 |
 | 13-states-empty-loading-error.md | Not started |

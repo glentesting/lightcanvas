@@ -122,7 +122,7 @@ export default function DashboardPage() {
         className="px-6 py-3.5 flex items-center justify-between"
         style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)" }}
       >
-        <h1 className="text-lg font-bold">LightShow AI</h1>
+        <h1 className="text-lg font-bold" style={{ fontFamily: "var(--font-display)" }}>LightShow AI</h1>
         <div className="flex items-center gap-4">
           <span className="text-sm" style={{ color: "var(--ink-3)" }}>
             {user?.firstName || user?.emailAddresses[0]?.emailAddress}
