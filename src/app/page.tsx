@@ -24,7 +24,7 @@ export default function Home() {
         className="text-5xl font-semibold mb-3 tracking-tight"
         style={{ fontFamily: "var(--font-display)" }}
       >
-        LightShow AI
+        LightCanvas
       </h1>
       <p className="text-base mb-8 text-center max-w-md" style={{ color: "var(--ink-3)" }}>
         Create stunning synchronized light shows with AI-assisted sequencing.

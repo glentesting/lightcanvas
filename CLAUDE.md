@@ -1,4 +1,4 @@
-# LightShow AI — Claude Code Briefing
+# LightCanvas — Claude Code Briefing
 
 ## What This Is
 

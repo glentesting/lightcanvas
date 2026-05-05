@@ -17,7 +17,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LightShow AI",
+  title: "LightCanvas",
   description: "Create stunning light shows with AI-assisted sequencing",
 };
 

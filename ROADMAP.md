@@ -1,4 +1,4 @@
-# LightShow AI — Full Roadmap
+# LightCanvas — Full Roadmap
 
 Last updated: May 2026
 
