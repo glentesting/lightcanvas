@@ -96,16 +96,18 @@ export default function ProjectEditorPage() {
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     draggingRef.current = true;
+    let lastPct = splitPct;
     const onMove = (ev: MouseEvent) => {
       if (!draggingRef.current || !containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
       const pct = ((ev.clientY - rect.top) / rect.height) * 100;
-      const clamped = Math.max(15, Math.min(70, pct));
+      const clamped = Math.max(20, Math.min(70, pct));
+      lastPct = clamped;
       setSplitPct(clamped);
     };
     const onUp = () => {
       draggingRef.current = false;
-      localStorage.setItem(STORAGE_KEY, String(splitPct));
+      localStorage.setItem(STORAGE_KEY, String(lastPct));
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
     };
@@ -216,18 +218,21 @@ export default function ProjectEditorPage() {
               </div>
             </SidebarSection>
 
-            {/* Edit Layout button */}
-            <div style={{ borderBottom: "1px solid var(--line)", padding: "10px 10px" }}>
+            {/* Edit Layout — navigation button, visually distinct */}
+            <div style={{ padding: "12px 10px", borderTop: "2px solid var(--line)", borderBottom: "1px solid var(--line)" }}>
               <Link
                 href={`/project/${projectId}/layout`}
-                className="flex items-center gap-2 w-full h-8 px-2.5 rounded-md text-xs font-medium justify-start transition-colors"
-                style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}
+                className="flex items-center gap-2.5 w-full h-9 px-3 rounded-lg text-xs font-semibold justify-start transition-colors"
+                style={{ background: "var(--panel)", border: "1px solid var(--line-2)", color: "var(--ink-2)" }}
               >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <path d="M3 9h18" /><path d="M9 21V9" />
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
                 </svg>
                 Edit Layout
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="ml-auto" style={{ opacity: 0.4 }}>
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
               </Link>
             </div>
 
@@ -258,10 +263,17 @@ export default function ProjectEditorPage() {
           {/* Resizable divider */}
           <div
             onMouseDown={handleDividerMouseDown}
-            className="shrink-0 flex items-center justify-center cursor-row-resize group"
-            style={{ height: 6, background: "var(--line)", borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)" }}
+            className="shrink-0 flex items-center justify-center cursor-row-resize group transition-colors"
+            style={{ height: 10, background: "var(--panel-2)", borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "color-mix(in oklab, var(--accent), transparent 60%)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--panel-2)"; }}
           >
-            <div className="w-8 h-1 rounded-full group-hover:bg-[var(--accent)]" style={{ background: "var(--ink-4)", opacity: 0.4 }} />
+            {/* Grip icon — three horizontal lines */}
+            <div className="flex flex-col gap-[2px] items-center">
+              <div className="w-6 h-[2px] rounded-full" style={{ background: "var(--ink-4)", opacity: 0.5 }} />
+              <div className="w-4 h-[2px] rounded-full" style={{ background: "var(--ink-4)", opacity: 0.5 }} />
+              <div className="w-6 h-[2px] rounded-full" style={{ background: "var(--ink-4)", opacity: 0.5 }} />
+            </div>
           </div>
 
           {/* Timeline region */}
