@@ -81,14 +81,14 @@ export default function PreviewPanel() {
   ).length;
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
-      {/* Preview canvas */}
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      {/* Preview canvas — uses 100% of available height */}
       <div
         className="flex-1 flex items-center justify-center relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #f0eee9, #e6e3dc)" }}
+        style={{ background: "linear-gradient(135deg, #f0eee9, #e6e3dc)", minHeight: 0 }}
       >
         {/* Status chips */}
-        <div className="absolute top-4 left-4 flex gap-2 z-10">
+        <div className="absolute top-3 left-3 flex gap-2 z-10">
           <span className="inline-flex items-center gap-1.5 px-2 rounded-full text-xs" style={{ height: 22, background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink-3)" }}>
             <span className="w-1.5 h-1.5 rounded-full" style={{ background: (isPlaying || playing) ? "oklch(58% 0.13 145)" : "var(--ink-4)" }} />
             {(isPlaying || playing) ? "Playing" : "Paused"}
@@ -99,8 +99,8 @@ export default function PreviewPanel() {
           </span>
         </div>
 
-        {/* House with lights */}
-        <div style={{ borderRadius: 10, overflow: "hidden", boxShadow: "0 20px 60px rgba(20,22,28,.18)" }}>
+        {/* House with lights — scales to fit available space */}
+        <div style={{ borderRadius: 10, overflow: "hidden", boxShadow: "0 12px 40px rgba(20,22,28,.15)", maxWidth: "100%", maxHeight: "100%", aspectRatio: "780/460" }}>
           <House width={780} height={460} lights={lights} time={effectiveTime} />
         </div>
       </div>
