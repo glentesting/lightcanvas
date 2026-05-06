@@ -220,7 +220,7 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
               ))}
             </ol>
             <p className="text-xs mt-4" style={{ color: "var(--ink-4)" }}>
-              Detailed instructions coming soon. You can change your sequencer in Settings.
+              Detailed instructions coming soon. You can change your sequencer in <a href="/settings" style={{ color: "var(--accent)", textDecoration: "underline" }}>Settings</a>.
             </p>
           </div>
           <div className="flex justify-end px-5 py-3" style={{ borderTop: "1px solid var(--line)", background: "var(--panel)" }}>
