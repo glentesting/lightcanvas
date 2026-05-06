@@ -29,6 +29,55 @@ function HouseSilhouette({ size = 64, opacity = 0.15 }: { size?: number; opacity
   );
 }
 
+/* ─── Animated light dots for card preview ────────────────── */
+const LIGHT_DOTS: Array<{ x: string; y: string; color: string; dur: string; delay: string; size: number }> = [
+  // Roofline cluster
+  { x: "22%", y: "28%", color: "#ff3b30", dur: "2.1s", delay: "0s", size: 5 },
+  { x: "32%", y: "22%", color: "#ffd60a", dur: "1.7s", delay: "0.4s", size: 4 },
+  { x: "42%", y: "20%", color: "#34c759", dur: "2.5s", delay: "0.8s", size: 5 },
+  { x: "52%", y: "22%", color: "#0a84ff", dur: "1.9s", delay: "0.2s", size: 4 },
+  { x: "62%", y: "28%", color: "#ffffff", dur: "2.3s", delay: "1.1s", size: 4 },
+  // Tree area (right)
+  { x: "78%", y: "35%", color: "#34c759", dur: "2.8s", delay: "0.5s", size: 5 },
+  { x: "75%", y: "50%", color: "#ff3b30", dur: "1.6s", delay: "1.3s", size: 4 },
+  { x: "82%", y: "45%", color: "#ffd60a", dur: "2.2s", delay: "0.7s", size: 5 },
+  { x: "80%", y: "60%", color: "#0a84ff", dur: "2.6s", delay: "0.1s", size: 4 },
+  // Scattered around
+  { x: "15%", y: "55%", color: "#ffd60a", dur: "2.4s", delay: "0.9s", size: 4 },
+  { x: "28%", y: "62%", color: "#ff3b30", dur: "1.8s", delay: "1.5s", size: 5 },
+  { x: "55%", y: "58%", color: "#ffffff", dur: "3.0s", delay: "0.3s", size: 4 },
+  { x: "45%", y: "45%", color: "#34c759", dur: "2.0s", delay: "0.6s", size: 5 },
+  { x: "68%", y: "68%", color: "#0a84ff", dur: "1.5s", delay: "1.0s", size: 4 },
+];
+
+function CardLightDots() {
+  return (
+    <>
+      <style>{`
+        @keyframes twinkle-dot {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.2; }
+        }
+      `}</style>
+      {LIGHT_DOTS.map((dot, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full"
+          style={{
+            left: dot.x,
+            top: dot.y,
+            width: dot.size,
+            height: dot.size,
+            background: dot.color,
+            boxShadow: `0 0 ${dot.size + 2}px ${dot.color}`,
+            animation: `twinkle-dot ${dot.dur} ease-in-out ${dot.delay} infinite`,
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
 export default function DashboardPage() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
@@ -114,9 +163,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+    <div className="min-h-screen" style={{ background: "#faf8f5" }}>
       {/* Nav */}
-      <header className="px-6 py-3.5 flex items-center justify-between" style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)" }}>
+      <header className="px-6 py-3.5 flex items-center justify-between" style={{ background: "#ffffff", borderBottom: "1px solid var(--line)" }}>
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs" style={{ background: "linear-gradient(135deg, var(--accent), oklch(72% 0.18 250))" }}>
             ✦
@@ -135,8 +184,11 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex items-end justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
+            <h1 className="text-3xl font-semibold tracking-tight flex items-center gap-2.5" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
               Your Shows
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: "var(--accent)" }}>
+                <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
+              </svg>
             </h1>
             {!loading && projects.length > 0 && (
               <p className="text-sm mt-1" style={{ color: "var(--ink-3)" }}>
@@ -234,12 +286,14 @@ export default function DashboardPage() {
                   (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-sm)";
                 }}
               >
-                {/* Upper — dark preview area */}
+                {/* Upper — dark preview area with twinkling lights */}
                 <Link href={`/project/${project.id}`} className="block relative" style={{ height: 160, background: "linear-gradient(180deg, #1a2440 0%, #0d1426 100%)" }}>
                   {/* Decorative house silhouette */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <HouseSilhouette size={80} opacity={0.12} />
                   </div>
+                  {/* Twinkling light dots */}
+                  <CardLightDots />
 
                   {/* Hover: Open button */}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10">
@@ -265,7 +319,7 @@ export default function DashboardPage() {
                 </Link>
 
                 {/* Lower — metadata */}
-                <div className="px-4 py-3.5">
+                <div className="px-4 py-3.5" style={{ background: "#ffffff" }}>
                   {/* Rename inline */}
                   {renamingId === project.id ? (
                     <input
