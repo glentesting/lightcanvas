@@ -47,4 +47,5 @@ export interface Sequence {
   bpm: number;
   beatGridOffset: number;
   xlightsNameMap?: Record<string, string>;
+  lorMapping?: Record<string, { unit: number; circuit: number }>;
 }

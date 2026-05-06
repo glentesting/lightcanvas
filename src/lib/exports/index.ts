@@ -4,3 +4,5 @@ export { exportXlights, exportRgbEffects, exportXlightsZip, generateReadme } fro
 export type { FrameTimeMs } from "./xlights";
 export { exportVideo } from "./video";
 export type { VideoExportOptions } from "./video";
+export { exportLor, exportLorZip, generateLorReadme, getLorDegradedEffects } from "./lor";
+export type { LorMapping } from "./lor";

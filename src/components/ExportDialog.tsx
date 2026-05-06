@@ -6,10 +6,12 @@ import { useEditorStore } from "@/lib/store/editor-store";
 import { exportLightCanvasJson } from "@/lib/exports/lightcanvas-json";
 import { exportXlightsZip } from "@/lib/exports/xlights";
 import type { FrameTimeMs } from "@/lib/exports/xlights";
+import { exportLorZip, getLorDegradedEffects } from "@/lib/exports/lor";
+import type { LorMapping } from "@/lib/exports/lor";
 import { exportVideo } from "@/lib/exports/video";
 import type { Project } from "@/types/domain";
 
-type ExportFormat = "lightcanvas-json" | "xlights" | "video";
+type ExportFormat = "lightcanvas-json" | "xlights" | "lor" | "video";
 
 interface ExportDialogProps {
   open: boolean;
@@ -17,7 +19,7 @@ interface ExportDialogProps {
 }
 
 function getDefaultFormat(sequencer?: string): ExportFormat {
-  if (sequencer === "lor") return "xlights"; // LOR export coming in RL-04, default to xlights for now
+  if (sequencer === "lor") return "lor";
   return "xlights"; // xlights, vixen, other, or unset all default to xlights
 }
 
@@ -42,7 +44,7 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
     }
   }, [open, sequencer]);
 
-  const [step, setStep] = useState<"options" | "name-mapping">("options");
+  const [step, setStep] = useState<"options" | "name-mapping" | "lor-degraded" | "lor-mapping">("options");
   const [showGuidance, setShowGuidance] = useState(false);
   const [rangeMode, setRangeMode] = useState<"full" | "custom">("full");
   const [customStart, setCustomStart] = useState(0);
@@ -54,9 +56,14 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
   const [progress, setProgress] = useState(0);
   const [namesReviewed, setNamesReviewed] = useState(false);
 
+  const [lorMapLocal, setLorMapLocal] = useState<LorMapping>({});
+  const [lorMappingReviewed, setLorMappingReviewed] = useState(false);
+  const [lorDegradedExpanded, setLorDegradedExpanded] = useState(false);
+
   const state = useEditorStore.getState();
   const fixtures = useEditorStore((s) => s.fixtures);
   const storedNameMap = useEditorStore((s) => s.sequence.xlightsNameMap);
+  const storedLorMapping = useEditorStore((s) => s.sequence.lorMapping);
 
   // Local editable name map state — initialized from store or fixture names
   const [localNameMap, setLocalNameMap] = useState<Record<string, string>>({});
@@ -72,6 +79,21 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
       setNamesReviewed(false);
     }
   }, [step, fixtures, storedNameMap]);
+
+  // Initialize lorMapLocal when entering the LOR mapping step
+  useEffect(() => {
+    if (step === "lor-mapping") {
+      const map: LorMapping = {};
+      for (const f of fixtures) {
+        map[f.id] = storedLorMapping?.[f.id] ?? {
+          unit: f.universe ?? 1,
+          circuit: f.startChannel ?? 1,
+        };
+      }
+      setLorMapLocal(map);
+      setLorMappingReviewed(false);
+    }
+  }, [step, fixtures, storedLorMapping]);
 
   const getProject = useCallback((): Project => {
     const s = useEditorStore.getState();
@@ -194,6 +216,63 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
           filename = `${project.name || "project"}-xlights.zip`;
           break;
         }
+        case "lor": {
+          // Save the LOR mapping to the store (triggers autosave)
+          useEditorStore.getState().setLorMapping(lorMapLocal);
+
+          const lorFiltered =
+            rangeMode === "custom"
+              ? {
+                  ...project,
+                  sequence: {
+                    ...project.sequence,
+                    blocks: project.sequence.blocks
+                      .filter(
+                        (b) =>
+                          b.start + b.duration > customStart &&
+                          b.start < customEnd
+                      )
+                      .map((b) => ({
+                        ...b,
+                        start: Math.max(0, b.start - customStart),
+                        duration: Math.max(
+                          0,
+                          Math.min(b.start + b.duration, customEnd) -
+                            Math.max(b.start, customStart)
+                        ),
+                      })),
+                  },
+                }
+              : project;
+
+          // Download audio file
+          let lorAudioBlob: Blob;
+          let lorAudioFilename = project.audioFile || "audio.mp3";
+
+          if (project.audioUrl) {
+            const signedRes = await fetch(`/api/audio/${project.id}`);
+            if (!signedRes.ok) throw new Error("Failed to get audio URL");
+            const signedData = await signedRes.json();
+            const audioUrl = signedData.url || signedData.signedUrl;
+            if (!audioUrl) throw new Error("No audio URL returned");
+            const audioRes = await fetch(audioUrl);
+            if (!audioRes.ok) throw new Error("Failed to download audio");
+            lorAudioBlob = await audioRes.blob();
+          } else {
+            lorAudioBlob = new Blob([], { type: "audio/mpeg" });
+            lorAudioFilename = "audio.mp3";
+          }
+
+          blob = await exportLorZip(
+            lorFiltered,
+            lorMapLocal,
+            frameTimeMs,
+            lorAudioBlob,
+            lorAudioFilename
+          );
+          filename = `${project.name || "project"}-lor.zip`;
+          break;
+        }
         case "video": {
           const startTime = rangeMode === "custom" ? customStart : undefined;
           const endTime = rangeMode === "custom" ? customEnd : undefined;
@@ -236,7 +315,7 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
       setExporting(false);
       setProgress(0);
     }
-  }, [format, rangeMode, customStart, customEnd, frameTimeMs, videoQuality, videoResolution, getProject, localNameMap]);
+  }, [format, rangeMode, customStart, customEnd, frameTimeMs, videoQuality, videoResolution, getProject, localNameMap, lorMapLocal]);
 
   if (!open) return null;
 
@@ -245,17 +324,18 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
   // Post-export guidance modal
   if (showGuidance) {
     const isXlights = format === "xlights";
-    const isLor = sequencer === "lor";
+    const isLor = format === "lor";
     const guidanceTitle = isLor
       ? "Next steps for Light-O-Rama"
       : isXlights
         ? "Next steps for xLights"
         : "Export complete";
     const guidanceSteps = isLor ? [
-      "Open the LOR Sequence Editor",
-      "Import the exported file into your sequence",
-      "Map channels to your LOR controllers",
-      "Run the Hardware Utility to test your setup",
+      "Open Light-O-Rama Sequence Editor",
+      "File > Open > select the .lms file",
+      "Verify channel assignments match your LOR controller",
+      "Edit > Channel Properties to adjust Unit/Circuit if needed",
+      "Hit Play to preview your show",
     ] : isXlights ? [
       "Create a show directory (e.g., C:\\xLights\\MyShow\\)",
       "Extract the ZIP contents into that directory",
@@ -299,6 +379,241 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
             <button onClick={() => { setShowGuidance(false); onClose(); }} className="h-8 px-4 rounded-md text-xs font-medium" style={{ background: "var(--accent)", color: "#fff" }}>
               Done
             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // LOR Step 1: Degradation warning
+  if (step === "lor-degraded") {
+    const project = getProject();
+    const degraded = getLorDegradedEffects(project);
+    const totalBlocks = project.sequence.blocks.length;
+    const nativeCount = totalBlocks - degraded.length;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(248, 247, 244, 0.72)", backdropFilter: "blur(8px)" }} onClick={onClose}>
+        <div className="rounded-xl overflow-hidden w-full max-w-lg" style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow-lg)" }} onClick={(e) => e.stopPropagation()}>
+          <div className="px-5 pt-5 pb-3">
+            <h3 className="text-sm font-semibold mb-1">LOR Export Compatibility</h3>
+            <p className="text-xs mb-4" style={{ color: "var(--ink-4)" }}>
+              Light-O-Rama supports fewer effect types than LightCanvas. Some effects will be approximated.
+            </p>
+
+            <div className="rounded-lg p-3 mb-3" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-medium" style={{ color: "var(--ink)" }}>
+                  {nativeCount} effect{nativeCount !== 1 ? "s" : ""} export directly
+                </span>
+                {degraded.length > 0 && (
+                  <>
+                    <span style={{ color: "var(--ink-4)" }}>&bull;</span>
+                    <span style={{ color: "oklch(55% 0.15 45)" }}>
+                      {degraded.length} will be approximated
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {degraded.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setLorDegradedExpanded(!lorDegradedExpanded)}
+                  className="flex items-center gap-1.5 text-xs font-medium mb-2"
+                  style={{ color: "var(--accent)" }}
+                >
+                  <svg
+                    width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2"
+                    style={{ transform: lorDegradedExpanded ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s" }}
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                  {lorDegradedExpanded ? "Hide details" : "Show details"}
+                </button>
+                {lorDegradedExpanded && (
+                  <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto" style={{ borderColor: "var(--line)" }}>
+                    <table className="w-full">
+                      <thead>
+                        <tr style={{ background: "var(--panel)", borderBottom: "1px solid var(--line)" }}>
+                          <th className="text-xs font-medium text-left px-3 py-1.5" style={{ color: "var(--ink-3)" }}>Fixture</th>
+                          <th className="text-xs font-medium text-left px-3 py-1.5" style={{ color: "var(--ink-3)" }}>Effect</th>
+                          <th className="text-xs font-medium text-left px-3 py-1.5" style={{ color: "var(--ink-3)" }}>Approximation</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {degraded.map((d, i) => (
+                          <tr key={d.blockId} style={{ borderBottom: i < degraded.length - 1 ? "1px solid var(--line)" : undefined }}>
+                            <td className="px-3 py-1.5 text-xs" style={{ color: "var(--ink-2)" }}>{d.fixtureName}</td>
+                            <td className="px-3 py-1.5 text-xs" style={{ color: "var(--ink-2)" }}>{d.effectId}</td>
+                            <td className="px-3 py-1.5 text-xs" style={{ color: "var(--ink-4)" }}>{d.approximation}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-between px-5 py-3" style={{ borderTop: "1px solid var(--line)", background: "var(--panel)" }}>
+            <button
+              onClick={() => setStep("options")}
+              className="h-8 px-4 rounded-md text-xs font-medium"
+              style={{ border: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink)" }}
+            >
+              Back
+            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={onClose}
+                className="h-8 px-4 rounded-md text-xs font-medium"
+                style={{ border: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink)" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => setStep("lor-mapping")}
+                className="h-8 px-4 rounded-md text-xs font-medium"
+                style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)" }}
+              >
+                Continue to mapping
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // LOR Step 2: Unit/Circuit mapping
+  if (step === "lor-mapping") {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(248, 247, 244, 0.72)", backdropFilter: "blur(8px)" }} onClick={onClose}>
+        <div className="rounded-xl overflow-hidden w-full max-w-lg" style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow-lg)" }} onClick={(e) => e.stopPropagation()}>
+          <div className="px-5 pt-5 pb-3">
+            <h3 className="text-sm font-semibold mb-1">Map fixtures to LOR channels</h3>
+            <p className="text-xs mb-4" style={{ color: "var(--ink-4)" }}>
+              Set the Unit and Circuit numbers to match your LOR controller configuration.
+            </p>
+
+            <div className="border rounded-lg overflow-hidden" style={{ borderColor: "var(--line)" }}>
+              <table className="w-full">
+                <thead>
+                  <tr style={{ background: "var(--panel)", borderBottom: "1px solid var(--line)" }}>
+                    <th className="text-xs font-medium text-left px-3 py-2" style={{ color: "var(--ink-3)" }}>Fixture Name</th>
+                    <th className="text-xs font-medium text-left px-3 py-2 w-20" style={{ color: "var(--ink-3)" }}>Unit #</th>
+                    <th className="text-xs font-medium text-left px-3 py-2 w-20" style={{ color: "var(--ink-3)" }}>Circuit #</th>
+                    <th className="text-xs font-medium text-left px-3 py-2 w-14" style={{ color: "var(--ink-3)" }}>Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fixtures.map((fixture, i) => (
+                    <tr key={fixture.id} style={{ borderBottom: i < fixtures.length - 1 ? "1px solid var(--line)" : undefined }}>
+                      <td className="px-3 py-2">
+                        <span className="text-xs" style={{ color: "var(--ink-2)" }}>{fixture.name}</span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          min={1}
+                          value={lorMapLocal[fixture.id]?.unit ?? 1}
+                          onChange={(e) => {
+                            setLorMapLocal((prev) => ({
+                              ...prev,
+                              [fixture.id]: {
+                                ...prev[fixture.id],
+                                unit: Math.max(1, parseInt(e.target.value) || 1),
+                              },
+                            }));
+                          }}
+                          className="w-full h-7 px-2 rounded-md text-xs"
+                          style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          min={1}
+                          value={lorMapLocal[fixture.id]?.circuit ?? 1}
+                          onChange={(e) => {
+                            setLorMapLocal((prev) => ({
+                              ...prev,
+                              [fixture.id]: {
+                                ...prev[fixture.id],
+                                circuit: Math.max(1, parseInt(e.target.value) || 1),
+                              },
+                            }));
+                          }}
+                          className="w-full h-7 px-2 rounded-md text-xs"
+                          style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="inline-flex items-center h-5 px-1.5 rounded text-xs font-medium" style={{ background: "oklch(96% 0.04 260)", color: "oklch(40% 0.12 260)" }}>
+                          RGB
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <label className="flex items-center gap-2 mt-4 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={lorMappingReviewed}
+                onChange={(e) => setLorMappingReviewed(e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-xs" style={{ color: "var(--ink-2)" }}>I&apos;ve reviewed the mapping</span>
+            </label>
+          </div>
+
+          {exporting && (
+            <div className="px-5 pb-2">
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--panel)" }}>
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: "100%", background: "var(--accent)", animation: "pulse 1.5s ease-in-out infinite" }}
+                />
+              </div>
+              <div className="text-xs mt-1" style={{ color: "var(--ink-4)" }}>
+                Building ZIP package...
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-between px-5 py-3" style={{ borderTop: "1px solid var(--line)", background: "var(--panel)" }}>
+            <button
+              onClick={() => setStep("lor-degraded")}
+              disabled={exporting}
+              className="h-8 px-4 rounded-md text-xs font-medium"
+              style={{ border: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink)", opacity: exporting ? 0.5 : 1 }}
+            >
+              Back
+            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={onClose}
+                disabled={exporting}
+                className="h-8 px-4 rounded-md text-xs font-medium"
+                style={{ border: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink)", opacity: exporting ? 0.5 : 1 }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={exporting || !lorMappingReviewed}
+                className="h-8 px-4 rounded-md text-xs font-medium"
+                style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)", opacity: exporting || !lorMappingReviewed ? 0.5 : 1 }}
+              >
+                {exporting ? "Exporting..." : "Export"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -558,11 +873,11 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
             )}
           </fieldset>
 
-          {/* xLights Options */}
-          {format === "xlights" && (
+          {/* xLights / LOR Options */}
+          {(format === "xlights" || format === "lor") && (
             <fieldset className="mb-4">
               <legend className="text-xs font-medium mb-2" style={{ color: "var(--ink-3)" }}>
-                xLights Options
+                {format === "lor" ? "LOR Options" : "xLights Options"}
               </legend>
               <div>
                 <label className="text-xs block mb-1" style={{ color: "var(--ink-4)" }}>Step time</label>
@@ -673,6 +988,8 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
             onClick={() => {
               if (format === "xlights") {
                 setStep("name-mapping");
+              } else if (format === "lor") {
+                setStep("lor-degraded");
               } else {
                 handleExport();
               }
@@ -686,7 +1003,7 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
               opacity: exporting ? 0.7 : 1,
             }}
           >
-            {exporting ? "Exporting..." : format === "xlights" ? "Next" : "Export"}
+            {exporting ? "Exporting..." : (format === "xlights" || format === "lor") ? "Next" : "Export"}
           </button>
         </div>
       </div>
@@ -704,6 +1021,11 @@ const FORMAT_OPTIONS: { value: ExportFormat; label: string; desc: string }[] = [
     value: "xlights",
     label: "xLights Package (.zip)",
     desc: "ZIP with .xsq, models, audio, and README for xLights",
+  },
+  {
+    value: "lor",
+    label: "Light-O-Rama (.lms)",
+    desc: "Open in LOR Sequence Editor with channels and timing",
   },
   {
     value: "video",

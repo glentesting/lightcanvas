@@ -45,6 +45,7 @@ export interface EditorState {
   reorderTracks: (fromIndex: number, toIndex: number) => void;
 
   setXlightsNameMap: (map: Record<string, string>) => void;
+  setLorMapping: (map: Record<string, { unit: number; circuit: number }>) => void;
   setHousePhoto: (url: string | undefined) => void;
   setSelection: (ids: string[], mode?: "replace" | "add" | "toggle") => void;
   clearSelection: () => void;
@@ -186,6 +187,11 @@ export const useEditorStore = create<EditorState>()(
         setXlightsNameMap: (map: Record<string, string>) =>
           set((state) => {
             state.sequence.xlightsNameMap = map;
+          }),
+
+        setLorMapping: (map: Record<string, { unit: number; circuit: number }>) =>
+          set((state) => {
+            state.sequence.lorMapping = map;
           }),
 
         setHousePhoto: (url: string | undefined) =>
