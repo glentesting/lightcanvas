@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { exportLightCanvasJson } from "@/lib/exports/lightcanvas-json";
 import { exportXlights } from "@/lib/exports/xlights";
@@ -14,8 +15,21 @@ interface ExportDialogProps {
   onClose: () => void;
 }
 
+function getDefaultFormat(sequencer?: string): ExportFormat {
+  if (sequencer === "lor") return "xlights"; // LOR export coming in RL-04, default to xlights for now
+  return "xlights"; // xlights, vixen, other, or unset all default to xlights
+}
+
 export default function ExportDialog({ open, onClose }: ExportDialogProps) {
-  const [format, setFormat] = useState<ExportFormat>("lightcanvas-json");
+  const { user } = useUser();
+  const sequencer = (user?.publicMetadata?.sequencer as string) || "xlights";
+  const [format, setFormat] = useState<ExportFormat>(getDefaultFormat(sequencer));
+  // Reset default format when dialog opens based on user profile
+  useEffect(() => {
+    if (open) setFormat(getDefaultFormat(sequencer));
+  }, [open, sequencer]);
+
+  const [showGuidance, setShowGuidance] = useState(false);
   const [rangeMode, setRangeMode] = useState<"full" | "custom">("full");
   const [customStart, setCustomStart] = useState(0);
   const [customEnd, setCustomEnd] = useState(30);
@@ -152,7 +166,7 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      onClose();
+      setShowGuidance(true);
     } catch (err) {
       console.error("Export failed:", err);
       alert(`Export failed: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -160,11 +174,64 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
       setExporting(false);
       setProgress(0);
     }
-  }, [format, rangeMode, customStart, customEnd, xlightsFrameRate, videoQuality, videoResolution, getProject, onClose]);
+  }, [format, rangeMode, customStart, customEnd, xlightsFrameRate, videoQuality, videoResolution, getProject]);
 
   if (!open) return null;
 
   const audioDuration = state.audio?.duration ?? 0;
+
+  // Post-export guidance modal
+  if (showGuidance) {
+    const isLor = sequencer === "lor";
+    const guidanceTitle = isLor ? "Next steps for Light-O-Rama" : "Next steps for xLights";
+    const guidanceSteps = isLor ? [
+      "Open the LOR Sequence Editor",
+      "Import the exported file into your sequence",
+      "Map channels to your LOR controllers",
+      "Run the Hardware Utility to test your setup",
+    ] : [
+      "Open xLights and load your show folder",
+      "Import the .xsq file (File → Import Sequence)",
+      "Map LightCanvas fixtures to your xLights models",
+      "Render the sequence (Tools → Render All)",
+      "Upload the .fseq to your FPP or controller",
+    ];
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(248, 247, 244, 0.72)", backdropFilter: "blur(8px)" }} onClick={() => { setShowGuidance(false); onClose(); }}>
+        <div className="rounded-xl overflow-hidden w-full max-w-md" style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow-lg)" }} onClick={(e) => e.stopPropagation()}>
+          <div className="px-5 pt-5 pb-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "oklch(96% 0.06 145)", color: "oklch(35% 0.12 145)" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold">Export complete!</h3>
+                <p className="text-xs" style={{ color: "var(--ink-3)" }}>Your file has been downloaded</p>
+              </div>
+            </div>
+            <h4 className="text-xs font-semibold mb-3" style={{ color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{guidanceTitle}</h4>
+            <ol className="space-y-2.5">
+              {guidanceSteps.map((s, i) => (
+                <li key={i} className="flex gap-3 text-sm" style={{ color: "var(--ink-2)" }}>
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold" style={{ background: "var(--accent-50)", color: "var(--accent-700)" }}>{i + 1}</span>
+                  {s}
+                </li>
+              ))}
+            </ol>
+            <p className="text-xs mt-4" style={{ color: "var(--ink-4)" }}>
+              Detailed instructions coming soon. You can change your sequencer in Settings.
+            </p>
+          </div>
+          <div className="flex justify-end px-5 py-3" style={{ borderTop: "1px solid var(--line)", background: "var(--panel)" }}>
+            <button onClick={() => { setShowGuidance(false); onClose(); }} className="h-8 px-4 rounded-md text-xs font-medium" style={{ background: "var(--accent)", color: "#fff" }}>
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
