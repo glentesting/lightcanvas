@@ -4,7 +4,8 @@ import { useState, useCallback, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { exportLightCanvasJson } from "@/lib/exports/lightcanvas-json";
-import { exportXlights } from "@/lib/exports/xlights";
+import { exportXlightsZip } from "@/lib/exports/xlights";
+import type { FrameTimeMs } from "@/lib/exports/xlights";
 import { exportVideo } from "@/lib/exports/video";
 import type { Project } from "@/types/domain";
 
@@ -20,26 +21,57 @@ function getDefaultFormat(sequencer?: string): ExportFormat {
   return "xlights"; // xlights, vixen, other, or unset all default to xlights
 }
 
+const FRAME_TIME_OPTIONS: Array<{ value: FrameTimeMs; label: string }> = [
+  { value: 20, label: "20ms (50fps)" },
+  { value: 25, label: "25ms (40fps)" },
+  { value: 40, label: "40ms (25fps)" },
+  { value: 50, label: "50ms (20fps)" },
+];
+
 export default function ExportDialog({ open, onClose }: ExportDialogProps) {
   const { user } = useUser();
   const sequencer = (user?.publicMetadata?.sequencer as string) || "xlights";
   const [format, setFormat] = useState<ExportFormat>(getDefaultFormat(sequencer));
   // Reset default format when dialog opens based on user profile
   useEffect(() => {
-    if (open) setFormat(getDefaultFormat(sequencer));
+    if (open) {
+      setFormat(getDefaultFormat(sequencer));
+      setStep("options");
+      setShowGuidance(false);
+      setNamesReviewed(false);
+    }
   }, [open, sequencer]);
 
+  const [step, setStep] = useState<"options" | "name-mapping">("options");
   const [showGuidance, setShowGuidance] = useState(false);
   const [rangeMode, setRangeMode] = useState<"full" | "custom">("full");
   const [customStart, setCustomStart] = useState(0);
   const [customEnd, setCustomEnd] = useState(30);
-  const [xlightsFrameRate, setXlightsFrameRate] = useState<20 | 40>(20);
+  const [frameTimeMs, setFrameTimeMs] = useState<FrameTimeMs>(50);
   const [videoQuality, setVideoQuality] = useState<"low" | "med" | "high">("med");
   const [videoResolution, setVideoResolution] = useState<"720p" | "1080p">("720p");
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [namesReviewed, setNamesReviewed] = useState(false);
 
   const state = useEditorStore.getState();
+  const fixtures = useEditorStore((s) => s.fixtures);
+  const storedNameMap = useEditorStore((s) => s.sequence.xlightsNameMap);
+
+  // Local editable name map state — initialized from store or fixture names
+  const [localNameMap, setLocalNameMap] = useState<Record<string, string>>({});
+
+  // Initialize localNameMap when entering the mapping step
+  useEffect(() => {
+    if (step === "name-mapping") {
+      const map: Record<string, string> = {};
+      for (const f of fixtures) {
+        map[f.id] = storedNameMap?.[f.id] ?? f.name;
+      }
+      setLocalNameMap(map);
+      setNamesReviewed(false);
+    }
+  }, [step, fixtures, storedNameMap]);
 
   const getProject = useCallback((): Project => {
     const s = useEditorStore.getState();
@@ -66,8 +98,6 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
 
     try {
       const project = getProject();
-      const startTime = rangeMode === "custom" ? customStart : undefined;
-      const endTime = rangeMode === "custom" ? customEnd : undefined;
 
       let blob: Blob;
       let filename: string;
@@ -94,6 +124,9 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
           break;
         }
         case "xlights": {
+          // Save the name map to the store (triggers autosave)
+          useEditorStore.getState().setXlightsNameMap(localNameMap);
+
           const filtered =
             rangeMode === "custom"
               ? {
@@ -130,11 +163,40 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
                     : null,
                 }
               : project;
-          blob = exportXlights(filtered, { frameRate: xlightsFrameRate });
-          filename = `${project.name || "project"}.xsq`;
+
+          // Download audio file
+          let audioBlob: Blob;
+          let audioFilename = project.audioFile || "audio.mp3";
+
+          if (project.audioUrl) {
+            // Fetch signed URL from API
+            const signedRes = await fetch(`/api/audio/${project.id}`);
+            if (!signedRes.ok) throw new Error("Failed to get audio URL");
+            const signedData = await signedRes.json();
+            const audioUrl = signedData.url || signedData.signedUrl;
+            if (!audioUrl) throw new Error("No audio URL returned");
+            const audioRes = await fetch(audioUrl);
+            if (!audioRes.ok) throw new Error("Failed to download audio");
+            audioBlob = await audioRes.blob();
+          } else {
+            // No audio — create empty blob
+            audioBlob = new Blob([], { type: "audio/mpeg" });
+            audioFilename = "audio.mp3";
+          }
+
+          blob = await exportXlightsZip(
+            filtered,
+            localNameMap,
+            frameTimeMs,
+            audioBlob,
+            audioFilename
+          );
+          filename = `${project.name || "project"}-xlights.zip`;
           break;
         }
         case "video": {
+          const startTime = rangeMode === "custom" ? customStart : undefined;
+          const endTime = rangeMode === "custom" ? customEnd : undefined;
           const dims =
             videoResolution === "1080p"
               ? { width: 1920, height: 1080 }
@@ -174,7 +236,7 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
       setExporting(false);
       setProgress(0);
     }
-  }, [format, rangeMode, customStart, customEnd, xlightsFrameRate, videoQuality, videoResolution, getProject]);
+  }, [format, rangeMode, customStart, customEnd, frameTimeMs, videoQuality, videoResolution, getProject, localNameMap]);
 
   if (!open) return null;
 
@@ -182,19 +244,29 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
 
   // Post-export guidance modal
   if (showGuidance) {
+    const isXlights = format === "xlights";
     const isLor = sequencer === "lor";
-    const guidanceTitle = isLor ? "Next steps for Light-O-Rama" : "Next steps for xLights";
+    const guidanceTitle = isLor
+      ? "Next steps for Light-O-Rama"
+      : isXlights
+        ? "Next steps for xLights"
+        : "Export complete";
     const guidanceSteps = isLor ? [
       "Open the LOR Sequence Editor",
       "Import the exported file into your sequence",
       "Map channels to your LOR controllers",
       "Run the Hardware Utility to test your setup",
+    ] : isXlights ? [
+      "Create a show directory (e.g., C:\\xLights\\MyShow\\)",
+      "Extract the ZIP contents into that directory",
+      "Open xLights and set Show Directory to that folder",
+      "Layout tab: your fixtures should appear as models",
+      "Sequencer tab: open the .xsq file",
+      "Render > Render All to generate pixel data",
+      "Load the .fseq file in FPP or xSchedule and play",
     ] : [
-      "Open xLights and load your show folder",
-      "Import the .xsq file (File → Import Sequence)",
-      "Map LightCanvas fixtures to your xLights models",
-      "Render the sequence (Tools → Render All)",
-      "Upload the .fseq to your FPP or controller",
+      "Your file has been downloaded",
+      "Open it in the appropriate application",
     ];
 
     return (
@@ -233,6 +305,140 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
     );
   }
 
+  // Step 2: xLights name mapping
+  if (step === "name-mapping") {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        style={{ background: "rgba(248, 247, 244, 0.72)", backdropFilter: "blur(8px)" }}
+        onClick={onClose}
+      >
+        <div
+          className="rounded-xl overflow-hidden w-full max-w-lg"
+          style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow-lg)" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="px-5 pt-5 pb-3">
+            <h3 className="text-sm font-semibold mb-1">Match your fixtures to xLights model names</h3>
+            <p className="text-xs mb-4" style={{ color: "var(--ink-4)" }}>
+              Your xLights sequence won&apos;t show effects for fixtures whose names don&apos;t match exactly. Fix any differences here.
+            </p>
+
+            {/* Mapping table */}
+            <div className="border rounded-lg overflow-hidden" style={{ borderColor: "var(--line)" }}>
+              <table className="w-full">
+                <thead>
+                  <tr style={{ background: "var(--panel)", borderBottom: "1px solid var(--line)" }}>
+                    <th className="text-xs font-medium text-left px-3 py-2" style={{ color: "var(--ink-3)" }}>LightCanvas</th>
+                    <th className="text-xs font-medium text-left px-3 py-2" style={{ color: "var(--ink-3)" }}>xLights Model Name</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fixtures.map((fixture, i) => (
+                    <tr key={fixture.id} style={{ borderBottom: i < fixtures.length - 1 ? "1px solid var(--line)" : undefined }}>
+                      <td className="px-3 py-2">
+                        <span className="text-xs" style={{ color: "var(--ink-2)" }}>{fixture.name}</span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="text"
+                          value={localNameMap[fixture.id] ?? fixture.name}
+                          onChange={(e) => {
+                            setLocalNameMap((prev) => ({
+                              ...prev,
+                              [fixture.id]: e.target.value,
+                            }));
+                          }}
+                          className="w-full h-7 px-2 rounded-md text-xs"
+                          style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Review checkbox */}
+            <label className="flex items-center gap-2 mt-4 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={namesReviewed}
+                onChange={(e) => setNamesReviewed(e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-xs" style={{ color: "var(--ink-2)" }}>I&apos;ve reviewed the names</span>
+            </label>
+          </div>
+
+          {/* Progress bar */}
+          {exporting && (
+            <div className="px-5 pb-2">
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--panel)" }}>
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: "100%", background: "var(--accent)", animation: "pulse 1.5s ease-in-out infinite" }}
+                />
+              </div>
+              <div className="text-xs mt-1" style={{ color: "var(--ink-4)" }}>
+                Building ZIP package...
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div
+            className="flex justify-between px-5 py-3"
+            style={{ borderTop: "1px solid var(--line)", background: "var(--panel)" }}
+          >
+            <button
+              onClick={() => setStep("options")}
+              disabled={exporting}
+              className="h-8 px-4 rounded-md text-xs font-medium"
+              style={{
+                border: "1px solid var(--line)",
+                background: "var(--surface)",
+                color: "var(--ink)",
+                opacity: exporting ? 0.5 : 1,
+              }}
+            >
+              Back
+            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={onClose}
+                disabled={exporting}
+                className="h-8 px-4 rounded-md text-xs font-medium"
+                style={{
+                  border: "1px solid var(--line)",
+                  background: "var(--surface)",
+                  color: "var(--ink)",
+                  opacity: exporting ? 0.5 : 1,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={exporting || !namesReviewed}
+                className="h-8 px-4 rounded-md text-xs font-medium"
+                style={{
+                  background: "var(--accent)",
+                  color: "#fff",
+                  border: "1px solid var(--accent)",
+                  opacity: exporting || !namesReviewed ? 0.5 : 1,
+                }}
+              >
+                {exporting ? "Exporting..." : "Export"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 1: Format selection + options
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
@@ -359,20 +565,20 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
                 xLights Options
               </legend>
               <div>
-                <label className="text-xs block mb-1" style={{ color: "var(--ink-4)" }}>Frame rate</label>
-                <div className="flex gap-2">
-                  {([20, 40] as const).map((rate) => (
+                <label className="text-xs block mb-1" style={{ color: "var(--ink-4)" }}>Step time</label>
+                <div className="flex flex-wrap gap-2">
+                  {FRAME_TIME_OPTIONS.map((opt) => (
                     <button
-                      key={rate}
-                      onClick={() => setXlightsFrameRate(rate)}
+                      key={opt.value}
+                      onClick={() => setFrameTimeMs(opt.value)}
                       className="h-7 px-3 rounded-md text-xs font-medium"
                       style={{
-                        border: xlightsFrameRate === rate ? "1.5px solid var(--accent)" : "1px solid var(--line)",
-                        background: xlightsFrameRate === rate ? "var(--accent-50)" : "var(--surface)",
-                        color: xlightsFrameRate === rate ? "var(--accent)" : "var(--ink)",
+                        border: frameTimeMs === opt.value ? "1.5px solid var(--accent)" : "1px solid var(--line)",
+                        background: frameTimeMs === opt.value ? "var(--accent-50)" : "var(--surface)",
+                        color: frameTimeMs === opt.value ? "var(--accent)" : "var(--ink)",
                       }}
                     >
-                      {rate} fps ({rate === 20 ? "50ms" : "25ms"})
+                      {opt.label}
                     </button>
                   ))}
                 </div>
@@ -464,7 +670,13 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
             Cancel
           </button>
           <button
-            onClick={handleExport}
+            onClick={() => {
+              if (format === "xlights") {
+                setStep("name-mapping");
+              } else {
+                handleExport();
+              }
+            }}
             disabled={exporting}
             className="h-8 px-4 rounded-md text-xs font-medium"
             style={{
@@ -474,7 +686,7 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
               opacity: exporting ? 0.7 : 1,
             }}
           >
-            {exporting ? "Exporting..." : "Export"}
+            {exporting ? "Exporting..." : format === "xlights" ? "Next" : "Export"}
           </button>
         </div>
       </div>
@@ -486,16 +698,16 @@ const FORMAT_OPTIONS: { value: ExportFormat; label: string; desc: string }[] = [
   {
     value: "lightcanvas-json",
     label: "LightCanvas JSON",
-    desc: "Full project file — re-importable into LightCanvas",
+    desc: "Full project file \u2014 re-importable into LightCanvas",
   },
   {
     value: "xlights",
-    label: "xLights Sequence (.xsq)",
-    desc: "Open in xLights with effects, models, and timing",
+    label: "xLights Package (.zip)",
+    desc: "ZIP with .xsq, models, audio, and README for xLights",
   },
   {
     value: "video",
     label: "Preview Video (WebM)",
-    desc: "Recorded preview with audio — playable in VLC or browser",
+    desc: "Recorded preview with audio \u2014 playable in VLC or browser",
   },
 ];

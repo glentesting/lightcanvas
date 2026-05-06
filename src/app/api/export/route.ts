@@ -49,8 +49,9 @@ export async function POST(request: Request) {
   }
 
   if (format === "xlights") {
-    const frameRate = body.frameRate === 40 ? 40 : 20;
-    const blob = exportXlights(project, { frameRate });
+    const nameMap: Record<string, string> = body.nameMap || {};
+    const frameTimeMs = [20, 25, 40, 50].includes(body.frameTimeMs) ? body.frameTimeMs : 50;
+    const blob = exportXlights(project, nameMap, { frameTimeMs });
     const buffer = Buffer.from(await blob.arrayBuffer());
     return new NextResponse(buffer, {
       headers: {

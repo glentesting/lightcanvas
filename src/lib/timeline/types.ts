@@ -46,4 +46,5 @@ export interface Sequence {
   blocks: EffectBlock[];
   bpm: number;
   beatGridOffset: number;
+  xlightsNameMap?: Record<string, string>;
 }
