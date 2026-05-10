@@ -35,6 +35,21 @@ export interface Show {
   updatedAt: string;
 }
 
+/** Maps a Supabase row to our domain Show type */
+export function showFromRow(row: Record<string, unknown>): Show {
+  return {
+    id: row.id as string,
+    ownerId: row.owner_id as string,
+    name: row.name as string,
+    description: (row.description as string) || undefined,
+    seasonYear: (row.season_year as number) || undefined,
+    isActive: (row.is_active as boolean) ?? true,
+    songOrder: (row.song_order as string[]) || [],
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
 /** Maps a Supabase row to our domain Project type */
 export function projectFromRow(row: Record<string, unknown>): Project {
   return {

@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
-import { createDefaultFixtures } from "@/lib/fixtures/defaults";
 
 export async function GET() {
   const { userId } = await auth();
@@ -9,8 +8,8 @@ export async function GET() {
 
   const supabase = createServiceClient();
   const { data, error } = await supabase
-    .from("projects")
-    .select("id, name, owner_id, audio_file, fixtures, parent_show_id, created_at, updated_at")
+    .from("shows")
+    .select("*")
     .eq("owner_id", userId)
     .order("updated_at", { ascending: false });
 
@@ -23,21 +22,21 @@ export async function POST(request: Request) {
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await request.json();
-  const { name } = body;
+  const { name, season_year } = body;
 
-  if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
-
-  const fixtures = createDefaultFixtures();
-  const tracks = fixtures.map((f) => ({ id: f.id, kind: "fixture" as const }));
+  if (!name || typeof name !== "string" || name.trim().length === 0) {
+    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  }
 
   const supabase = createServiceClient();
   const { data, error } = await supabase
-    .from("projects")
+    .from("shows")
     .insert({
       owner_id: userId,
-      name,
-      fixtures,
-      sequence: { tracks, blocks: [], bpm: 120, beatGridOffset: 0 },
+      name: name.trim(),
+      season_year: season_year || new Date().getFullYear(),
+      is_active: true,
+      song_order: [],
     })
     .select()
     .single();
