@@ -32,6 +32,8 @@ export interface EffectBlock {
   duration: number;
   params: EffectParams;
   locked?: boolean;
+  presetId?: string;
+  presetName?: string;
 }
 
 export interface Track {

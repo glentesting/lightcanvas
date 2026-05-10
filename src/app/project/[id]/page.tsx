@@ -17,6 +17,7 @@ import { createDefaultFixtures } from "@/lib/fixtures/defaults";
 import type { AudioAnalysis } from "@/lib/audio/types";
 import { EFFECT_COLORS, EFFECT_NAMES } from "@/lib/timeline/constants";
 import type { EffectId } from "@/lib/timeline/types";
+import PresetLibrary from "@/components/PresetLibrary";
 
 const STORAGE_KEY = "lightcanvas-split-ratio";
 const DEFAULT_SPLIT = 35; // percent for preview
@@ -313,6 +314,10 @@ export default function ProjectEditorPage() {
                   <PaletteEffectChip key={id} effectId={id} name={EFFECT_NAMES[id]} color={EFFECT_COLORS[id]} />
                 ))}
               </div>
+            </SidebarSection>
+
+            <SidebarSection title="Presets">
+              <PresetLibrary />
             </SidebarSection>
 
             <SidebarSection title="AI Actions">
