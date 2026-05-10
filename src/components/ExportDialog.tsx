@@ -9,6 +9,8 @@ import type { FrameTimeMs } from "@/lib/exports/xlights";
 import { exportLorZip, getLorDegradedEffects } from "@/lib/exports/lor";
 import type { LorMapping } from "@/lib/exports/lor";
 import { exportVideo } from "@/lib/exports/video";
+import { validateFixtures } from "@/lib/exports/validation";
+import type { ValidationIssue } from "@/lib/exports/validation";
 import type { Project } from "@/types/domain";
 
 type ExportFormat = "lightcanvas-json" | "xlights" | "lor" | "video";
@@ -56,6 +58,8 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
   const [progress, setProgress] = useState(0);
   const [namesReviewed, setNamesReviewed] = useState(false);
 
+  const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
+
   const [lorMapLocal, setLorMapLocal] = useState<LorMapping>({});
   const [lorMappingReviewed, setLorMappingReviewed] = useState(false);
   const [lorDegradedExpanded, setLorDegradedExpanded] = useState(false);
@@ -64,6 +68,15 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
   const fixtures = useEditorStore((s) => s.fixtures);
   const storedNameMap = useEditorStore((s) => s.sequence.xlightsNameMap);
   const storedLorMapping = useEditorStore((s) => s.sequence.lorMapping);
+
+  // Run validation when dialog opens
+  useEffect(() => {
+    if (open) {
+      const controllerType = (user?.publicMetadata?.controllerType as string) || null;
+      const issues = validateFixtures(fixtures, controllerType);
+      setValidationIssues(issues);
+    }
+  }, [open, fixtures, user]);
 
   // Local editable name map state — initialized from store or fixture names
   const [localNameMap, setLocalNameMap] = useState<Record<string, string>>({});
@@ -768,6 +781,38 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
         {/* Header */}
         <div className="px-5 pt-5 pb-3">
           <h3 className="text-sm font-semibold mb-4">Export Project</h3>
+
+          {/* Validation results */}
+          {validationIssues.length > 0 && (
+            <div className="mb-4 rounded-lg overflow-hidden" style={{ border: "1px solid #f59e0b", background: "#fffbeb" }}>
+              <div className="px-3 py-2 flex items-center gap-2" style={{ borderBottom: "1px solid #fde68a" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <span className="text-xs font-semibold" style={{ color: "#92400e" }}>
+                  {validationIssues.length} warning{validationIssues.length !== 1 ? "s" : ""} found
+                </span>
+              </div>
+              <div className="px-3 py-2 flex flex-col gap-2">
+                {validationIssues.map((issue, i) => (
+                  <div key={i} className="text-xs" style={{ color: "#92400e" }}>
+                    <p className="font-medium">{issue.message}</p>
+                    {issue.details && <p style={{ color: "#b45309", marginTop: 2 }}>{issue.details}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {validationIssues.length === 0 && (
+            <div className="mb-4 px-3 py-2 rounded-lg flex items-center gap-2" style={{ background: "oklch(96% 0.06 145)", border: "1px solid oklch(88% 0.08 145)" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="oklch(45% 0.13 145)" strokeWidth="2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <span className="text-xs font-medium" style={{ color: "oklch(35% 0.1 145)" }}>No channel conflicts found</span>
+            </div>
+          )}
 
           {/* Format */}
           <fieldset className="mb-4">
