@@ -14,6 +14,8 @@ export default function AudioUpload({ projectId, onUploaded }: AudioUploadProps)
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
+  const [showRightsHelp, setShowRightsHelp] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const audioFile = useEditorStore((s) => s.audioFile);
@@ -81,7 +83,7 @@ export default function AudioUpload({ projectId, onUploaded }: AudioUploadProps)
       type="file"
       accept="audio/*"
       onChange={handleUpload}
-      disabled={uploading || analyzing}
+      disabled={!rightsConfirmed || uploading || analyzing}
       className="hidden"
     />
   );
@@ -160,12 +162,50 @@ export default function AudioUpload({ projectId, onUploaded }: AudioUploadProps)
   return (
     <div>
       {fileInput}
+      {/* Audio rights checkbox */}
+      <div className="mb-3">
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={rightsConfirmed}
+            onChange={(e) => setRightsConfirmed(e.target.checked)}
+            className="mt-0.5 accent-[var(--accent)]"
+          />
+          <span className="text-xs" style={{ color: "var(--ink-2)", lineHeight: 1.4 }}>
+            I confirm I have the right to use this audio file in my light show (personal use, licensed, or original).
+          </span>
+        </label>
+        <button
+          type="button"
+          onClick={() => setShowRightsHelp(!showRightsHelp)}
+          className="text-xs mt-1 ml-5"
+          style={{ color: "var(--accent)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+        >
+          What does this mean?
+        </button>
+        {showRightsHelp && (
+          <div className="ml-5 mt-2 rounded-lg p-3 text-xs" style={{ background: "var(--panel)", border: "1px solid var(--line)", color: "var(--ink-2)", lineHeight: 1.5 }}>
+            <p className="font-medium mb-1" style={{ color: "var(--ink)" }}>You can upload audio if:</p>
+            <ul style={{ paddingLeft: 16, margin: 0 }}>
+              <li>You made the music yourself</li>
+              <li>You have a direct license to use it</li>
+              <li>It&apos;s royalty-free or Creative Commons</li>
+              <li>It&apos;s for personal home use only (not commercial distribution)</li>
+            </ul>
+            <p className="mt-2" style={{ color: "var(--ink-3)" }}>
+              Streaming subscriptions (Spotify, Apple Music) do not grant rights for this use.
+            </p>
+          </div>
+        )}
+      </div>
       <label
         className="flex items-center justify-center gap-2 w-full h-8 rounded-md cursor-pointer text-xs font-medium transition-colors"
         style={{
           background: "var(--accent-50)",
           color: "var(--accent-ink)",
           border: "1px solid var(--accent-200)",
+          opacity: rightsConfirmed ? 1 : 0.5,
+          pointerEvents: rightsConfirmed ? "auto" : "none",
         }}
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -178,7 +218,7 @@ export default function AudioUpload({ projectId, onUploaded }: AudioUploadProps)
           type="file"
           accept="audio/*"
           onChange={handleUpload}
-          disabled={uploading || analyzing}
+          disabled={!rightsConfirmed || uploading || analyzing}
           className="hidden"
         />
       </label>

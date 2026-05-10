@@ -400,8 +400,9 @@ function Footer() {
           <h5>Company</h5>
           <a href="#">About</a>
           <a href="#">Contact</a>
-          <a href="#">Privacy</a>
-          <a href="#">Terms</a>
+          <a href="/legal/privacy">Privacy</a>
+          <a href="/legal/terms">Terms</a>
+          <a href="/legal/copyright">Copyright</a>
         </div>
       </div>
       <div className="lp-foot-bot">
