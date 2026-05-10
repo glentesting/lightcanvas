@@ -32,6 +32,7 @@ export default function Timeline({ analysis }: TimelineProps) {
   const tracks = useEditorStore((s) => s.sequence.tracks);
   const blocks = useEditorStore((s) => s.sequence.blocks);
   const fixtures = useEditorStore((s) => s.fixtures);
+  const groups = useEditorStore((s) => s.groups);
   const selectedBlockIds = useEditorStore((s) => s.selectedBlockIds);
   const setSelection = useEditorStore((s) => s.setSelection);
   const clearSelection = useEditorStore((s) => s.clearSelection);
@@ -144,8 +145,28 @@ export default function Timeline({ analysis }: TimelineProps) {
             </div>
           ) : (
             tracks.map((track, trackIndex) => {
-              const fixture = fixtures.find((f) => f.id === track.id);
               const trackBlocks = blocks.filter((b) => b.trackId === track.id);
+              if (track.kind === "group") {
+                const group = groups.find((g) => g.id === track.id);
+                if (!group) return null;
+                return (
+                  <TrackRow
+                    key={track.id}
+                    trackId={track.id}
+                    trackIndex={trackIndex}
+                    name={`\u2B21 ${group.name}`}
+                    pixelCount={undefined}
+                    blocks={trackBlocks}
+                    selectedBlockIds={selectedBlockIds}
+                    zoom={zoom}
+                    totalWidth={totalWidth}
+                    analysis={analysis}
+                    isGroup
+                    groupColor={group.color}
+                  />
+                );
+              }
+              const fixture = fixtures.find((f) => f.id === track.id);
               return (
                 <TrackRow
                   key={track.id}
@@ -187,6 +208,8 @@ function TrackRow({
   zoom,
   totalWidth,
   analysis,
+  isGroup,
+  groupColor,
 }: {
   trackId: string;
   trackIndex: number;
@@ -197,11 +220,15 @@ function TrackRow({
   zoom: number;
   totalWidth: number;
   analysis: AudioAnalysis | null;
+  isGroup?: boolean;
+  groupColor?: string;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `track:${trackId}`,
     data: { type: "track", trackId },
   });
+
+  const rowHeight = isGroup ? ROW_HEIGHT + 4 : ROW_HEIGHT;
 
   return (
     <div
@@ -219,16 +246,22 @@ function TrackRow({
         className="shrink-0 flex items-center px-3 sticky left-0 z-10"
         style={{
           width: LABEL_WIDTH,
-          height: ROW_HEIGHT,
+          height: rowHeight,
           borderRight: "1px solid var(--line)",
+          borderLeft: isGroup ? `3px solid ${groupColor ?? "#6366f1"}` : undefined,
           background: "inherit",
         }}
       >
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-semibold truncate">{name}</div>
-          {pixelCount && (
+          <div className="text-xs font-semibold truncate" style={isGroup ? { color: groupColor ?? "#6366f1" } : undefined}>{name}</div>
+          {pixelCount != null && (
             <div className="text-xs" style={{ color: "var(--ink-4)", fontSize: 10 }}>
               {pixelCount} px
+            </div>
+          )}
+          {isGroup && (
+            <div className="text-xs" style={{ color: "var(--ink-4)", fontSize: 10 }}>
+              Group
             </div>
           )}
         </div>
@@ -237,7 +270,7 @@ function TrackRow({
       <div
         ref={setNodeRef}
         className="relative"
-        style={{ width: totalWidth, height: ROW_HEIGHT, flexShrink: 0 }}
+        style={{ width: totalWidth, height: rowHeight, flexShrink: 0 }}
       >
         {blocks.map((block) => (
           <EffectBlockComponent

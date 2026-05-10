@@ -47,6 +47,10 @@ export interface EditorState {
   setXlightsNameMap: (map: Record<string, string>) => void;
   setLorMapping: (map: Record<string, { unit: number; circuit: number }>) => void;
   setHousePhoto: (url: string | undefined) => void;
+  addGroup: (group: FixtureGroup) => void;
+  updateGroup: (id: string, patch: Partial<FixtureGroup>) => void;
+  deleteGroup: (id: string) => void;
+
   setSelection: (ids: string[], mode?: "replace" | "add" | "toggle") => void;
   clearSelection: () => void;
   setSaveStatus: (status: EditorState["saveStatus"]) => void;
@@ -182,6 +186,26 @@ export const useEditorStore = create<EditorState>()(
           set((state) => {
             const [track] = state.sequence.tracks.splice(fromIndex, 1);
             state.sequence.tracks.splice(toIndex, 0, track);
+          }),
+
+        addGroup: (group: FixtureGroup) =>
+          set((state) => {
+            state.groups.push(group);
+            // Add a group track at the top of the tracks list
+            state.sequence.tracks.unshift({ id: group.id, kind: "group" });
+          }),
+
+        updateGroup: (id: string, patch: Partial<FixtureGroup>) =>
+          set((state) => {
+            const group = state.groups.find((g) => g.id === id);
+            if (group) Object.assign(group, patch);
+          }),
+
+        deleteGroup: (id: string) =>
+          set((state) => {
+            state.groups = state.groups.filter((g) => g.id !== id);
+            state.sequence.tracks = state.sequence.tracks.filter((t) => t.id !== id);
+            state.sequence.blocks = state.sequence.blocks.filter((b) => b.trackId !== id);
           }),
 
         setXlightsNameMap: (map: Record<string, string>) =>

@@ -161,7 +161,8 @@ function drawFrame(
     project.sequence,
     project.fixtures,
     t,
-    project.audio?.beats
+    project.audio?.beats,
+    project.groups
   );
 
   const fixtureAreaY = 80;

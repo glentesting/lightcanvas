@@ -16,6 +16,7 @@ import House from "@/components/editor/house";
 export default function PreviewPanel({ projectId }: { projectId: string }) {
   const sequence = useEditorStore((s) => s.sequence);
   const fixtures = useEditorStore((s) => s.fixtures);
+  const groups = useEditorStore((s) => s.groups);
   const audio = useEditorStore((s) => s.audio);
 
   const currentTime = useTransportStore((s) => s.currentTime);
@@ -51,7 +52,7 @@ export default function PreviewPanel({ projectId }: { projectId: string }) {
   // Compute pixel states from render engine
   let lights: Record<string, { color: string; intensity: number; outline?: boolean }> = {};
   try {
-    const pixelStates = renderFrame(sequence, fixtures, effectiveTime, audio?.beats);
+    const pixelStates = renderFrame(sequence, fixtures, effectiveTime, audio?.beats, groups);
     lights = buildHouseLights(pixelStates, fixtures);
   } catch (e) {
     console.warn("Preview render error:", e);

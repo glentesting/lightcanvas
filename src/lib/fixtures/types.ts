@@ -26,4 +26,5 @@ export interface FixtureGroup {
   id: string;
   name: string;
   fixtureIds: string[];
+  color?: string;  // track color in timeline
 }

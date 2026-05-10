@@ -26,6 +26,9 @@ export default function ProjectEditorPage() {
   const projectId = params.id as string;
   const [showAI, setShowAI] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [showGroupForm, setShowGroupForm] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupFixtureIds, setNewGroupFixtureIds] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const loadedRef = useRef(false);
@@ -50,6 +53,9 @@ export default function ProjectEditorPage() {
   const audioFile = useEditorStore((s) => s.audioFile);
   const audioAnalysis = useEditorStore((s) => s.audio);
   const fixtures = useEditorStore((s) => s.fixtures);
+  const groups = useEditorStore((s) => s.groups);
+  const addGroup = useEditorStore((s) => s.addGroup);
+  const deleteGroup = useEditorStore((s) => s.deleteGroup);
   const saveStatus = useEditorStore((s) => s.saveStatus);
   const loadProject = useEditorStore((s) => s.loadProject);
   const setAudio = useEditorStore((s) => s.setAudio);
@@ -207,6 +213,97 @@ export default function ProjectEditorPage() {
                   <span className="truncate flex-1">{f.name}</span>
                 </div>
               ))}
+            </SidebarSection>
+
+            <SidebarSection title="Groups">
+              {groups.length > 0 && (
+                <div className="mb-2">
+                  {groups.map((g) => (
+                    <div key={g.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs mb-0.5 hover:bg-[var(--panel)] transition-colors group/grp" style={{ color: "var(--ink-2)" }}>
+                      <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: g.color ?? "#6366f1" }} />
+                      <span className="truncate flex-1">{g.name}</span>
+                      <span className="text-xs" style={{ color: "var(--ink-4)", fontSize: 10 }}>{g.fixtureIds.length} props</span>
+                      <button
+                        onClick={() => deleteGroup(g.id)}
+                        className="opacity-0 group-hover/grp:opacity-100 transition-opacity shrink-0"
+                        style={{ color: "var(--ink-4)" }}
+                        title="Delete group"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {showGroupForm ? (
+                <div className="flex flex-col gap-2 p-2 rounded-md" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
+                  <input
+                    type="text"
+                    placeholder="Group name"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    className="h-7 px-2 rounded text-xs"
+                    style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+                    autoFocus
+                  />
+                  <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
+                    {fixtures.map((f) => (
+                      <label key={f.id} className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: "var(--ink-2)" }}>
+                        <input
+                          type="checkbox"
+                          checked={newGroupFixtureIds.includes(f.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setNewGroupFixtureIds((prev) => [...prev, f.id]);
+                            } else {
+                              setNewGroupFixtureIds((prev) => prev.filter((id) => id !== f.id));
+                            }
+                          }}
+                        />
+                        {f.name}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => {
+                        if (newGroupName.trim() && newGroupFixtureIds.length > 0) {
+                          addGroup({
+                            id: crypto.randomUUID(),
+                            name: newGroupName.trim(),
+                            fixtureIds: newGroupFixtureIds,
+                            color: "#6366f1",
+                          });
+                          setNewGroupName("");
+                          setNewGroupFixtureIds([]);
+                          setShowGroupForm(false);
+                        }
+                      }}
+                      disabled={!newGroupName.trim() || newGroupFixtureIds.length === 0}
+                      className="flex-1 h-7 rounded text-xs font-medium transition-colors disabled:opacity-40"
+                      style={{ background: "var(--accent)", color: "#fff" }}
+                    >
+                      Create
+                    </button>
+                    <button
+                      onClick={() => { setShowGroupForm(false); setNewGroupName(""); setNewGroupFixtureIds([]); }}
+                      className="h-7 px-3 rounded text-xs font-medium transition-colors"
+                      style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink-3)" }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowGroupForm(true)}
+                  className="flex items-center gap-2 w-full h-7 px-2.5 rounded-md text-xs font-medium justify-start transition-colors"
+                  style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                  Create Group
+                </button>
+              )}
             </SidebarSection>
 
             <SidebarSection title="Effects">
