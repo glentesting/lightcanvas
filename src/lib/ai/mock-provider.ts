@@ -1,4 +1,4 @@
-import type { AIProvider, AIEvent, GenerateInput } from "./provider";
+import type { AIProvider, AIEvent, GenerateInput, GenerateOptions } from "./provider";
 import type { EffectBlock, EffectId } from "@/lib/timeline/types";
 import { DEFAULT_EFFECT_PARAMS } from "@/lib/timeline/constants";
 
@@ -25,7 +25,7 @@ const COLORS: Record<string, string[]> = {
 };
 
 export class MockAIProvider implements AIProvider {
-  async *generateFromMusic(input: GenerateInput): AsyncIterable<AIEvent> {
+  async *generateFromMusic(input: GenerateInput, _options?: GenerateOptions): AsyncIterable<AIEvent> {
     const { audio, fixtures, vibe, intensity } = input;
 
     yield { type: "progress", step: "Listening to song...", pct: 10 };

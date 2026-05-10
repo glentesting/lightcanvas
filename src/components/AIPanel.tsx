@@ -4,6 +4,7 @@ import { useState, useCallback, useRef } from "react";
 import { useEditorStore } from "@/lib/store/editor-store";
 import type { AIEvent } from "@/lib/ai/provider";
 import type { EffectBlock } from "@/lib/timeline/types";
+import { AI_STYLES, REFINE_PROMPTS } from "@/lib/ai/styles";
 
 type Vibe = "classic" | "jazz" | "edm" | "cinematic" | "whimsical";
 type Intensity = "subtle" | "balanced" | "wild";
@@ -16,80 +17,120 @@ interface AIPanelProps {
 export default function AIPanel({ open, onClose }: AIPanelProps) {
   const audio = useEditorStore((s) => s.audio);
   const fixtures = useEditorStore((s) => s.fixtures);
+  const sequence = useEditorStore((s) => s.sequence);
   const addBlock = useEditorStore((s) => s.addBlock);
   const deleteBlocks = useEditorStore((s) => s.deleteBlocks);
 
   const [vibe, setVibe] = useState<Vibe>("classic");
   const [intensity, setIntensity] = useState<Intensity>("balanced");
+  const [styleId, setStyleId] = useState("classic");
   const [running, setRunning] = useState(false);
   const [events, setEvents] = useState<AIEvent[]>([]);
   const [generatedBlockIds, setGeneratedBlockIds] = useState<string[]>([]);
   const abortRef = useRef<AbortController | null>(null);
 
-  const handleGenerate = useCallback(async () => {
-    if (!audio) return;
-    setRunning(true);
-    setEvents([]);
-    setGeneratedBlockIds([]);
+  const runGeneration = useCallback(
+    async (refinementPrompt?: string) => {
+      if (!audio) return;
+      setRunning(true);
+      setEvents([]);
 
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    try {
-      const res = await fetch("/api/ai/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ audio, fixtures, vibe, intensity }),
-        signal: controller.signal,
-      });
-
-      if (!res.ok || !res.body) {
-        setEvents((prev) => [...prev, { type: "error", message: "Failed to connect" }]);
-        setRunning(false);
-        return;
+      // If refining, keep existing generated block IDs; otherwise reset
+      if (!refinementPrompt) {
+        setGeneratedBlockIds([]);
       }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      const blockIds: string[] = [];
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
+      try {
+        const res = await fetch("/api/ai/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            audio,
+            fixtures,
+            vibe,
+            intensity,
+            style: styleId,
+            refinementPrompt,
+            existingBlocks: refinementPrompt ? sequence?.blocks : undefined,
+          }),
+          signal: controller.signal,
+        });
 
-        const lines = buffer.split("\n\n");
-        buffer = lines.pop() || "";
+        if (!res.ok || !res.body) {
+          const errorText = await res.text().catch(() => "Unknown error");
+          setEvents((prev) => [
+            ...prev,
+            {
+              type: "error",
+              message: `Failed to connect (${res.status}): ${errorText.slice(0, 200)}`,
+            },
+          ]);
+          setRunning(false);
+          return;
+        }
 
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const json = line.slice(6);
-          try {
-            const event: AIEvent = JSON.parse(json);
-            setEvents((prev) => [...prev, event]);
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        const blockIds: string[] = [];
 
-            // Apply patches immediately
-            if (event.type === "patch" && event.patch.addBlocks) {
-              for (const block of event.patch.addBlocks) {
-                addBlock(block as EffectBlock);
-                blockIds.push(block.id);
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split("\n\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const json = line.slice(6);
+            try {
+              const event: AIEvent = JSON.parse(json);
+              setEvents((prev) => [...prev, event]);
+
+              // Apply patches immediately
+              if (event.type === "patch" && event.patch.addBlocks) {
+                for (const block of event.patch.addBlocks) {
+                  addBlock(block as EffectBlock);
+                  blockIds.push(block.id);
+                }
               }
+            } catch {
+              // skip malformed events
             }
-          } catch {
-            // skip malformed events
           }
         }
-      }
 
-      setGeneratedBlockIds(blockIds);
-    } catch (e) {
-      if ((e as Error).name !== "AbortError") {
-        setEvents((prev) => [...prev, { type: "error", message: String(e) }]);
+        setGeneratedBlockIds((prev) =>
+          refinementPrompt ? [...prev, ...blockIds] : blockIds
+        );
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") {
+          setEvents((prev) => [
+            ...prev,
+            { type: "error", message: String(e) },
+          ]);
+        }
       }
-    }
-    setRunning(false);
-  }, [audio, fixtures, vibe, intensity, addBlock]);
+      setRunning(false);
+    },
+    [audio, fixtures, sequence, vibe, intensity, styleId, addBlock]
+  );
+
+  const handleGenerate = useCallback(() => {
+    runGeneration();
+  }, [runGeneration]);
+
+  const handleRefine = useCallback(
+    (prompt: string) => {
+      runGeneration(prompt);
+    },
+    [runGeneration]
+  );
 
   const handleUndo = useCallback(() => {
     if (generatedBlockIds.length > 0) {
@@ -122,9 +163,20 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 shrink-0" style={{ height: 52, borderBottom: "1px solid var(--line)" }}>
+      <div
+        className="flex items-center justify-between px-4 shrink-0"
+        style={{ height: 52, borderBottom: "1px solid var(--line)" }}
+      >
         <div className="flex items-center gap-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--accent)" }}>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            style={{ color: "var(--accent)" }}
+          >
             <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
           </svg>
           <span className="text-sm font-semibold">AI Actions</span>
@@ -132,10 +184,23 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
         <button
           onClick={onClose}
           className="w-7 h-7 flex items-center justify-center rounded-md"
-          style={{ color: "var(--ink-3)", background: "none", border: "none", cursor: "pointer" }}
+          style={{
+            color: "var(--ink-3)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+          }}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
       </div>
@@ -144,19 +209,83 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
       <div className="flex-1 overflow-y-auto p-4">
         {!running && !doneEvent && (
           <>
-            {/* Config form */}
+            {/* Style preset selector */}
             <div className="mb-4">
-              <label className="text-xs font-medium block mb-2" style={{ color: "var(--ink-3)" }}>Vibe</label>
+              <label
+                className="text-xs font-medium block mb-2"
+                style={{ color: "var(--ink-3)" }}
+              >
+                Style Preset
+              </label>
+              <div className="flex flex-col gap-1.5">
+                {AI_STYLES.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setStyleId(s.id)}
+                    className="text-left px-3 py-2 rounded-md text-xs transition-colors"
+                    style={{
+                      background:
+                        styleId === s.id
+                          ? "var(--accent-50)"
+                          : "var(--surface)",
+                      border:
+                        styleId === s.id
+                          ? "1px solid var(--accent-200)"
+                          : "1px solid var(--line)",
+                      color:
+                        styleId === s.id
+                          ? "var(--accent-ink)"
+                          : "var(--ink-2)",
+                    }}
+                  >
+                    <span className="font-medium">{s.name}</span>
+                    <span
+                      className="block mt-0.5"
+                      style={{
+                        color:
+                          styleId === s.id
+                            ? "var(--accent-ink)"
+                            : "var(--ink-4)",
+                      }}
+                    >
+                      {s.desc}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Vibe */}
+            <div className="mb-4">
+              <label
+                className="text-xs font-medium block mb-2"
+                style={{ color: "var(--ink-3)" }}
+              >
+                Color Palette
+              </label>
               <div className="flex flex-wrap gap-1.5">
-                {(["classic", "jazz", "edm", "cinematic", "whimsical"] as Vibe[]).map((v) => (
+                {(
+                  [
+                    "classic",
+                    "jazz",
+                    "edm",
+                    "cinematic",
+                    "whimsical",
+                  ] as Vibe[]
+                ).map((v) => (
                   <button
                     key={v}
                     onClick={() => setVibe(v)}
                     className="h-7 px-3 rounded-md text-xs font-medium capitalize"
                     style={{
-                      background: vibe === v ? "var(--accent-50)" : "var(--surface)",
-                      border: vibe === v ? "1px solid var(--accent-200)" : "1px solid var(--line)",
-                      color: vibe === v ? "var(--accent-ink)" : "var(--ink-2)",
+                      background:
+                        vibe === v ? "var(--accent-50)" : "var(--surface)",
+                      border:
+                        vibe === v
+                          ? "1px solid var(--accent-200)"
+                          : "1px solid var(--line)",
+                      color:
+                        vibe === v ? "var(--accent-ink)" : "var(--ink-2)",
                     }}
                   >
                     {v}
@@ -165,8 +294,14 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
               </div>
             </div>
 
+            {/* Intensity */}
             <div className="mb-5">
-              <label className="text-xs font-medium block mb-2" style={{ color: "var(--ink-3)" }}>Intensity</label>
+              <label
+                className="text-xs font-medium block mb-2"
+                style={{ color: "var(--ink-3)" }}
+              >
+                Intensity
+              </label>
               <div className="flex gap-1.5">
                 {(["subtle", "balanced", "wild"] as Intensity[]).map((i) => (
                   <button
@@ -174,9 +309,18 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
                     onClick={() => setIntensity(i)}
                     className="h-7 px-3 rounded-md text-xs font-medium capitalize flex-1"
                     style={{
-                      background: intensity === i ? "var(--accent-50)" : "var(--surface)",
-                      border: intensity === i ? "1px solid var(--accent-200)" : "1px solid var(--line)",
-                      color: intensity === i ? "var(--accent-ink)" : "var(--ink-2)",
+                      background:
+                        intensity === i
+                          ? "var(--accent-50)"
+                          : "var(--surface)",
+                      border:
+                        intensity === i
+                          ? "1px solid var(--accent-200)"
+                          : "1px solid var(--line)",
+                      color:
+                        intensity === i
+                          ? "var(--accent-ink)"
+                          : "var(--ink-2)",
                     }}
                   >
                     {i}
@@ -192,18 +336,30 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
               style={{
                 background: audio ? "var(--accent)" : "var(--panel)",
                 color: audio ? "#fff" : "var(--ink-4)",
-                border: audio ? "1px solid var(--accent)" : "1px solid var(--line)",
+                border: audio
+                  ? "1px solid var(--accent)"
+                  : "1px solid var(--line)",
                 cursor: audio ? "pointer" : "not-allowed",
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
               </svg>
               {audio ? "Generate from Music" : "Upload a song first"}
             </button>
 
             {!audio && (
-              <p className="text-xs mt-3 text-center" style={{ color: "var(--ink-4)" }}>
+              <p
+                className="text-xs mt-3 text-center"
+                style={{ color: "var(--ink-4)" }}
+              >
                 Upload a song in the Song section to enable AI generation.
               </p>
             )}
@@ -216,20 +372,37 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
             {lastProgress && "pct" in lastProgress && (
               <div>
                 <div className="flex justify-between text-xs mb-1">
-                  <span style={{ color: "var(--ink-2)" }}>{"step" in lastProgress ? lastProgress.step : ""}</span>
-                  <span style={{ color: "var(--ink-4)" }}>{lastProgress.pct}%</span>
+                  <span style={{ color: "var(--ink-2)" }}>
+                    {"step" in lastProgress ? lastProgress.step : ""}
+                  </span>
+                  <span style={{ color: "var(--ink-4)" }}>
+                    {lastProgress.pct}%
+                  </span>
                 </div>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--panel)" }}>
+                <div
+                  className="h-1.5 rounded-full overflow-hidden"
+                  style={{ background: "var(--panel)" }}
+                >
                   <div
                     className="h-full rounded-full transition-all duration-300"
-                    style={{ width: `${lastProgress.pct}%`, background: "var(--accent)" }}
+                    style={{
+                      width: `${lastProgress.pct}%`,
+                      background: "var(--accent)",
+                    }}
                   />
                 </div>
               </div>
             )}
 
             {thoughts.map((t, i) => (
-              <div key={i} className="text-xs p-2.5 rounded-md" style={{ background: "var(--panel)", color: "var(--ink-2)" }}>
+              <div
+                key={i}
+                className="text-xs p-2.5 rounded-md"
+                style={{
+                  background: "var(--panel)",
+                  color: "var(--ink-2)",
+                }}
+              >
                 {"text" in t ? t.text : ""}
               </div>
             ))}
@@ -237,7 +410,11 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
             <button
               onClick={handleCancel}
               className="w-full h-8 rounded-md text-xs font-medium"
-              style={{ border: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink-3)" }}
+              style={{
+                border: "1px solid var(--line)",
+                background: "var(--surface)",
+                color: "var(--ink-3)",
+              }}
             >
               Cancel
             </button>
@@ -247,8 +424,22 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
         {/* Done state */}
         {doneEvent && (
           <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-xs p-3 rounded-md" style={{ background: "var(--accent-50)", border: "1px solid var(--accent-200)", color: "var(--accent-ink)" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <div
+              className="flex items-center gap-2 text-xs p-3 rounded-md"
+              style={{
+                background: "var(--accent-50)",
+                border: "1px solid var(--accent-200)",
+                color: "var(--accent-ink)",
+              }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               {"summary" in doneEvent ? doneEvent.summary : "Done"}
@@ -258,25 +449,90 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
               <button
                 onClick={handleUndo}
                 className="flex-1 h-8 rounded-md text-xs font-medium"
-                style={{ border: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink)" }}
+                style={{
+                  border: "1px solid var(--line)",
+                  background: "var(--surface)",
+                  color: "var(--ink)",
+                }}
               >
                 Undo
               </button>
               <button
-                onClick={() => { setEvents([]); setGeneratedBlockIds([]); }}
+                onClick={() => {
+                  setEvents([]);
+                  setGeneratedBlockIds([]);
+                }}
                 className="flex-1 h-8 rounded-md text-xs font-medium"
-                style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)" }}
+                style={{
+                  background: "var(--accent)",
+                  color: "#fff",
+                  border: "1px solid var(--accent)",
+                }}
               >
                 Keep
               </button>
+            </div>
+
+            {/* Refine section */}
+            <div
+              className="mt-2 pt-3"
+              style={{ borderTop: "1px solid var(--line)" }}
+            >
+              <label
+                className="text-xs font-medium block mb-2"
+                style={{ color: "var(--ink-3)" }}
+              >
+                Refine
+              </label>
+              <div className="flex flex-col gap-1.5">
+                {REFINE_PROMPTS.map((r) => (
+                  <button
+                    key={r.label}
+                    onClick={() => handleRefine(r.prompt)}
+                    className="text-left px-3 py-2 rounded-md text-xs transition-colors"
+                    style={{
+                      background: "var(--surface)",
+                      border: "1px solid var(--line)",
+                      color: "var(--ink-2)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         {/* Error state */}
-        {errorEvent && (
-          <div className="text-xs p-3 rounded-md" style={{ background: "#fee2e2", border: "1px solid #fca5a5", color: "#b91c1c" }}>
-            {"message" in errorEvent ? errorEvent.message : "An error occurred"}
+        {errorEvent && !doneEvent && (
+          <div className="flex flex-col gap-3">
+            <div
+              className="text-xs p-3 rounded-md"
+              style={{
+                background: "#fee2e2",
+                border: "1px solid #fca5a5",
+                color: "#b91c1c",
+              }}
+            >
+              {"message" in errorEvent
+                ? errorEvent.message
+                : "An error occurred"}
+            </div>
+            <button
+              onClick={() => {
+                setEvents([]);
+              }}
+              className="w-full h-8 rounded-md text-xs font-medium"
+              style={{
+                border: "1px solid var(--line)",
+                background: "var(--surface)",
+                color: "var(--ink-3)",
+              }}
+            >
+              Try Again
+            </button>
           </div>
         )}
       </div>

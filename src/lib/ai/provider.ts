@@ -1,5 +1,5 @@
 import type { EffectBlock } from "@/lib/timeline/types";
-import type { AudioAnalysis } from "@/lib/audio/types";
+import type { AudioAnalysis, AudioSection } from "@/lib/audio/types";
 import type { Fixture } from "@/lib/fixtures/types";
 
 export interface ProjectPatch {
@@ -22,6 +22,14 @@ export interface GenerateInput {
   intensity: "subtle" | "balanced" | "wild";
 }
 
+export interface GenerateOptions {
+  style?: string;
+  intensity?: number;
+  refinementPrompt?: string;
+  existingBlocks?: EffectBlock[];
+  sections?: AudioSection[];
+}
+
 export interface AIProvider {
-  generateFromMusic(input: GenerateInput): AsyncIterable<AIEvent>;
+  generateFromMusic(input: GenerateInput, options?: GenerateOptions): AsyncIterable<AIEvent>;
 }

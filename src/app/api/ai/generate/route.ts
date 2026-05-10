@@ -11,10 +11,29 @@ const generateSchema = z.object({
     downbeats: z.array(z.number()),
     onsets: z.array(z.number()),
     loudness: z.array(z.object({ t: z.number(), v: z.number() })),
+    sections: z
+      .array(
+        z.object({
+          label: z.enum(["intro", "verse", "chorus", "bridge", "outro"]),
+          startTime: z.number(),
+          endTime: z.number(),
+          avgEnergy: z.number(),
+        })
+      )
+      .optional(),
+    spectralFeatures: z
+      .object({
+        bassEnergy: z.array(z.number()),
+        highEnergy: z.array(z.number()),
+      })
+      .optional(),
   }),
   fixtures: z.array(z.any()),
   vibe: z.enum(["classic", "jazz", "edm", "cinematic", "whimsical"]),
   intensity: z.enum(["subtle", "balanced", "wild"]),
+  style: z.string().optional(),
+  refinementPrompt: z.string().optional(),
+  existingBlocks: z.array(z.any()).optional(),
 });
 
 export async function POST(request: Request) {
@@ -29,16 +48,28 @@ export async function POST(request: Request) {
 
   const provider = getAIProvider();
   const encoder = new TextEncoder();
+  const { style, refinementPrompt, existingBlocks, ...input } = parsed.data;
+
+  const options = {
+    style,
+    refinementPrompt,
+    existingBlocks,
+    sections: input.audio.sections,
+  };
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        for await (const event of provider.generateFromMusic(parsed.data)) {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+        for await (const event of provider.generateFromMusic(input, options)) {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(event)}\n\n`)
+          );
         }
       } catch (e) {
         controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ type: "error", message: String(e) })}\n\n`)
+          encoder.encode(
+            `data: ${JSON.stringify({ type: "error", message: String(e) })}\n\n`
+          )
         );
       }
       controller.close();
