@@ -18,6 +18,19 @@ export interface Project {
   sequence: Sequence;
   houseTemplate: string;
   houseCustomSvg?: string;
+  parentShowId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Show {
+  id: string;
+  ownerId: string;
+  name: string;
+  description?: string;
+  seasonYear?: number;
+  isActive: boolean;
+  songOrder: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -36,6 +49,7 @@ export function projectFromRow(row: Record<string, unknown>): Project {
     sequence: (row.sequence as Sequence) || { tracks: [], blocks: [], bpm: 120, beatGridOffset: 0 },
     houseTemplate: (row.house_template as string) || "default",
     houseCustomSvg: row.house_custom_svg as string | undefined,
+    parentShowId: (row.parent_show_id as string) || null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
