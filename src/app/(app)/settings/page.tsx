@@ -1,6 +1,6 @@
 "use client";
 
-import { useUser, UserButton } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -77,34 +77,9 @@ export default function SettingsPage() {
   const hardwareChanged = sequencer !== currentSequencer || controller !== currentController;
 
   return (
-    <div className="min-h-screen" style={{ background: "#faf8f5" }}>
-      {/* Nav */}
-      <header className="px-6 py-3.5 flex items-center justify-between" style={{ background: "#ffffff", borderBottom: "1px solid var(--line)" }}>
-        <div className="flex items-center gap-2.5">
-          <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs" style={{ background: "linear-gradient(135deg, var(--accent), oklch(72% 0.18 250))" }}>
-              ✦
-            </div>
-            <span className="text-lg font-semibold" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}>LightCanvas</span>
-          </Link>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm" style={{ color: "var(--ink-3)" }}>
-            {user?.firstName || user?.emailAddresses[0]?.emailAddress}
-          </span>
-          <UserButton />
-        </div>
-      </header>
-
-      <main style={{ maxWidth: 640, margin: "0 auto", padding: "40px 24px" }}>
-        <div className="flex items-center gap-3 mb-6">
-          <Link href="/dashboard" className="flex items-center justify-center w-8 h-8 rounded-md transition-colors hover:bg-[var(--panel)]" style={{ color: "var(--ink-3)" }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </Link>
-          <h1 className="text-2xl font-semibold" style={{ fontFamily: "var(--font-display)" }}>Settings</h1>
-        </div>
+    <div style={{ background: "#FFFFFF" }}>
+      <div style={{ maxWidth: 640, margin: "0 auto", padding: "40px 24px" }}>
+        <h1 className="text-2xl font-semibold mb-6" style={{ fontFamily: "var(--font-display)" }}>Settings</h1>
 
         {/* Tab bar */}
         <div className="flex gap-1 mb-6 p-1 rounded-lg" style={{ background: "var(--panel)" }}>
@@ -371,7 +346,7 @@ export default function SettingsPage() {
             </section>
           </div>
         )}
-      </main>
+      </div>
 
       {/* Toast */}
       {toast && (

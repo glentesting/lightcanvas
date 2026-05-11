@@ -1,7 +1,6 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useCallback } from "react";
@@ -614,35 +613,8 @@ export default function DashboardPage() {
   const totalShows = shows.length;
 
   return (
-    <div className="min-h-screen" style={{ background: "#faf8f5" }}>
-      {/* Nav */}
-      <header className="px-6 py-3.5 flex items-center justify-between" style={{ background: "#ffffff", borderBottom: "1px solid var(--line)" }}>
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs" style={{ background: "linear-gradient(135deg, var(--accent), oklch(72% 0.18 250))" }}>
-            ✦
-          </div>
-          <span className="text-lg font-semibold" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}>LightCanvas</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm" style={{ color: "var(--ink-3)" }}>
-            {user?.firstName || user?.emailAddresses[0]?.emailAddress}
-          </span>
-          <Link
-            href="/settings"
-            className="w-8 h-8 rounded-md flex items-center justify-center transition-colors hover:bg-[var(--panel)]"
-            style={{ color: "var(--ink-3)" }}
-            title="Settings"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-          </Link>
-          <UserButton />
-        </div>
-      </header>
-
-      <main id="main-content" style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px" }}>
+    <div style={{ background: "#FFFFFF" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px" }}>
         {/* Header */}
         <div className="flex items-end justify-between mb-8">
           <div>
@@ -1032,7 +1004,7 @@ export default function DashboardPage() {
             )}
           </>
         )}
-      </main>
+      </div>
 
       {/* Show Export placeholder modal */}
       {exportShowName && (
