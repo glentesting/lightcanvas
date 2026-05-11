@@ -20,7 +20,21 @@
       "Bash(unzip -o \"Lightshow AI Design.zip\" house.jsx editor-layout.jsx editor-data.jsx -d design-ref)",
       "Bash(python3 fix_editor.py)",
       "Bash(rm fix_editor.py)",
-      "Bash(python3 -c ':*)"
+      "Bash(python3 -c ':*)",
+      "Bash(unzip -o LightCanvas_Landing_Page_Handoff.zip -d landing_pkg)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(unzip -o LightCanvas_v2_Handoff.zip -d handoff_v2_pkg)",
+      "Bash(node -e \"console.log\\(require\\('zod/package.json'\\).version\\)\")",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "Bash(cp 'C:/Users/glenh/Documents/Lightshow/AppRepo/.claude/worktrees/agent-a38e008a/src/app/project/[id]/page.tsx' 'C:/Users/glenh/Documents/Lightshow/AppRepo/src/app/project/[id]/page.tsx')",
+      "Bash(mkdir -p 'C:/Users/glenh/Documents/Lightshow/AppRepo/src/app/p/[token]')",
+      "Bash(cp 'C:/Users/glenh/Documents/Lightshow/AppRepo/.claude/worktrees/agent-a38e008a/src/app/p/[token]/page.tsx' 'C:/Users/glenh/Documents/Lightshow/AppRepo/src/app/p/[token]/page.tsx')",
+      "Bash(ls -la *.md *.zip *.xlsx *.docx)",
+      "Bash(ls -d handoff*/ landing_pkg/)",
+      "Bash(ls *.md)",
+      "Bash(ls -d */)"
     ]
   }
 }
