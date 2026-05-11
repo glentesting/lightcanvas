@@ -14,6 +14,7 @@ const PROP_DEFAULTS: Record<string, { w: number; h: number; cx: number; cy: numb
   "mega-tree":     { w: 64, h: 160, cx: 690, cy: 240 },
   "mini-tree":     { w: 36, h: 55, cx: 310, cy: 295 },
   arch:            { w: 80, h: 50, cx: 360, cy: 295 },
+  matrix:          { w: 80, h: 50, cx: 500, cy: 240 },
 };
 
 export default function LayoutEditor() {
@@ -242,6 +243,158 @@ export default function LayoutEditor() {
                   </select>
                 </div>
               </div>
+              {/* Geometry fields — conditional on fixture kind */}
+              {selected.kind === "mega-tree" && (
+                <div className="grid grid-cols-2 gap-2 pt-1" style={{ borderTop: "1px solid var(--line)" }}>
+                  <div className="col-span-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)", letterSpacing: "0.06em", fontSize: 10 }}>Tree Geometry</span>
+                  </div>
+                  <div>
+                    <label className="text-xs mb-1 block" style={{ color: "var(--ink-3)" }}>Strands</label>
+                    <input
+                      type="number"
+                      value={selected.geometry?.strandCount ?? 16}
+                      onChange={(e) => updateFixture(selected.id, { geometry: { ...selected.geometry, strandCount: parseInt(e.target.value) || 1 } })}
+                      className="w-full h-7 px-2 rounded text-xs"
+                      style={{ border: "1px solid var(--line)", background: "var(--surface)", fontVariantNumeric: "tabular-nums" }}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs mb-1 block" style={{ color: "var(--ink-3)" }}>Px/strand</label>
+                    <input
+                      type="number"
+                      value={selected.geometry?.pixelsPerStrand ?? 100}
+                      onChange={(e) => updateFixture(selected.id, { geometry: { ...selected.geometry, pixelsPerStrand: parseInt(e.target.value) || 1 } })}
+                      className="w-full h-7 px-2 rounded text-xs"
+                      style={{ border: "1px solid var(--line)", background: "var(--surface)", fontVariantNumeric: "tabular-nums" }}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs mb-1 block" style={{ color: "var(--ink-3)" }}>Strand dir.</label>
+                    <select
+                      value={selected.geometry?.strandDirection ?? "topDown"}
+                      onChange={(e) => updateFixture(selected.id, { geometry: { ...selected.geometry, strandDirection: e.target.value as "topDown" | "bottomUp" } })}
+                      className="w-full h-7 px-1.5 rounded text-xs"
+                      style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+                    >
+                      <option value="topDown">Top-down</option>
+                      <option value="bottomUp">Bottom-up</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs mb-1 block" style={{ color: "var(--ink-3)" }}>Rotation</label>
+                    <select
+                      value={selected.geometry?.rotationDirection ?? "clockwise"}
+                      onChange={(e) => updateFixture(selected.id, { geometry: { ...selected.geometry, rotationDirection: e.target.value as "clockwise" | "counterClockwise" } })}
+                      className="w-full h-7 px-1.5 rounded text-xs"
+                      style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+                    >
+                      <option value="clockwise">Clockwise</option>
+                      <option value="counterClockwise">Counter-CW</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {selected.kind === "arch" && (
+                <div className="grid grid-cols-2 gap-2 pt-1" style={{ borderTop: "1px solid var(--line)" }}>
+                  <div className="col-span-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)", letterSpacing: "0.06em", fontSize: 10 }}>Arch Geometry</span>
+                  </div>
+                  <div>
+                    <label className="text-xs mb-1 block" style={{ color: "var(--ink-3)" }}>Orientation</label>
+                    <select
+                      value={selected.geometry?.curveOrientation ?? "leftArch"}
+                      onChange={(e) => updateFixture(selected.id, { geometry: { ...selected.geometry, curveOrientation: e.target.value as "leftArch" | "rightArch" | "mirrored" } })}
+                      className="w-full h-7 px-1.5 rounded text-xs"
+                      style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+                    >
+                      <option value="leftArch">Left arch</option>
+                      <option value="rightArch">Right arch</option>
+                      <option value="mirrored">Mirrored</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs mb-1 block" style={{ color: "var(--ink-3)" }}>Start end</label>
+                    <select
+                      value={selected.geometry?.startEnd ?? "left"}
+                      onChange={(e) => updateFixture(selected.id, { geometry: { ...selected.geometry, startEnd: e.target.value as "left" | "right" } })}
+                      className="w-full h-7 px-1.5 rounded text-xs"
+                      style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+                    >
+                      <option value="left">Left</option>
+                      <option value="right">Right</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {selected.kind === "matrix" && (
+                <div className="grid grid-cols-2 gap-2 pt-1" style={{ borderTop: "1px solid var(--line)" }}>
+                  <div className="col-span-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--ink-3)", letterSpacing: "0.06em", fontSize: 10 }}>Matrix Geometry</span>
+                  </div>
+                  <div>
+                    <label className="text-xs mb-1 block" style={{ color: "var(--ink-3)" }}>Rows</label>
+                    <input
+                      type="number"
+                      value={selected.geometry?.rows ?? 16}
+                      onChange={(e) => updateFixture(selected.id, { geometry: { ...selected.geometry, rows: parseInt(e.target.value) || 1 } })}
+                      className="w-full h-7 px-2 rounded text-xs"
+                      style={{ border: "1px solid var(--line)", background: "var(--surface)", fontVariantNumeric: "tabular-nums" }}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs mb-1 block" style={{ color: "var(--ink-3)" }}>Columns</label>
+                    <input
+                      type="number"
+                      value={selected.geometry?.cols ?? 32}
+                      onChange={(e) => updateFixture(selected.id, { geometry: { ...selected.geometry, cols: parseInt(e.target.value) || 1 } })}
+                      className="w-full h-7 px-2 rounded text-xs"
+                      style={{ border: "1px solid var(--line)", background: "var(--surface)", fontVariantNumeric: "tabular-nums" }}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs mb-1 block" style={{ color: "var(--ink-3)" }}>Wiring dir.</label>
+                    <select
+                      value={selected.geometry?.wiringDirection ?? "horizontal"}
+                      onChange={(e) => updateFixture(selected.id, { geometry: { ...selected.geometry, wiringDirection: e.target.value as "horizontal" | "vertical" } })}
+                      className="w-full h-7 px-1.5 rounded text-xs"
+                      style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+                    >
+                      <option value="horizontal">Horizontal</option>
+                      <option value="vertical">Vertical</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs mb-1 block" style={{ color: "var(--ink-3)" }}>Wiring pat.</label>
+                    <select
+                      value={selected.geometry?.wiringPattern ?? "linear"}
+                      onChange={(e) => updateFixture(selected.id, { geometry: { ...selected.geometry, wiringPattern: e.target.value as "linear" | "alternating" } })}
+                      className="w-full h-7 px-1.5 rounded text-xs"
+                      style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+                    >
+                      <option value="linear">Linear</option>
+                      <option value="alternating">Alternating</option>
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs mb-1 block" style={{ color: "var(--ink-3)" }}>Start corner</label>
+                    <select
+                      value={selected.geometry?.startCorner ?? "topLeft"}
+                      onChange={(e) => updateFixture(selected.id, { geometry: { ...selected.geometry, startCorner: e.target.value as "topLeft" | "topRight" | "bottomLeft" | "bottomRight" } })}
+                      className="w-full h-7 px-1.5 rounded text-xs"
+                      style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
+                    >
+                      <option value="topLeft">Top-left</option>
+                      <option value="topRight">Top-right</option>
+                      <option value="bottomLeft">Bottom-left</option>
+                      <option value="bottomRight">Bottom-right</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={() => { deleteFixture(selected.id); setSelectedId(null); }}
                 className="text-xs mt-2 text-left"
@@ -336,6 +489,18 @@ function PropShape({
       {fixture.kind === "bush" && (
         <ellipse cx={cx} cy={cy} rx={w / 2} ry={h / 2}
           fill={color} fillOpacity={fillOpacity} stroke={color} strokeWidth={isSelected ? 2.5 : 1.5} />
+      )}
+      {fixture.kind === "matrix" && (
+        <>
+          <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={2}
+            fill={color} fillOpacity={fillOpacity} stroke={color} strokeWidth={isSelected ? 2.5 : 1.5} />
+          {/* Grid dots to suggest pixels */}
+          {Array.from({ length: 3 }).map((_, r) =>
+            Array.from({ length: 5 }).map((_, c) => (
+              <circle key={`${r}-${c}`} cx={cx - w / 2 + w * (c + 0.5) / 5} cy={cy - h / 2 + h * (r + 0.5) / 3} r={1.5} fill={color} opacity={0.5} />
+            ))
+          )}
+        </>
       )}
 
       {/* Selection ring */}
@@ -458,6 +623,7 @@ function PropTypeIcon({ kind, selected }: { kind: string; selected: boolean }) {
         {kind === "mini-tree" && <><polygon points="12,4 5,17 19,17" /><line x1="12" y1="17" x2="12" y2="21" /></>}
         {kind === "arch" && <path d="M4 20 Q12 2 20 20" />}
         {kind === "bush" && <ellipse cx="12" cy="13" rx="9" ry="6" />}
+        {kind === "matrix" && <><rect x="3" y="5" width="18" height="14" rx="1" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="12" y1="5" x2="12" y2="19" /></>}
       </svg>
     </div>
   );

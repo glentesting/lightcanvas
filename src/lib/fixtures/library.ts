@@ -13,6 +13,7 @@ export const FIXTURE_TEMPLATES: FixtureTemplate[] = [
   { kind: "arch", name: "Arch", pixelCount: 50 },
   { kind: "bush", name: "Bush Wrap", pixelCount: 60 },
   { kind: "window-outline", name: "Window", pixelCount: 32 },
+  { kind: "matrix", name: "Matrix", pixelCount: 512 },
 ];
 
 /**

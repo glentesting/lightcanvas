@@ -64,9 +64,46 @@ const chase: EffectFn = ({ block, fixture, t }) => {
   const rgb = hexToRgb(color1);
   const n = fixture.pixelCount;
   const localT = (t - block.start) * speed;
+  const geo = fixture.geometry;
+
+  // Mega-tree: chase strand-by-strand
+  if (fixture.kind === "mega-tree" && geo?.strandCount && geo.strandCount > 1) {
+    const strandCount = geo.strandCount;
+    const pixelsPerStrand = Math.floor(n / strandCount);
+    const strandPhase = (localT * 2) % strandCount;
+    const pixels: RGB[] = Array.from({ length: n }, () => [0, 0, 0] as RGB);
+    for (let s = 0; s < strandCount; s++) {
+      const brightness = Math.max(0, 1 - Math.abs(s - strandPhase) * 0.5) * intensity;
+      for (let p = 0; p < pixelsPerStrand; p++) {
+        const idx = s * pixelsPerStrand + p;
+        if (idx < n) pixels[idx] = scale(rgb, brightness);
+      }
+    }
+    return pixels;
+  }
+
+  // Matrix: chase across rows or columns
+  if (fixture.kind === "matrix" && geo?.rows && geo?.cols) {
+    const { rows, cols } = geo;
+    const horizontal = geo.wiringDirection !== "vertical";
+    const lineCount = horizontal ? rows : cols;
+    const linePhase = (localT * 2) % lineCount;
+    const pixels: RGB[] = Array.from({ length: n }, () => [0, 0, 0] as RGB);
+    for (let line = 0; line < lineCount; line++) {
+      const brightness = Math.max(0, 1 - Math.abs(line - linePhase) * 0.5) * intensity;
+      const lineLen = horizontal ? cols : rows;
+      for (let p = 0; p < lineLen; p++) {
+        const idx = horizontal ? line * cols + p : p * cols + line;
+        if (idx < n) pixels[idx] = scale(rgb, brightness);
+      }
+    }
+    return pixels;
+  }
+
+  // Default: pixel-linear chase
   const headPos = (localT * n * 0.5) % n;
   return Array.from({ length: n }, (_, i) => {
-    let idx = direction === "backward" ? n - 1 - i : i;
+    const idx = direction === "backward" ? n - 1 - i : i;
     let dist = (headPos - idx + n) % n;
     if (dist > n / 2) dist = n - dist;
     const brightness = dist < trailLength ? (1 - dist / trailLength) * intensity : 0;
@@ -120,6 +157,27 @@ const wave: EffectFn = ({ block, fixture, t }) => {
   const rgb2 = color2 ? hexToRgb(color2) : rgb1;
   const n = fixture.pixelCount;
   const localT = (t - block.start) * speed;
+  const geo = fixture.geometry;
+
+  // Mega-tree: wave across strands
+  if (fixture.kind === "mega-tree" && geo?.strandCount && geo.strandCount > 1) {
+    const strandCount = geo.strandCount;
+    const pixelsPerStrand = Math.floor(n / strandCount);
+    const pixels: RGB[] = Array.from({ length: n }, () => [0, 0, 0] as RGB);
+    for (let s = 0; s < strandCount; s++) {
+      const phase = (s / strandCount) * Math.PI * 2 + localT * Math.PI * 2;
+      const v = (Math.sin(phase) + 1) / 2;
+      const rgb = color2 ? lerpRgb(rgb1, rgb2, v) : rgb1;
+      const px = scale(rgb, v * intensity);
+      for (let p = 0; p < pixelsPerStrand; p++) {
+        const idx = s * pixelsPerStrand + p;
+        if (idx < n) pixels[idx] = px;
+      }
+    }
+    return pixels;
+  }
+
+  // Default: pixel-linear wave
   return Array.from({ length: n }, (_, i) => {
     const phase = (i / n) * Math.PI * 2 + localT * Math.PI * 2;
     const v = (Math.sin(phase) + 1) / 2;
@@ -162,6 +220,30 @@ const meteor: EffectFn = ({ block, fixture, t }) => {
   const rgb = hexToRgb(color1);
   const n = fixture.pixelCount;
   const localT = (t - block.start) * speed;
+  const geo = fixture.geometry;
+
+  // Mega-tree: meteor falls down each strand
+  if (fixture.kind === "mega-tree" && geo?.strandCount && geo.strandCount > 1) {
+    const strandCount = geo.strandCount;
+    const pixelsPerStrand = Math.floor(n / strandCount);
+    const pixels: RGB[] = Array.from({ length: n }, () => [0, 0, 0] as RGB);
+    for (let s = 0; s < strandCount; s++) {
+      // Stagger meteor start per strand
+      const stagger = s * 0.15;
+      const headPos = Math.floor(((localT + stagger) * pixelsPerStrand * 0.8) % (pixelsPerStrand + trailLength));
+      for (let p = 0; p < pixelsPerStrand; p++) {
+        const dist = headPos - p;
+        if (dist >= 0 && dist < trailLength) {
+          const brightness = (1 - dist / trailLength) * intensity;
+          const idx = s * pixelsPerStrand + p;
+          if (idx < n) pixels[idx] = scale(rgb, brightness * brightness);
+        }
+      }
+    }
+    return pixels;
+  }
+
+  // Default: pixel-linear meteor
   const headPos = Math.floor((localT * n * 0.8) % (n + trailLength));
   return Array.from({ length: n }, (_, i) => {
     const dist = headPos - i;

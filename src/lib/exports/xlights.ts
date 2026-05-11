@@ -29,6 +29,7 @@ const DISPLAY_AS_MAP: Record<FixtureKind, string> = {
   "mini-tree": "Single Line",
   "mega-tree": "Tree 360",
   "window-outline": "Single Line",
+  matrix: "Matrix",
   custom: "Single Line",
 };
 
@@ -274,9 +275,25 @@ export function exportRgbEffects(
     lines.push(`      Dir="${dir}"`);
     lines.push(`      StringType="RGB Nodes"`);
     lines.push(`      Antialias="1"`);
-    lines.push(`      parm1="${pixelCount}"`);
-    lines.push(`      parm2="1"`);
-    lines.push(`      parm3="1"`);
+
+    const geo = fixture.geometry;
+    if (fixture.kind === "mega-tree" && geo?.strandCount) {
+      const pps = geo.pixelsPerStrand || Math.floor(pixelCount / geo.strandCount);
+      lines.push(`      parm1="${geo.strandCount}"`);
+      lines.push(`      parm2="${pps}"`);
+      lines.push(`      parm3="1"`);
+    } else if (fixture.kind === "matrix" && geo?.cols && geo?.rows) {
+      const zigzag = geo.wiringPattern === "alternating" ? 1 : 0;
+      lines.push(`      parm1="${geo.cols}"`);
+      lines.push(`      parm2="${geo.rows}"`);
+      lines.push(`      parm3="1"`);
+      lines.push(`      ZigZag="${zigzag}"`);
+    } else {
+      lines.push(`      parm1="${pixelCount}"`);
+      lines.push(`      parm2="1"`);
+      lines.push(`      parm3="1"`);
+    }
+
     lines.push(`    />`);
   }
 
