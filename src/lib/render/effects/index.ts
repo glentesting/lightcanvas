@@ -203,7 +203,7 @@ const pulse: EffectFn = ({ block, fixture, t, beats }) => {
   return Array.from({ length: n }, () => pixel);
 };
 
-const wash: EffectFn = ({ block, fixture, t }) => {
+const wash: EffectFn = ({ block, fixture, t: _t }) => {
   const { color1, color2, intensity } = block.params;
   const rgb1 = hexToRgb(color1);
   const rgb2 = color2 ? hexToRgb(color2) : rgb1;

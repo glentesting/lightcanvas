@@ -31,12 +31,12 @@ export async function POST(request: Request) {
 
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-  // Upload to Supabase Storage — use "songs" bucket for now (it exists)
+  // Upload to Supabase Storage — use "lightcanvas-images" bucket for now (it exists)
   const fileExt = file.name.split(".").pop();
   const filePath = `${userId}/${projectId}/house.${fileExt}`;
 
   const { error: uploadError } = await supabase.storage
-    .from("songs")
+    .from("lightcanvas-images")
     .upload(filePath, file, { contentType: file.type, upsert: true });
 
   if (uploadError) {
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   }
 
   // Get public URL
-  const { data: urlData } = supabase.storage.from("songs").getPublicUrl(filePath);
+  const { data: urlData } = supabase.storage.from("lightcanvas-images").getPublicUrl(filePath);
 
   // Update project with custom house photo URL
   await supabase

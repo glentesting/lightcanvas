@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useState, useEffect } from "react";
+import { useRef, useCallback, useState, useEffect, useMemo } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -16,7 +16,7 @@ import { useEditorStore } from "@/lib/store/editor-store";
 import { useTransportStore } from "@/lib/store/transport-store";
 import { EFFECT_COLORS, EFFECT_NAMES, DEFAULT_EFFECT_PARAMS } from "@/lib/timeline/constants";
 import { secondsToPx, pxToSeconds, snapToBeat } from "@/lib/timeline/snapping";
-import type { EffectId, EffectBlock, EffectParams } from "@/lib/timeline/types";
+import type { EffectId, EffectBlock } from "@/lib/timeline/types";
 import type { AudioAnalysis } from "@/lib/audio/types";
 import { addUserPreset } from "@/components/PresetLibrary";
 import { BUILTIN_PRESETS } from "@/lib/presets/builtins";
@@ -37,7 +37,6 @@ export default function Timeline({ analysis }: TimelineProps) {
   const fixtures = useEditorStore((s) => s.fixtures);
   const groups = useEditorStore((s) => s.groups);
   const selectedBlockIds = useEditorStore((s) => s.selectedBlockIds);
-  const setSelection = useEditorStore((s) => s.setSelection);
   const clearSelection = useEditorStore((s) => s.clearSelection);
 
   const zoom = useTransportStore((s) => s.zoom);
@@ -306,7 +305,7 @@ function EffectBlockComponent({
   const resizeBlock = useEditorStore((s) => s.resizeBlock);
   const selectedBlockIds = useEditorStore((s) => s.selectedBlockIds);
 
-  const beats = analysis?.beats ?? [];
+  const beats = useMemo(() => analysis?.beats ?? [], [analysis?.beats]);
   const [dragging, setDragging] = useState<"move" | "resize-left" | "resize-right" | null>(null);
   const dragStartRef = useRef<{ x: number; blockStart: number; blockDuration: number } | null>(null);
 
@@ -486,7 +485,7 @@ export function TimelineDndProvider({ children }: { children: React.ReactNode })
   const analysis = useEditorStore((s) => s.audio);
 
   const [draggingEffect, setDraggingEffect] = useState<EffectId | null>(null);
-  const beats = analysis?.beats ?? [];
+  const beats = useMemo(() => analysis?.beats ?? [], [analysis?.beats]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })

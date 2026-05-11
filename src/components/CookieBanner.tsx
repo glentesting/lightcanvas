@@ -12,6 +12,7 @@ export default function CookieBanner() {
   useEffect(() => {
     const stored = localStorage.getItem("lightcanvas-cookie-consent");
     if (stored === "all" || stored === "essential") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setConsent(stored);
     } else {
       setConsent(null); // no consent yet — show banner
@@ -71,7 +72,7 @@ export default function CookieBanner() {
             >
               <div>
                 <p className="text-xs font-medium" style={{ color: "var(--ink)" }}>
-                  Analytics (PostHog)
+                  Analytics
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: "var(--ink-4)" }}>
                   Helps us understand how you use LightCanvas

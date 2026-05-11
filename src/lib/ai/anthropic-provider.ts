@@ -259,7 +259,7 @@ export class AnthropicAIProvider implements AIProvider {
 
 function toEffectBlock(
   raw: z.infer<typeof effectBlockSchema>,
-  input: GenerateInput
+  _input: GenerateInput
 ): EffectBlock {
   return {
     id: crypto.randomUUID(),

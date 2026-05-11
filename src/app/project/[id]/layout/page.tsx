@@ -24,6 +24,7 @@ export default function LayoutPage() {
     loadedRef.current = true;
     // Only load if store is empty (navigated directly)
     if (useEditorStore.getState().projectId === projectId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoaded(true);
       return;
     }

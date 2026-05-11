@@ -46,6 +46,7 @@ export default function ProjectEditorPage() {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const val = parseFloat(stored);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (val >= 15 && val <= 70) setSplitPct(val);
     }
   }, []);

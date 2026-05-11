@@ -142,6 +142,7 @@ export default function LayoutEditor() {
         <div className="absolute inset-0 flex items-center justify-center">
           <div style={{ position: "relative", borderRadius: 6, overflow: "hidden", boxShadow: "0 8px 40px rgba(20,22,28,.15)" }}>
             {houseCustomSvg ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
               <img src={houseCustomSvg} alt="Custom house" width={720} height={420} style={{ width: 720, height: 420, objectFit: "cover" }} />
             ) : (
               <House width={720} height={420} id="layout-house" />

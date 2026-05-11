@@ -3,7 +3,7 @@ import { subscribeWithSelector } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import { temporal } from "zundo";
 import type { Project, Fixture, FixtureGroup } from "@/types/domain";
-import type { EffectBlock, Sequence, Track } from "@/lib/timeline/types";
+import type { EffectBlock, Sequence } from "@/lib/timeline/types";
 import type { AudioAnalysis } from "@/lib/audio/types";
 
 export interface EditorState {

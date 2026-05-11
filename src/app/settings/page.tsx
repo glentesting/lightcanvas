@@ -337,7 +337,7 @@ export default function SettingsPage() {
               </p>
 
               <div className="grid gap-3">
-                <a
+                <Link
                   href="/#pricing"
                   className="flex items-center justify-between rounded-lg px-4 py-3 transition-all"
                   style={{ background: "var(--panel)", border: "1px solid var(--line)" }}
@@ -349,8 +349,8 @@ export default function SettingsPage() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--ink-3)" }}>
                     <polyline points="9 18 15 12 9 6" />
                   </svg>
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/#pricing"
                   className="flex items-center justify-between rounded-lg px-4 py-3 transition-all"
                   style={{ background: "var(--panel)", border: "1px solid var(--line)" }}
@@ -362,7 +362,7 @@ export default function SettingsPage() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--ink-3)" }}>
                     <polyline points="9 18 15 12 9 6" />
                   </svg>
-                </a>
+                </Link>
               </div>
 
               <p className="text-xs mt-5 text-center" style={{ color: "var(--ink-4)" }}>

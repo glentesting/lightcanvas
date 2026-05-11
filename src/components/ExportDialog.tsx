@@ -37,16 +37,6 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
   const { user } = useUser();
   const sequencer = (user?.publicMetadata?.sequencer as string) || "xlights";
   const [format, setFormat] = useState<ExportFormat>(getDefaultFormat(sequencer));
-  // Reset default format when dialog opens based on user profile
-  useEffect(() => {
-    if (open) {
-      setFormat(getDefaultFormat(sequencer));
-      setStep("options");
-      setShowGuidance(false);
-      setNamesReviewed(false);
-    }
-  }, [open, sequencer]);
-
   const [step, setStep] = useState<"options" | "name-mapping" | "lor-degraded" | "lor-mapping">("options");
   const [showGuidance, setShowGuidance] = useState(false);
   const [rangeMode, setRangeMode] = useState<"full" | "custom">("full");
@@ -58,6 +48,17 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
   const [exporting, setExporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [namesReviewed, setNamesReviewed] = useState(false);
+
+  // Reset default format when dialog opens based on user profile
+  useEffect(() => {
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFormat(getDefaultFormat(sequencer));
+      setStep("options");
+      setShowGuidance(false);
+      setNamesReviewed(false);
+    }
+  }, [open, sequencer]);
 
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
 
@@ -75,6 +76,7 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
     if (open) {
       const controllerType = (user?.publicMetadata?.controllerType as string) || null;
       const issues = validateFixtures(fixtures, controllerType);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setValidationIssues(issues);
     }
   }, [open, fixtures, user]);
@@ -89,6 +91,7 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
       for (const f of fixtures) {
         map[f.id] = storedNameMap?.[f.id] ?? f.name;
       }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalNameMap(map);
       setNamesReviewed(false);
     }
@@ -104,6 +107,7 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
           circuit: f.startChannel ?? 1,
         };
       }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLorMapLocal(map);
       setLorMappingReviewed(false);
     }

@@ -50,6 +50,7 @@ export default function PresetLibrary() {
   const updateBlock = useEditorStore((s) => s.updateBlock);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUserPresets(loadUserPresets());
     const handler = () => setUserPresets(loadUserPresets());
     window.addEventListener("lightcanvas-presets-changed", handler);

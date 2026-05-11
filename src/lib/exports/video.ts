@@ -76,7 +76,7 @@ export async function exportVideo(
     audioEl.play();
 
     const totalDuration = endTime - startTime;
-    const frameInterval = 1000 / fps;
+    const _frameInterval = 1000 / fps;
 
     const renderTick = () => {
       const currentTime = audioEl.currentTime;

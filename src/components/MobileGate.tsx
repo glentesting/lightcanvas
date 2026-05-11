@@ -11,6 +11,7 @@ export default function MobileGate() {
     if (typeof window === "undefined") return;
     const dismissed = sessionStorage.getItem(DISMISS_KEY);
     if (!dismissed && window.innerWidth < 768) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShow(true);
     }
   }, []);

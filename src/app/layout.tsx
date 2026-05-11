@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Inter_Tight, JetBrains_Mono } from "next/font/google";
+import { Inter_Tight, JetBrains_Mono, Fraunces } from "next/font/google";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import CookieBanner from "@/components/CookieBanner";
 import "./globals.css";
@@ -17,6 +17,13 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+});
+
 export const metadata: Metadata = {
   title: "LightCanvas",
   description: "Create stunning light shows with AI-assisted sequencing",
@@ -31,15 +38,9 @@ export default function RootLayout({
     <ClerkProvider>
       <html
         lang="en"
-        className={`${interTight.variable} ${jetbrainsMono.variable} h-full antialiased`}
+        className={`${interTight.variable} ${jetbrainsMono.variable} ${fraunces.variable} h-full antialiased`}
       >
-        <head>
-          {/* Fraunces — display font (optical sizing, not in next/font/google stable set) */}
-          <link
-            href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap"
-            rel="stylesheet"
-          />
-        </head>
+        <head />
         <body className="min-h-full flex flex-col" style={{ background: "var(--bg)", color: "var(--ink)" }}>
           <a href="#main-content" className="skip-to-content">Skip to content</a>
           <ErrorBoundary>

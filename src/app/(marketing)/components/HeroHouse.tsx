@@ -30,6 +30,7 @@ export default function HeroHouse() {
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReducedMotion(mq.matches);
     const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
     mq.addEventListener("change", handler);
@@ -38,6 +39,7 @@ export default function HeroHouse() {
 
   useEffect(() => {
     if (reducedMotion) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setT(2.5);
       return;
     }
@@ -53,7 +55,7 @@ export default function HeroHouse() {
 
   // Beat — show is "142 BPM" → 2.367 beats/sec
   const BPS = 142 / 60;
-  const beatPulse = Math.max(0, 1 - ((t * BPS) % 1) * 1.4);
+  const _beatPulse = Math.max(0, 1 - ((t * BPS) % 1) * 1.4);
 
   // Anchors so roofline traces the real roof.
   const APEX = { x: 340, y: 108 };

@@ -34,7 +34,13 @@
       "Bash(ls -la *.md *.zip *.xlsx *.docx)",
       "Bash(ls -d handoff*/ landing_pkg/)",
       "Bash(ls *.md)",
-      "Bash(ls -d */)"
+      "Bash(ls -d */)",
+      "Bash(cp C:/Users/glenh/Documents/Lightshow/Reference/xLights_File_Format_Reference.docx C:/Users/glenh/Documents/Lightshow/AppRepo/docs/)",
+      "Bash(cp C:/Users/glenh/Documents/Lightshow/Reference/LOR_File_Format_Reference.docx C:/Users/glenh/Documents/Lightshow/AppRepo/docs/)",
+      "Bash(cp C:/Users/glenh/Documents/Lightshow/Reference/LightCanvas_AI_Native_Show_Sequencer_Reference.docx C:/Users/glenh/Documents/Lightshow/AppRepo/docs/)",
+      "Bash(cp 'C:/Users/glenh/Documents/Lightshow/Reference/LightCanvas_Timeline_Effects_Engine_Spec - From ChatGPT.docx' C:/Users/glenh/Documents/Lightshow/AppRepo/docs/)",
+      "Bash(cp 'C:/Users/glenh/Documents/Lightshow/Reference/LightCanvas_Technical_Blueprint Draft 05.10.pdf' C:/Users/glenh/Documents/Lightshow/AppRepo/docs/)",
+      "Bash(npm run:*)"
     ]
   }
 }
