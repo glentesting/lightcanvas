@@ -109,7 +109,10 @@ export default function DashboardPage() {
                 <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={heroProject.house_custom_svg} alt="House" style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(0,0,0,.55) 0%, transparent 60%), linear-gradient(180deg, transparent 50%, rgba(0,0,0,.7) 100%)" }} />
+                  {/* Dusk/night overlay — deep navy top, warm amber glow bottom */}
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(15,20,40,.55) 0%, rgba(15,20,40,.35) 40%, rgba(30,25,15,.45) 70%, rgba(40,30,10,.65) 100%)" }} />
+                  {/* Warm light glow vignette in lower third */}
+                  <div className="absolute bottom-0 left-0 right-0 h-2/5" style={{ background: "radial-gradient(ellipse 80% 100% at 50% 100%, rgba(255,180,50,.12), transparent 70%)" }} />
                   {/* Dynamic prop pills from real fixtures */}
                   {(() => {
                     const fixtures = (heroProject.fixtures as Array<{ kind: string; name: string }>) || [];
@@ -131,7 +134,8 @@ export default function DashboardPage() {
               ) : (
                 <>
                   <Starfield />
-                  <div className="absolute bottom-0 left-0 right-0 h-1/3" style={{ background: "linear-gradient(180deg, transparent, rgba(37, 99, 235, 0.06))", zIndex: 1 }} />
+                  {/* Warm amber glow suggesting "this is where your lit-up house will appear" */}
+                  <div className="absolute bottom-0 left-0 right-0 h-2/5" style={{ background: "linear-gradient(180deg, transparent, rgba(255,180,50,.08))", zIndex: 1 }} />
                   {/* Upload prompt card */}
                   <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 2 }}>
                     <div className="rounded-xl px-10 py-8 text-center" style={{ background: "rgba(255,255,255,.08)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,.12)" }}>
