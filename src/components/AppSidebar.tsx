@@ -6,7 +6,7 @@ import { useUser, UserButton } from "@clerk/nextjs";
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: DashboardIcon },
-  { id: "projects", label: "Projects", href: "/dashboard", icon: ProjectsIcon },
+  { id: "projects", label: "Projects", href: "/projects", icon: ProjectsIcon },
   { id: "designer", label: "Designer", href: "/designer", icon: DesignerIcon },
   { id: "timeline", label: "Timeline", href: "/timeline", icon: TimelineIcon },
   { id: "ai-studio", label: "AI Studio", href: "/ai-studio", icon: AIStudioIcon },
