@@ -3,7 +3,7 @@
 **The single source of truth for the project. Read this first. Update this last.**
 
 Last updated: 2026-05-11
-Updated by: Claude (Track B Step 1 — sidebar shell)
+Updated by: Claude (Track B Step 2 — dashboard rebuild)
 
 ---
 
@@ -482,6 +482,7 @@ Concurrent with implementation:
 
 When you make significant changes, add a one-line entry here. Newest at the top.
 
+- 2026-05-11 — Track B Step 2: Dashboard rebuilt to v4 hero layout (welcome row, hero project card with house photo/SVG fallback, Design Overview tiles, Show Readiness ring + checklist, Next Action card, empty state). Old Shows+Songs list moved to /projects with full CRUD preserved.
 - 2026-05-11 — Track B Step 1 fix: added 7 stub placeholder pages (Projects, Designer, Timeline, AI Studio, Audio, Preflight, Exports) so all sidebar links resolve. Fixed Projects href from /dashboard to /projects.
 - 2026-05-11 — Track B Step 1: sidebar shell. Created (app) route group with AppSidebar (9 nav items) + AppTopBar (project selector, search, actions). Moved dashboard/settings/project into (app). Removed standalone navs from dashboard and settings. --bg token → #FFFFFF. Lint clean 0/0.
 - 2026-05-11 — v4 design lock + single-home scope clarification. Sidebar reduced from 12 to 9 destinations (Mapping folded into Designer, Controllers/Integrations removed as top-level). Workspaces/Members/Roles/SSO/API Keys explicitly cut. Cream background → true white token swap added to Track B. Dark mode toggle in v4 Settings mockup flagged for removal. "LightCanvas Worship" demo data flagged for replacement. v4 image set now visual north star (`LightCanvas_v4_Full_Image_Set/`).
