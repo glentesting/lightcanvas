@@ -18,6 +18,7 @@ import type { AudioAnalysis } from "@/lib/audio/types";
 import { EFFECT_COLORS, EFFECT_NAMES } from "@/lib/timeline/constants";
 import type { EffectId } from "@/lib/timeline/types";
 import PresetLibrary from "@/components/PresetLibrary";
+import MobileGate from "@/components/MobileGate";
 
 const STORAGE_KEY = "lightcanvas-split-ratio";
 const DEFAULT_SPLIT = 35; // percent for preview
@@ -32,6 +33,7 @@ export default function ProjectEditorPage() {
   const [newGroupFixtureIds, setNewGroupFixtureIds] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [shareToast, setShareToast] = useState(false);
   const loadedRef = useRef(false);
 
   // Resizable split
@@ -99,6 +101,14 @@ export default function ProjectEditorPage() {
     [setAudio]
   );
 
+  const handleShare = useCallback(() => {
+    const url = `${window.location.origin}/p/${projectId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setShareToast(true);
+      setTimeout(() => setShareToast(false), 2000);
+    });
+  }, [projectId]);
+
   // Resizable divider handlers
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -150,7 +160,8 @@ export default function ProjectEditorPage() {
   }
 
   return (
-    <div id="main-content" className="h-screen flex flex-col overflow-hidden" style={{ background: "var(--bg)" }}>
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: "var(--bg)" }}>
+      <MobileGate />
       {/* Top Bar */}
       <header
         className="flex items-center gap-3 px-3.5 shrink-0"
@@ -168,8 +179,8 @@ export default function ProjectEditorPage() {
         <div className="flex items-center gap-1.5">
           <span className="text-xs" style={{ color: "var(--ink-3)" }}>My shows /</span>
           <span className="text-sm font-semibold">{name || "Untitled"}</span>
-          {saveStatus === "saving" && <span className="text-xs ml-1" aria-label="Save status" aria-live="polite" style={{ color: "var(--ink-4)" }}>· saving...</span>}
-          {saveStatus === "error" && <span className="text-xs ml-1" aria-label="Save status" aria-live="polite" style={{ color: "#d44" }}>· unsaved</span>}
+          {saveStatus === "saving" && <span className="text-xs ml-1" style={{ color: "var(--ink-4)" }}>· saving...</span>}
+          {saveStatus === "error" && <span className="text-xs ml-1" style={{ color: "#d44" }}>· unsaved</span>}
         </div>
         <div className="flex-1" />
         <div className="flex items-center gap-2 px-2.5 py-1 rounded-md text-xs" style={{ background: "var(--panel)", color: "var(--ink-3)" }}>
@@ -185,6 +196,12 @@ export default function ProjectEditorPage() {
           </svg>
           AI Actions
           <span className="inline-flex items-center justify-center px-1.5 rounded font-mono" style={{ height: 18, background: "var(--panel)", border: "1px solid var(--line)", color: "var(--ink-4)", fontSize: 10 }}>⌘K</span>
+        </button>
+        <button onClick={handleShare} className="inline-flex items-center gap-2 h-7 px-2.5 rounded-md text-xs font-medium transition-colors relative" style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
+          </svg>
+          {shareToast ? "Copied!" : "Share"}
         </button>
         <button onClick={() => setShowExport(true)} className="inline-flex items-center gap-2 h-7 px-2.5 rounded-md text-xs font-medium transition-colors" style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)" }}>
           Export

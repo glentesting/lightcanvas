@@ -32,10 +32,28 @@ export async function PATCH(request: Request) {
 
   const body = await request.json();
   const validSequencers = ["xlights", "lor", "vixen", "other"];
-  const sequencer = validSequencers.includes(body.sequencer) ? body.sequencer : undefined;
+  const validControllers = ["falcon-f16v3", "alphapix-16", "wled-esp32", "lor-controller", "other"];
 
-  if (!sequencer) {
-    return NextResponse.json({ error: "Invalid sequencer" }, { status: 400 });
+  const updates: Record<string, string> = {};
+
+  if (body.sequencer) {
+    const sequencer = validSequencers.includes(body.sequencer) ? body.sequencer : undefined;
+    if (!sequencer) {
+      return NextResponse.json({ error: "Invalid sequencer" }, { status: 400 });
+    }
+    updates.sequencer = sequencer;
+  }
+
+  if (body.controllerType) {
+    const controllerType = validControllers.includes(body.controllerType) ? body.controllerType : undefined;
+    if (!controllerType) {
+      return NextResponse.json({ error: "Invalid controller type" }, { status: 400 });
+    }
+    updates.controllerType = controllerType;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
   }
 
   const client = await clerkClient();
@@ -43,7 +61,7 @@ export async function PATCH(request: Request) {
   await client.users.updateUser(userId, {
     publicMetadata: {
       ...user.publicMetadata,
-      sequencer,
+      ...updates,
     },
   });
 
