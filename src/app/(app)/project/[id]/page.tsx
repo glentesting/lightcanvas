@@ -166,7 +166,7 @@ export default function ProjectEditorPage() {
       {/* Top Bar */}
       <header
         className="flex items-center gap-3 px-3.5 shrink-0"
-        style={{ height: 52, borderBottom: "1px solid var(--line)", background: "var(--surface)" }}
+        style={{ height: 52, borderBottom: "1px solid var(--line)", background: "#FFFFFF" }}
       >
         <Link href="/dashboard" className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-[var(--panel)] transition-colors text-[var(--ink-3)]">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -178,7 +178,6 @@ export default function ProjectEditorPage() {
           <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
         </svg>
         <div className="flex items-center gap-1.5">
-          <span className="text-xs" style={{ color: "var(--ink-3)" }}>My shows /</span>
           <span className="text-sm font-semibold">{name || "Untitled"}</span>
           {saveStatus === "saving" && <span className="text-xs ml-1" style={{ color: "var(--ink-4)" }}>· saving...</span>}
           {saveStatus === "error" && <span className="text-xs ml-1" style={{ color: "#d44" }}>· unsaved</span>}
@@ -214,7 +213,7 @@ export default function ProjectEditorPage() {
       <TimelineDndProvider>
       <div className="flex flex-1 min-h-0">
         {/* Left Sidebar */}
-        <aside className="flex flex-col shrink-0 overflow-hidden" style={{ width: 240, borderRight: "1px solid var(--line)", background: "var(--surface)" }}>
+        <aside className="flex flex-col shrink-0 overflow-hidden" style={{ width: 240, borderRight: "1px solid var(--line)", background: "#FFFFFF" }}>
           <div className="flex-1 overflow-y-auto">
             <SidebarSection title="Song">
               <AudioUpload projectId={projectId} onUploaded={handleAudioUploaded} />
@@ -224,12 +223,21 @@ export default function ProjectEditorPage() {
               <p className="text-xs mb-2" style={{ color: "var(--ink-3)" }}>
                 {fixtures.length} props · {fixtures.reduce((s, f) => s + f.pixelCount, 0)} px
               </p>
-              {fixtures.map((f) => (
-                <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs mb-0.5 hover:bg-[var(--panel)] transition-colors cursor-default" style={{ color: "var(--ink-2)" }}>
-                  <span className="rounded flex items-center justify-center shrink-0" style={{ width: 18, height: 18, background: "var(--accent-50)", color: "var(--accent-ink)" }}>
-                    <FixtureKindIcon kind={f.kind} />
-                  </span>
-                  <span className="truncate flex-1">{f.name}</span>
+              {groupFixturesByKind(fixtures).map(({ label, items }) => (
+                <div key={label} className="mb-2">
+                  <p className="text-xs font-medium mb-1 px-2" style={{ color: "var(--ink-4)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</p>
+                  {items.map((f) => (
+                    <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs mb-0.5 transition-colors cursor-default" style={{ color: "var(--ink-2)" }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#f8f8f8"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                    >
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: FIXTURE_KIND_COLORS[f.kind] ?? "var(--ink-4)" }} />
+                      <span className="rounded flex items-center justify-center shrink-0" style={{ width: 18, height: 18, background: "var(--accent-50)", color: "var(--accent-ink)" }}>
+                        <FixtureKindIcon kind={f.kind} />
+                      </span>
+                      <span className="truncate flex-1">{f.name}</span>
+                    </div>
+                  ))}
                 </div>
               ))}
             </SidebarSection>
@@ -432,6 +440,36 @@ function TimelineRegion({ audioUrl, analysis }: { audioUrl: string | null; analy
   );
 }
 
+/* ─── Fixture Kind Colors & Grouping ───────────────────────── */
+const FIXTURE_KIND_COLORS: Record<string, string> = {
+  roofline: "#f97316",
+  "window-outline": "#3b82f6",
+  "mega-tree": "#22c55e",
+  "mini-tree": "#84cc16",
+  arch: "#a855f7",
+  bush: "#14b8a6",
+};
+
+const KIND_LABELS: Record<string, string> = {
+  roofline: "Rooflines",
+  "window-outline": "Accents",
+  "mega-tree": "Trees",
+  "mini-tree": "Trees",
+  arch: "Accents",
+  bush: "Bushes",
+};
+
+function groupFixturesByKind(fixtures: { id: string; name: string; kind: string; pixelCount: number }[]) {
+  const order = ["Rooflines", "Trees", "Bushes", "Accents", "Other"];
+  const groups: Record<string, typeof fixtures> = {};
+  for (const f of fixtures) {
+    const label = KIND_LABELS[f.kind] ?? "Other";
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(f);
+  }
+  return order.filter((l) => groups[l]).map((label) => ({ label, items: groups[label] }));
+}
+
 /* ─── Fixture Kind Icon ─────────────────────────────────────── */
 function FixtureKindIcon({ kind }: { kind: string }) {
   return (
@@ -454,7 +492,7 @@ function SidebarSection({ title, children }: { title: string; children: React.Re
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-1.5 px-3.5 py-2.5 text-left"
-        style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ink-3)", background: "transparent", border: "none", cursor: "pointer" }}
+        style={{ fontSize: 13, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-3)", background: "transparent", border: "none", cursor: "pointer" }}
       >
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: open ? "rotate(0)" : "rotate(-90deg)", transition: "transform 0.15s" }}>
           <polyline points="6 9 12 15 18 9" />

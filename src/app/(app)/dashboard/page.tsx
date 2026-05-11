@@ -110,22 +110,37 @@ export default function DashboardPage() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={heroProject.house_custom_svg} alt="House" style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
                   <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, rgba(0,0,0,.55) 0%, transparent 60%), linear-gradient(180deg, transparent 50%, rgba(0,0,0,.7) 100%)" }} />
-                  {/* Prop label pills on photo */}
-                  <PropPill label="Roofline" top="22%" left="30%" />
-                  <PropPill label="Mega Tree" top="40%" left="72%" />
-                  <PropPill label="Bushes" top="68%" left="25%" />
+                  {/* Dynamic prop pills from real fixtures */}
+                  {(() => {
+                    const fixtures = (heroProject.fixtures as Array<{ kind: string; name: string }>) || [];
+                    const byKind = new Map<string, string>();
+                    for (const f of fixtures) {
+                      if (!byKind.has(f.kind) && byKind.size < 3) byKind.set(f.kind, f.name);
+                    }
+                    const positions = [
+                      { top: "22%", left: "30%" },
+                      { top: "40%", left: "72%" },
+                      { top: "68%", left: "25%" },
+                    ];
+                    let i = 0;
+                    return Array.from(byKind.entries()).map(([kind, name]) => (
+                      <PropPill key={kind} label={name} top={positions[i]?.top || "50%"} left={positions[i++]?.left || "50%"} />
+                    ));
+                  })()}
                 </>
               ) : (
                 <>
                   <Starfield />
+                  <div className="absolute bottom-0 left-0 right-0 h-1/3" style={{ background: "linear-gradient(180deg, transparent, rgba(37, 99, 235, 0.06))", zIndex: 1 }} />
                   {/* Upload prompt card */}
                   <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 2 }}>
-                    <div className="rounded-xl px-8 py-6 text-center" style={{ background: "rgba(255,255,255,.08)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,.12)" }}>
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" strokeWidth="1.5" className="mx-auto mb-3">
-                        <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                    <div className="rounded-xl px-10 py-8 text-center" style={{ background: "rgba(255,255,255,.08)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,.12)" }}>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" strokeWidth="1.5" className="mx-auto mb-3">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                        <circle cx="12" cy="13" r="4" />
                       </svg>
-                      <p className="text-sm font-medium text-white/80 mb-1">Add a photo of your home</p>
-                      <p className="text-xs text-white/40 mb-4">Bring your design to life</p>
+                      <p className="text-sm font-medium text-white/80 mb-1">See your home come alive</p>
+                      <p className="text-xs text-white/40 mb-4">Upload a photo to start designing your show</p>
                       <Link href={`/project/${heroProject.id}/layout`} className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg text-xs font-semibold" style={{ background: "rgba(255,255,255,.15)", color: "#fff", border: "1px solid rgba(255,255,255,.2)" }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                         Upload Photo
@@ -233,8 +248,65 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+
+          <AISuggestionsCard />
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─── AI Suggestions card ────────────────────────────── */
+function AISuggestionsCard() {
+  return (
+    <div className="rounded-2xl overflow-hidden mt-5" style={{ border: "1px solid var(--line)", background: "#fafafa", boxShadow: "0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.02)" }}>
+      <div className="px-5 py-3 flex items-center gap-2" style={{ borderBottom: "1px solid var(--line)" }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2" strokeLinecap="round">
+          <path d="M12 3l1.9 5.8a2 2 0 001.3 1.3L21 12l-5.8 1.9a2 2 0 00-1.3 1.3L12 21l-1.9-5.8a2 2 0 00-1.3-1.3L3 12l5.8-1.9a2 2 0 001.3-1.3L12 3z" />
+        </svg>
+        <span style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: "var(--ink-3)" }}>AI Suggestions</span>
+      </div>
+      <div className="p-5">
+        {/* Featured suggestion */}
+        <div className="rounded-xl p-4 mb-4" style={{ background: "oklch(97% 0.04 85)", border: "1px solid oklch(90% 0.06 85)" }}>
+          <p className="text-xs font-semibold mb-1" style={{ color: "#92400e" }}>Enhance Your Chorus</p>
+          <p className="text-xs mb-3" style={{ color: "var(--ink-3)" }}>
+            Add chase effects to the roofline during the chorus for more energy. Lumi detected 4 high-energy sections.
+          </p>
+          <button className="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg text-[11px] font-semibold" style={{ background: "#eab308", color: "#fff" }}>
+            Apply Suggestion
+          </button>
+        </div>
+
+        {/* Smaller suggestions */}
+        <div className="flex flex-col gap-2.5">
+          <SuggestionRow icon="balance" text="Balance roofline brightness across all segments" />
+          <SuggestionRow icon="extend" text="Consider extending the outro by 30 seconds" />
+          <SuggestionRow icon="check" text="Nice! Your transitions are smooth" />
+        </div>
+
+        <Link href="/ai-studio" className="text-xs font-medium mt-4 inline-block" style={{ color: "#2563eb" }}>
+          View all suggestions →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function SuggestionRow({ icon, text }: { icon: string; text: string }) {
+  const iconColor = icon === "check" ? "#22c55e" : icon === "balance" ? "#2563eb" : "#f59e0b";
+  return (
+    <div className="flex items-start gap-2.5">
+      <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: `${iconColor}15` }}>
+        {icon === "check" ? (
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
+        ) : icon === "balance" ? (
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.5"><line x1="12" y1="2" x2="12" y2="22" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>
+        ) : (
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2.5"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+        )}
+      </div>
+      <p className="text-xs" style={{ color: "var(--ink-2)", lineHeight: 1.5 }}>{text}</p>
     </div>
   );
 }

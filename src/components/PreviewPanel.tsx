@@ -68,7 +68,7 @@ export default function PreviewPanel({ projectId }: { projectId: string }) {
       <div
         ref={containerRef}
         className="flex-1 flex items-center justify-center relative overflow-hidden"
-        style={{ background: "linear-gradient(180deg, #1a2440 0%, #0d1426 100%)", minHeight: 0 }}
+        style={{ background: "#f5f4f0", minHeight: 0 }}
       >
         {/* Status chips */}
         <div className="absolute top-3 left-3 flex gap-2 z-10">

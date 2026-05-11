@@ -55,13 +55,13 @@ export default function LayoutPage() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: "var(--bg)" }}>
-      <header className="flex items-center gap-3 px-3.5 shrink-0" style={{ height: 52, borderBottom: "1px solid var(--line)", background: "var(--surface)" }}>
+      <header className="flex items-center gap-3 px-3.5 shrink-0" style={{ height: 52, borderBottom: "1px solid var(--line)", background: "#FFFFFF" }}>
         <Link
           href={`/project/${projectId}`}
-          className="flex items-center gap-2 h-7 px-2.5 rounded-md text-xs font-medium transition-colors"
-          style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}
+          className="flex items-center gap-1.5 h-7 px-2.5 rounded-md text-xs transition-colors"
+          style={{ background: "#FFFFFF", border: "1px solid var(--line)", color: "var(--ink)", fontFamily: "'Inter Tight', var(--font-sans)", fontWeight: 400 }}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
           Back to Editor

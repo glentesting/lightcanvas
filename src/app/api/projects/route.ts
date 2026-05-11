@@ -10,7 +10,7 @@ export async function GET() {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("projects")
-    .select("id, name, owner_id, audio_file, fixtures, parent_show_id, created_at, updated_at")
+    .select("id, name, owner_id, audio_file, fixtures, parent_show_id, house_custom_svg, created_at, updated_at")
     .eq("owner_id", userId)
     .order("updated_at", { ascending: false });
 
