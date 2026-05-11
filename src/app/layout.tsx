@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Inter_Tight, JetBrains_Mono } from "next/font/google";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import CookieBanner from "@/components/CookieBanner";
 import "./globals.css";
 
 const interTight = Inter_Tight({
@@ -40,8 +41,10 @@ export default function RootLayout({
           />
         </head>
         <body className="min-h-full flex flex-col" style={{ background: "var(--bg)", color: "var(--ink)" }}>
+          <a href="#main-content" className="skip-to-content">Skip to content</a>
           <ErrorBoundary>
             {children}
+            <CookieBanner />
           </ErrorBoundary>
         </body>
       </html>

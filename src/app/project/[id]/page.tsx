@@ -150,7 +150,7 @@ export default function ProjectEditorPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: "var(--bg)" }}>
+    <div id="main-content" className="h-screen flex flex-col overflow-hidden" style={{ background: "var(--bg)" }}>
       {/* Top Bar */}
       <header
         className="flex items-center gap-3 px-3.5 shrink-0"
@@ -168,8 +168,8 @@ export default function ProjectEditorPage() {
         <div className="flex items-center gap-1.5">
           <span className="text-xs" style={{ color: "var(--ink-3)" }}>My shows /</span>
           <span className="text-sm font-semibold">{name || "Untitled"}</span>
-          {saveStatus === "saving" && <span className="text-xs ml-1" style={{ color: "var(--ink-4)" }}>· saving...</span>}
-          {saveStatus === "error" && <span className="text-xs ml-1" style={{ color: "#d44" }}>· unsaved</span>}
+          {saveStatus === "saving" && <span className="text-xs ml-1" aria-label="Save status" aria-live="polite" style={{ color: "var(--ink-4)" }}>· saving...</span>}
+          {saveStatus === "error" && <span className="text-xs ml-1" aria-label="Save status" aria-live="polite" style={{ color: "#d44" }}>· unsaved</span>}
         </div>
         <div className="flex-1" />
         <div className="flex items-center gap-2 px-2.5 py-1 rounded-md text-xs" style={{ background: "var(--panel)", color: "var(--ink-3)" }}>

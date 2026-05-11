@@ -12,6 +12,7 @@ import { exportVideo } from "@/lib/exports/video";
 import { validateFixtures } from "@/lib/exports/validation";
 import type { ValidationIssue } from "@/lib/exports/validation";
 import type { Project } from "@/types/domain";
+import { trackEvent } from "@/lib/analytics";
 
 type ExportFormat = "lightcanvas-json" | "xlights" | "lor" | "video";
 
@@ -321,6 +322,7 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
       URL.revokeObjectURL(url);
 
       setShowGuidance(true);
+      trackEvent("first_export", { format });
     } catch (err) {
       console.error("Export failed:", err);
       alert(`Export failed: ${err instanceof Error ? err.message : "Unknown error"}`);

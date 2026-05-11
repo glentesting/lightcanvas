@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@clerk/nextjs";
+import { trackEvent } from "@/lib/analytics";
 
 type Sequencer = "xlights" | "lor" | "vixen" | "other";
 
@@ -46,6 +47,7 @@ export default function OnboardingPage() {
       }
 
       await session?.reload();
+      trackEvent("onboarding_completed", { sequencer, decorating });
 
       if (audioFile) {
         const createRes = await fetch("/api/projects", {

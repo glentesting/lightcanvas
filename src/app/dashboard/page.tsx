@@ -642,7 +642,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px" }}>
+      <main id="main-content" style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 24px" }}>
         {/* Header */}
         <div className="flex items-end justify-between mb-8">
           <div>
