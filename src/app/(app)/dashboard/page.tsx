@@ -182,6 +182,39 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* Continue Where You Left Off */}
+          <div className="mt-6 rounded-2xl p-6 flex items-center gap-5 transition-shadow hover:shadow-md" style={{ border: "1px solid var(--line)", background: "#fafafa", boxShadow: "0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.02)" }}>
+            {/* Thumbnail */}
+            <div className="shrink-0 rounded-xl overflow-hidden" style={{ width: 80, height: 56, background: "linear-gradient(135deg, #1e3a5f, #0d1426)" }}>
+              <div className="w-full h-full flex items-center justify-center">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" strokeWidth="1.5"><line x1="2" y1="6" x2="22" y2="6" /><line x1="2" y1="12" x2="22" y2="12" /><line x1="2" y1="18" x2="22" y2="18" /></svg>
+              </div>
+            </div>
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" strokeWidth="2"><path d="M12 3l1.9 5.8a2 2 0 001.3 1.3L21 12l-5.8 1.9a2 2 0 00-1.3 1.3L12 21l-1.9-5.8a2 2 0 00-1.3-1.3L3 12l5.8-1.9a2 2 0 001.3-1.3L12 3z" /></svg>
+                <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: "var(--ink-3)" }}>Continue Where You Left Off</span>
+              </div>
+              <p className="font-semibold truncate" style={{ fontFamily: "var(--font-display)", fontSize: 16, color: "var(--ink)" }}>{heroProject.name}</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--ink-3)" }}>
+                Last edited {relativeDate(heroProject.updated_at)} · {fixtureCount} props · 1 controller
+              </p>
+            </div>
+            {/* Progress */}
+            <div className="shrink-0 text-right" style={{ width: 120 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.06em", color: "var(--ink-4)", marginBottom: 4 }}>Sequence Progress</p>
+              <div className="rounded-full overflow-hidden mb-1" style={{ height: 4, background: "var(--line)" }}>
+                <div className="h-full rounded-full" style={{ width: "68%", background: "#2563eb" }} />
+              </div>
+              <p className="text-xs font-medium" style={{ color: "var(--ink)" }}>68%</p>
+            </div>
+            {/* CTA */}
+            <Link href={`/project/${heroProject.id}`} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs font-semibold shrink-0" style={{ background: "#1e3a5f", color: "#fff" }}>
+              Open Designer →
+            </Link>
+          </div>
+
           {/* Design Overview */}
           <div className="mt-8">
             <h3 style={{ fontSize: 13, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.08em", color: "var(--ink-3)", marginBottom: 16 }}>
