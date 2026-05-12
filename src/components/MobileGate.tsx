@@ -26,7 +26,7 @@ export default function MobileGate() {
   return (
     <div
       className="fixed inset-0 flex flex-col items-center justify-center px-6"
-      style={{ zIndex: 999, background: "#faf8f5" }}
+      style={{ zIndex: 999, background: "#FFFFFF" }}
     >
       {/* Logo */}
       <div className="flex items-center gap-2.5 mb-10">

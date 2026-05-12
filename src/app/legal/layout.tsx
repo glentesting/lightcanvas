@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function LegalLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ background: "#faf8f5", minHeight: "100vh" }}>
+    <div style={{ background: "#FFFFFF", minHeight: "100vh" }}>
       <header style={{ background: "#ffffff", borderBottom: "1px solid var(--line)", padding: "14px 24px" }}>
         <div style={{ maxWidth: 720, margin: "0 auto", display: "flex", alignItems: "center", gap: 12 }}>
           <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "var(--ink)" }}>

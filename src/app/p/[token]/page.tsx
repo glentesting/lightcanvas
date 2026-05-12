@@ -21,7 +21,7 @@ export default async function SharePage({ params }: SharePageProps) {
 
   if (error || !row) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: "#faf8f5" }}>
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: "#FFFFFF" }}>
         <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-4" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: "var(--ink-3)" }}>
             <circle cx="12" cy="12" r="10" />
@@ -41,7 +41,7 @@ export default async function SharePage({ params }: SharePageProps) {
   const project = projectFromRow(row);
 
   return (
-    <div className="min-h-screen" style={{ background: "#faf8f5" }}>
+    <div className="min-h-screen" style={{ background: "#FFFFFF" }}>
       {/* Header */}
       <header className="px-6 py-3.5 flex items-center justify-between" style={{ background: "#ffffff", borderBottom: "1px solid var(--line)" }}>
         <div className="flex items-center gap-2.5">

@@ -3,7 +3,7 @@
 **The single source of truth for the project. Read this first. Update this last.**
 
 Last updated: 2026-05-11
-Updated by: Claude (Track B Step 2c — editor light-mode + photo sync + dashboard polish)
+Updated by: Claude (Track B Seven-Priority Rebuild Pass)
 
 ---
 
@@ -482,6 +482,7 @@ Concurrent with implementation:
 
 When you make significant changes, add a one-line entry here. Newest at the top.
 
+- 2026-05-11 — Track B Seven-Priority Rebuild: P1 demo data verified clean, P2 hero nighttime treatment (dusk overlay + warm amber glow), P3 Projects page rebuilt to v4 library (tabs, sort, project cards, templates), P4 Continue Where You Left Off card, P5 Designer rebuilt (props tree + preview + inspector + sequence overview) + Timeline graduated (full waveform + tracks + effects), P6 Layout rebuilt as three-column workspace (props left + canvas center + inspector right), P7 consistency sweep (cream→white on legal/share/mobile).
 - 2026-05-11 — Track B Step 2c: Photo sync (house_custom_svg added to projects API select), editor light-mode (preview canvas → warm cream, sidebar → #FFFFFF, props grouped by category with colored dots, breadcrumb removed), dashboard AI Suggestions card + hero empty-state polish (camera icon, warm glow, warmer copy) + dynamic prop pills from real fixtures.
 - 2026-05-11 — Track B Step 2b: Dashboard visual polish — 400px hero card with starfield + upload prompt (no-photo) or full-bleed photo with prop pills, 48px Fraunces welcome, Design Overview tiles with colored icons + progress bars + percentages, 96px readiness ring, Next Action card with accent header + lightbulb icon, generous spacing/shadows throughout.
 - 2026-05-11 — Track B Step 2: Dashboard rebuilt to v4 hero layout (welcome row, hero project card with house photo/SVG fallback, Design Overview tiles, Show Readiness ring + checklist, Next Action card, empty state). Old Shows+Songs list moved to /projects with full CRUD preserved.
