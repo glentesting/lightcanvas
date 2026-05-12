@@ -1,12 +1,9 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { useEffect, useState, useCallback, useRef } from "react";
 import AudioUpload from "@/components/AudioUpload";
-import WaveformViewer from "@/components/WaveformViewer";
-import Timeline, { PaletteEffectChip, TimelineDndProvider, useTimelineShortcuts } from "@/components/Timeline";
 import PreviewPanel from "@/components/PreviewPanel";
 import AIPanel from "@/components/AIPanel";
 import ExportDialog from "@/components/ExportDialog";
@@ -15,60 +12,78 @@ import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
 import { createDefaultFixtures } from "@/lib/fixtures/defaults";
 import type { AudioAnalysis } from "@/lib/audio/types";
-import { EFFECT_COLORS, EFFECT_NAMES } from "@/lib/timeline/constants";
-import type { EffectId } from "@/lib/timeline/types";
-import PresetLibrary from "@/components/PresetLibrary";
 import MobileGate from "@/components/MobileGate";
+import type { Fixture } from "@/lib/fixtures/types";
 
-const STORAGE_KEY = "lightcanvas-split-ratio";
-const DEFAULT_SPLIT = 35; // percent for preview
+/* ─── Fixture Kind Colors ──────────────────────────────────── */
+const FIXTURE_KIND_COLORS: Record<string, string> = {
+  roofline: "#f59e0b",
+  "window-outline": "#3b82f6",
+  "mega-tree": "#22c55e",
+  "mini-tree": "#22c55e",
+  arch: "#6b7280",
+  bush: "#8b5cf6",
+  matrix: "#6b7280",
+  custom: "#6b7280",
+};
 
-export default function ProjectEditorPage() {
+const KIND_GROUP_MAP: Record<string, string> = {
+  roofline: "Rooflines",
+  "window-outline": "Windows",
+  "mega-tree": "Trees",
+  "mini-tree": "Trees",
+  bush: "Landscape",
+  arch: "Other",
+  matrix: "Other",
+  custom: "Other",
+};
+
+function groupFixturesByCategory(fixtures: Fixture[]) {
+  const order = ["Rooflines", "Windows", "Trees", "Landscape", "Other"];
+  const groups: Record<string, Fixture[]> = {};
+  for (const f of fixtures) {
+    const label = KIND_GROUP_MAP[f.kind] ?? "Other";
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(f);
+  }
+  return order.filter((l) => groups[l]).map((label) => ({ label, items: groups[label], count: groups[label].length }));
+}
+
+/* ─── Section colors for sequence overview ─────────────────── */
+const SECTION_COLORS: Record<string, string> = {
+  intro: "#93c5fd",
+  verse: "#86efac",
+  chorus: "#fbbf24",
+  bridge: "#c4b5fd",
+  outro: "#fca5a5",
+};
+
+export default function DesignerPage() {
   const params = useParams();
   const projectId = params.id as string;
   const [showAI, setShowAI] = useState(false);
   const [showExport, setShowExport] = useState(false);
-  const [showGroupForm, setShowGroupForm] = useState(false);
-  const [newGroupName, setNewGroupName] = useState("");
-  const [newGroupFixtureIds, setNewGroupFixtureIds] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [shareToast, setShareToast] = useState(false);
   const loadedRef = useRef(false);
-
-  // Resizable split
-  const [splitPct, setSplitPct] = useState(DEFAULT_SPLIT);
-  const draggingRef = useRef(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Load split from localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const val = parseFloat(stored);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (val >= 15 && val <= 70) setSplitPct(val);
-    }
-  }, []);
+  const [selectedFixtureId, setSelectedFixtureId] = useState<string | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   // Store selectors
-  const name = useEditorStore((s) => s.name);
-  const audioUrl = useEditorStore((s) => s.audioUrl);
+  const _name = useEditorStore((s) => s.name);
+  const _audioUrl = useEditorStore((s) => s.audioUrl);
   const audioFile = useEditorStore((s) => s.audioFile);
   const audioAnalysis = useEditorStore((s) => s.audio);
   const fixtures = useEditorStore((s) => s.fixtures);
-  const groups = useEditorStore((s) => s.groups);
-  const addGroup = useEditorStore((s) => s.addGroup);
-  const deleteGroup = useEditorStore((s) => s.deleteGroup);
+  const sequence = useEditorStore((s) => s.sequence);
   const saveStatus = useEditorStore((s) => s.saveStatus);
   const loadProject = useEditorStore((s) => s.loadProject);
   const setAudio = useEditorStore((s) => s.setAudio);
 
+  // Transport for sequence overview (not used directly but kept for future use)
+
   // Autosave hook
   useAutosave(projectId);
-
-  // Timeline keyboard shortcuts (Delete, Cmd+D, Cmd+A, Cmd+Z, Esc)
-  useTimelineShortcuts();
 
   // Load project from API into store (once)
   useEffect(() => {
@@ -102,40 +117,21 @@ export default function ProjectEditorPage() {
     [setAudio]
   );
 
-  const handleShare = useCallback(() => {
-    const url = `${window.location.origin}/p/${projectId}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setShareToast(true);
-      setTimeout(() => setShareToast(false), 2000);
+  const toggleGroup = useCallback((label: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
     });
-  }, [projectId]);
+  }, []);
 
-  // Resizable divider handlers
-  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    draggingRef.current = true;
-    let lastPct = splitPct;
-    const onMove = (ev: MouseEvent) => {
-      if (!draggingRef.current || !containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const pct = ((ev.clientY - rect.top) / rect.height) * 100;
-      const clamped = Math.max(20, Math.min(70, pct));
-      lastPct = clamped;
-      setSplitPct(clamped);
-    };
-    const onUp = () => {
-      draggingRef.current = false;
-      localStorage.setItem(STORAGE_KEY, String(lastPct));
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-    };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-  }, [splitPct]);
+  const selectedFixture = fixtures.find((f) => f.id === selectedFixtureId) ?? null;
+  const totalChannels = fixtures.reduce((s, f) => s + f.pixelCount * 3, 0);
 
   if (loadError) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center gap-4" style={{ background: "var(--bg)" }}>
+      <div className="h-full flex flex-col items-center justify-center gap-4" style={{ background: "var(--bg)" }}>
         <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "var(--panel)", color: "var(--ink-3)" }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <circle cx="12" cy="12" r="10" />
@@ -153,246 +149,259 @@ export default function ProjectEditorPage() {
 
   if (!loaded) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center gap-3" style={{ background: "var(--bg)" }}>
+      <div className="h-full flex flex-col items-center justify-center gap-3" style={{ background: "var(--bg)" }}>
         <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--line)", borderTopColor: "transparent" }} />
         <p className="text-sm" style={{ color: "var(--ink-3)" }}>Loading project...</p>
       </div>
     );
   }
 
+  const grouped = groupFixturesByCategory(fixtures);
+
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ background: "var(--bg)" }}>
+    <div className="h-full flex flex-col overflow-hidden" style={{ background: "var(--bg)" }}>
       <MobileGate />
-      {/* Top Bar */}
+
+      {/* Page header */}
       <header
-        className="flex items-center gap-3 px-3.5 shrink-0"
-        style={{ height: 52, borderBottom: "1px solid var(--line)", background: "#FFFFFF" }}
+        className="flex items-center justify-between px-6 shrink-0"
+        style={{ height: 64, borderBottom: "1px solid var(--line)", background: "#FFFFFF" }}
       >
-        <Link href="/dashboard" className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-[var(--panel)] transition-colors text-[var(--ink-3)]">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </Link>
-        <div className="w-px h-5" style={{ background: "var(--line)" }} />
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: "var(--accent)" }}>
-          <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
-        </svg>
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-semibold">{name || "Untitled"}</span>
-          {saveStatus === "saving" && <span className="text-xs ml-1" style={{ color: "var(--ink-4)" }}>· saving...</span>}
-          {saveStatus === "error" && <span className="text-xs ml-1" style={{ color: "#d44" }}>· unsaved</span>}
+        <div>
+          <h1
+            className="text-2xl font-semibold leading-tight"
+            style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
+          >
+            Main Sequence Editor
+          </h1>
+          <p className="text-sm" style={{ color: "var(--ink-4)" }}>
+            Design, map, and perfect your show — one prop at a time.
+          </p>
         </div>
-        <div className="flex-1" />
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded-md text-xs" style={{ background: "var(--panel)", color: "var(--ink-3)" }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
-          </svg>
-          <span>{audioFile || "No song"}</span>
-          {audioAnalysis && <span style={{ color: "var(--ink-4)" }}>· {Math.floor(audioAnalysis.duration / 60)}:{String(Math.floor(audioAnalysis.duration % 60)).padStart(2, "0")}</span>}
+        <div className="flex items-center gap-3">
+          <span className="text-xs" style={{ color: "var(--ink-4)" }}>
+            {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : saveStatus === "error" ? "Unsaved" : ""}
+          </span>
+          <Link
+            href={`/timeline?project=${projectId}`}
+            className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg text-xs font-semibold transition-colors"
+            style={{ background: "var(--accent)", color: "#fff" }}
+          >
+            Edit Timeline
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </Link>
         </div>
-        <button onClick={() => setShowAI(true)} className="inline-flex items-center gap-2 h-7 px-2.5 rounded-md text-xs font-medium transition-colors" style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
-          </svg>
-          AI Actions
-          <span className="inline-flex items-center justify-center px-1.5 rounded font-mono" style={{ height: 18, background: "var(--panel)", border: "1px solid var(--line)", color: "var(--ink-4)", fontSize: 10 }}>⌘K</span>
-        </button>
-        <button onClick={handleShare} className="inline-flex items-center gap-2 h-7 px-2.5 rounded-md text-xs font-medium transition-colors relative" style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
-          </svg>
-          {shareToast ? "Copied!" : "Share"}
-        </button>
-        <button onClick={() => setShowExport(true)} className="inline-flex items-center gap-2 h-7 px-2.5 rounded-md text-xs font-medium transition-colors" style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)" }}>
-          Export
-        </button>
-        <UserButton />
       </header>
 
-      {/* Main body: sidebar + split view */}
-      <TimelineDndProvider>
+      {/* Main body: left panel + center preview + right inspector */}
       <div className="flex flex-1 min-h-0">
-        {/* Left Sidebar */}
-        <aside className="flex flex-col shrink-0 overflow-hidden" style={{ width: 240, borderRight: "1px solid var(--line)", background: "#FFFFFF" }}>
+        {/* Left Panel — Props tree */}
+        <aside
+          className="flex flex-col shrink-0 overflow-hidden"
+          style={{ width: 240, borderRight: "1px solid var(--line)", background: "#FFFFFF" }}
+        >
           <div className="flex-1 overflow-y-auto">
-            <SidebarSection title="Song">
-              <AudioUpload projectId={projectId} onUploaded={handleAudioUploaded} />
-            </SidebarSection>
-
-            <SidebarSection title="Props">
-              <p className="text-xs mb-2" style={{ color: "var(--ink-3)" }}>
-                {fixtures.length} props · {fixtures.reduce((s, f) => s + f.pixelCount, 0)} px
+            {/* Props header */}
+            <div className="px-3.5 pt-3.5 pb-2">
+              <p
+                className="text-xs font-semibold mb-2"
+                style={{ letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-4)" }}
+              >
+                Props
               </p>
-              {groupFixturesByKind(fixtures).map(({ label, items }) => (
-                <div key={label} className="mb-2">
-                  <p className="text-xs font-medium mb-1 px-2" style={{ color: "var(--ink-4)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</p>
-                  {items.map((f) => (
-                    <div key={f.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs mb-0.5 transition-colors cursor-default" style={{ color: "var(--ink-2)" }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#f8f8f8"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-                    >
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: FIXTURE_KIND_COLORS[f.kind] ?? "var(--ink-4)" }} />
-                      <span className="rounded flex items-center justify-center shrink-0" style={{ width: 18, height: 18, background: "var(--accent-50)", color: "var(--accent-ink)" }}>
-                        <FixtureKindIcon kind={f.kind} />
-                      </span>
-                      <span className="truncate flex-1">{f.name}</span>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </SidebarSection>
-
-            <SidebarSection title="Groups">
-              {groups.length > 0 && (
-                <div className="mb-2">
-                  {groups.map((g) => (
-                    <div key={g.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs mb-0.5 hover:bg-[var(--panel)] transition-colors group/grp" style={{ color: "var(--ink-2)" }}>
-                      <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: g.color ?? "#6366f1" }} />
-                      <span className="truncate flex-1">{g.name}</span>
-                      <span className="text-xs" style={{ color: "var(--ink-4)", fontSize: 10 }}>{g.fixtureIds.length} props</span>
-                      <button
-                        onClick={() => deleteGroup(g.id)}
-                        className="opacity-0 group-hover/grp:opacity-100 transition-opacity shrink-0"
-                        style={{ color: "var(--ink-4)" }}
-                        title="Delete group"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {showGroupForm ? (
-                <div className="flex flex-col gap-2 p-2 rounded-md" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-                  <input
-                    type="text"
-                    placeholder="Group name"
-                    value={newGroupName}
-                    onChange={(e) => setNewGroupName(e.target.value)}
-                    className="h-7 px-2 rounded text-xs"
-                    style={{ border: "1px solid var(--line)", background: "var(--surface)" }}
-                    autoFocus
-                  />
-                  <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
-                    {fixtures.map((f) => (
-                      <label key={f.id} className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: "var(--ink-2)" }}>
-                        <input
-                          type="checkbox"
-                          checked={newGroupFixtureIds.includes(f.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setNewGroupFixtureIds((prev) => [...prev, f.id]);
-                            } else {
-                              setNewGroupFixtureIds((prev) => prev.filter((id) => id !== f.id));
-                            }
-                          }}
-                        />
-                        {f.name}
-                      </label>
-                    ))}
-                  </div>
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => {
-                        if (newGroupName.trim() && newGroupFixtureIds.length > 0) {
-                          addGroup({
-                            id: crypto.randomUUID(),
-                            name: newGroupName.trim(),
-                            fixtureIds: newGroupFixtureIds,
-                            color: "#6366f1",
-                          });
-                          setNewGroupName("");
-                          setNewGroupFixtureIds([]);
-                          setShowGroupForm(false);
-                        }
-                      }}
-                      disabled={!newGroupName.trim() || newGroupFixtureIds.length === 0}
-                      className="flex-1 h-7 rounded text-xs font-medium transition-colors disabled:opacity-40"
-                      style={{ background: "var(--accent)", color: "#fff" }}
-                    >
-                      Create
-                    </button>
-                    <button
-                      onClick={() => { setShowGroupForm(false); setNewGroupName(""); setNewGroupFixtureIds([]); }}
-                      className="h-7 px-3 rounded text-xs font-medium transition-colors"
-                      style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink-3)" }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowGroupForm(true)}
-                  className="flex items-center gap-2 w-full h-7 px-2.5 rounded-md text-xs font-medium justify-start transition-colors"
-                  style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                  Create Group
-                </button>
-              )}
-            </SidebarSection>
-
-            <SidebarSection title="Effects">
-              <p className="text-xs mb-2" style={{ color: "var(--ink-3)" }}>Drag onto a track</p>
-              <div className="grid grid-cols-2 gap-1">
-                {(Object.keys(EFFECT_NAMES) as EffectId[]).map((id) => (
-                  <PaletteEffectChip key={id} effectId={id} name={EFFECT_NAMES[id]} color={EFFECT_COLORS[id]} />
-                ))}
+              <div
+                className="flex items-center gap-2 h-7 px-2.5 rounded-md text-xs"
+                style={{ background: "var(--panel)", border: "1px solid var(--line)", color: "var(--ink-4)" }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <span>Search props...</span>
               </div>
-            </SidebarSection>
+            </div>
 
-            <SidebarSection title="Presets">
-              <PresetLibrary />
-            </SidebarSection>
+            {/* All props count */}
+            <div className="px-3.5 pb-1">
+              <p className="text-xs font-medium" style={{ color: "var(--ink-3)" }}>
+                ALL PROPS <span className="inline-flex items-center justify-center px-1.5 rounded-full text-xs" style={{ background: "var(--panel)", color: "var(--ink-4)", fontSize: 10, minWidth: 18, height: 16 }}>{fixtures.length}</span>
+              </p>
+            </div>
 
-            <SidebarSection title="AI Actions">
-              <div className="flex flex-col gap-1.5">
-                <button onClick={() => setShowAI(true)} className="flex items-center gap-2 w-full h-8 px-2.5 rounded-md text-xs font-medium justify-start transition-colors" style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)" }}>
+            {/* Categorized groups */}
+            <div className="px-1.5 pb-2">
+              {grouped.map(({ label, items, count }) => {
+                const isCollapsed = collapsedGroups.has(label);
+                return (
+                  <div key={label} className="mb-1">
+                    <button
+                      onClick={() => toggleGroup(label)}
+                      className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left rounded-md hover:bg-[var(--panel)] transition-colors"
+                      style={{ background: "transparent", border: "none", cursor: "pointer" }}
+                    >
+                      <svg
+                        width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                        style={{ transform: isCollapsed ? "rotate(-90deg)" : "rotate(0)", transition: "transform 0.15s", color: "var(--ink-4)" }}
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                      <span className="text-xs font-medium" style={{ color: "var(--ink-3)" }}>{label}</span>
+                      <span
+                        className="inline-flex items-center justify-center rounded-full ml-auto"
+                        style={{ background: "var(--panel)", color: "var(--ink-4)", fontSize: 10, minWidth: 16, height: 14, padding: "0 4px" }}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                    {!isCollapsed && (
+                      <div className="ml-1">
+                        {items.map((f) => (
+                          <button
+                            key={f.id}
+                            onClick={() => setSelectedFixtureId(selectedFixtureId === f.id ? null : f.id)}
+                            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors text-left"
+                            style={{
+                              color: "var(--ink-2)",
+                              background: selectedFixtureId === f.id ? "var(--accent-50, #eff6ff)" : "transparent",
+                              border: "none",
+                              cursor: "pointer",
+                            }}
+                            onMouseEnter={(e) => {
+                              if (selectedFixtureId !== f.id) (e.currentTarget as HTMLElement).style.background = "#f8f8f8";
+                            }}
+                            onMouseLeave={(e) => {
+                              if (selectedFixtureId !== f.id) (e.currentTarget as HTMLElement).style.background = "transparent";
+                            }}
+                          >
+                            <span
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ background: FIXTURE_KIND_COLORS[f.kind] ?? "#6b7280" }}
+                            />
+                            <span className="truncate flex-1">{f.name}</span>
+                            <svg
+                              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+                              style={{ color: "var(--ink-4)", opacity: 0.5 }}
+                            >
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Song upload (compact) */}
+            <div style={{ borderTop: "1px solid var(--line)" }}>
+              <div className="px-3.5 py-2.5">
+                <p className="text-xs font-semibold mb-2" style={{ letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-4)" }}>
+                  Song
+                </p>
+                {audioFile ? (
+                  <div className="flex items-center gap-2 text-xs" style={{ color: "var(--ink-3)" }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
+                    </svg>
+                    <span className="truncate">{audioFile}</span>
+                    {audioAnalysis && (
+                      <span style={{ color: "var(--ink-4)" }}>
+                        {Math.floor(audioAnalysis.duration / 60)}:{String(Math.floor(audioAnalysis.duration % 60)).padStart(2, "0")}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <AudioUpload projectId={projectId} onUploaded={handleAudioUploaded} />
+                )}
+              </div>
+            </div>
+
+            {/* AI Actions */}
+            <div style={{ borderTop: "1px solid var(--line)" }}>
+              <div className="px-3.5 py-2.5">
+                <p className="text-xs font-semibold mb-2" style={{ letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-4)" }}>
+                  AI Actions
+                </p>
+                <button
+                  onClick={() => setShowAI(true)}
+                  className="flex items-center gap-2 w-full h-8 px-2.5 rounded-md text-xs font-medium justify-start transition-colors"
+                  style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)" }}
+                >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
                   </svg>
                   Generate sequence
                 </button>
-                <button className="flex items-center gap-2 w-full h-7 px-2.5 rounded-md text-xs font-medium justify-start transition-colors" style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12h4l3-9 4 18 3-9h4" /></svg>
-                  Analyze audio
-                </button>
               </div>
-            </SidebarSection>
+            </div>
           </div>
         </aside>
 
-        {/* Split view: Preview (top) + Timeline (bottom) */}
-        <div ref={containerRef} className="flex-1 flex flex-col min-w-0 min-h-0">
-          {/* Preview region */}
-          <div style={{ height: `${splitPct}%`, minHeight: 120 }} className="flex flex-col min-h-0">
+        {/* Center — Preview canvas */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
+          {/* Preview toolbar */}
+          <div
+            className="flex items-center gap-2 px-4 shrink-0"
+            style={{ height: 40, borderBottom: "1px solid var(--line)", background: "#FFFFFF" }}
+          >
+            <div className="flex items-center gap-0.5 rounded-lg p-0.5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
+              {["Select", "Move", "Scale"].map((tool, i) => (
+                <button
+                  key={tool}
+                  className="px-2.5 py-1 rounded-md text-xs font-medium transition-colors"
+                  style={{
+                    background: i === 0 ? "#FFFFFF" : "transparent",
+                    color: i === 0 ? "var(--ink)" : "var(--ink-4)",
+                    boxShadow: i === 0 ? "0 1px 2px rgba(0,0,0,.06)" : "none",
+                  }}
+                >
+                  {tool}
+                </button>
+              ))}
+            </div>
+            <div className="flex-1" />
+            <span className="text-xs font-mono" style={{ color: "var(--ink-4)" }}>100%</span>
+            <Link
+              href={`/timeline?project=${projectId}`}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors hover:bg-[var(--panel)]"
+              style={{ color: "var(--ink-3)", border: "1px solid var(--line)" }}
+            >
+              Edit Timeline
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ opacity: 0.5 }}>
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </Link>
+          </div>
+
+          {/* Preview canvas area */}
+          <div className="flex-1 min-h-0">
             <PreviewPanel projectId={projectId} />
           </div>
-
-          {/* Resizable divider */}
-          <div
-            onMouseDown={handleDividerMouseDown}
-            className="shrink-0 flex items-center justify-center cursor-row-resize group transition-colors"
-            style={{ height: 10, background: "var(--panel-2)", borderTop: "1px solid var(--line)", borderBottom: "1px solid var(--line)" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "color-mix(in oklab, var(--accent), transparent 60%)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--panel-2)"; }}
-          >
-            {/* Grip icon — three horizontal lines */}
-            <div className="flex flex-col gap-[2px] items-center">
-              <div className="w-6 h-[2px] rounded-full" style={{ background: "var(--ink-4)", opacity: 0.5 }} />
-              <div className="w-4 h-[2px] rounded-full" style={{ background: "var(--ink-4)", opacity: 0.5 }} />
-              <div className="w-6 h-[2px] rounded-full" style={{ background: "var(--ink-4)", opacity: 0.5 }} />
-            </div>
-          </div>
-
-          {/* Timeline region */}
-          <div style={{ flex: 1, minHeight: 120 }} className="flex flex-col min-h-0">
-            <TimelineRegion audioUrl={audioUrl ? `/api/audio/${projectId}` : null} analysis={audioAnalysis} />
-          </div>
         </div>
+
+        {/* Right Panel — Selected Prop Inspector */}
+        <aside
+          className="flex flex-col shrink-0 overflow-y-auto"
+          style={{ width: 280, borderLeft: "1px solid var(--line)", background: "#FFFFFF" }}
+        >
+          {selectedFixture ? (
+            <FixtureInspector fixture={selectedFixture} totalChannels={totalChannels} />
+          ) : (
+            <LayoutSummary fixtureCount={fixtures.length} totalChannels={totalChannels} />
+          )}
+        </aside>
       </div>
-      </TimelineDndProvider>
+
+      {/* Bottom — Sequence Overview */}
+      <SequenceOverview
+        projectId={projectId}
+        audioAnalysis={audioAnalysis}
+        blockCount={sequence.blocks.length}
+        duration={audioAnalysis?.duration ?? 0}
+      />
 
       <AIPanel open={showAI} onClose={() => setShowAI(false)} />
       <ExportDialog open={showExport} onClose={() => setShowExport(false)} />
@@ -400,106 +409,206 @@ export default function ProjectEditorPage() {
   );
 }
 
-/* ─── Timeline Region ───────────────────────────────────────── */
-function TimelineRegion({ audioUrl, analysis }: { audioUrl: string | null; analysis: AudioAnalysis | null }) {
-  if (audioUrl) {
-    return (
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="shrink-0" style={{ borderBottom: "1px solid var(--line)" }}>
-          <WaveformViewer audioUrl={audioUrl} analysis={analysis} />
-        </div>
-        <Timeline analysis={analysis} />
-      </div>
-    );
-  }
-
+/* ─── Layout Summary (no selection) ────────────────────────── */
+function LayoutSummary({ fixtureCount, totalChannels }: { fixtureCount: number; totalChannels: number }) {
   return (
-    <div className="flex-1 flex flex-col min-h-0" style={{ background: "var(--bg)" }}>
-      <div className="flex items-center gap-2.5 px-3.5 shrink-0" style={{ height: 48, borderBottom: "1px solid var(--line)", background: "var(--surface)" }}>
-        <div className="px-2.5 py-1 rounded-md text-xs font-mono" style={{ background: "var(--panel)", color: "var(--ink-2)", fontVariantNumeric: "tabular-nums" }}>
-          00:00.00 <span style={{ color: "var(--ink-4)" }}>/ 00:00</span>
-        </div>
-        <div className="flex-1" />
-        <span className="inline-flex items-center gap-1.5 px-2 rounded-full text-xs" style={{ height: 22, background: "var(--panel)", color: "var(--ink-3)", border: "1px solid var(--line)" }}>
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--ink-4)" }} />
-          Upload a song to detect BPM
-        </span>
-      </div>
-      <div className="flex-1 flex items-center justify-center" style={{ background: "var(--panel)" }}>
-        <div className="text-center">
-          <div className="w-14 h-14 rounded-xl flex items-center justify-center mx-auto mb-3" style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ color: "var(--ink-3)" }}>
-              <path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" />
-            </svg>
-          </div>
-          <p className="text-sm font-medium mb-1" style={{ color: "var(--ink-2)" }}>No audio loaded</p>
-          <p className="text-xs" style={{ color: "var(--ink-4)" }}>Upload a song in the sidebar to build your timeline</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Fixture Kind Colors & Grouping ───────────────────────── */
-const FIXTURE_KIND_COLORS: Record<string, string> = {
-  roofline: "#f97316",
-  "window-outline": "#3b82f6",
-  "mega-tree": "#22c55e",
-  "mini-tree": "#84cc16",
-  arch: "#a855f7",
-  bush: "#14b8a6",
-};
-
-const KIND_LABELS: Record<string, string> = {
-  roofline: "Rooflines",
-  "window-outline": "Accents",
-  "mega-tree": "Trees",
-  "mini-tree": "Trees",
-  arch: "Accents",
-  bush: "Bushes",
-};
-
-function groupFixturesByKind(fixtures: { id: string; name: string; kind: string; pixelCount: number }[]) {
-  const order = ["Rooflines", "Trees", "Bushes", "Accents", "Other"];
-  const groups: Record<string, typeof fixtures> = {};
-  for (const f of fixtures) {
-    const label = KIND_LABELS[f.kind] ?? "Other";
-    if (!groups[label]) groups[label] = [];
-    groups[label].push(f);
-  }
-  return order.filter((l) => groups[l]).map((label) => ({ label, items: groups[label] }));
-}
-
-/* ─── Fixture Kind Icon ─────────────────────────────────────── */
-function FixtureKindIcon({ kind }: { kind: string }) {
-  return (
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      {kind === "roofline" && <line x1="2" y1="12" x2="22" y2="12" />}
-      {kind === "window-outline" && <rect x="4" y="6" width="16" height="12" rx="1" />}
-      {kind === "mega-tree" && <><polygon points="12,2 3,18 21,18" /><line x1="12" y1="18" x2="12" y2="22" /></>}
-      {kind === "mini-tree" && <><polygon points="12,4 5,17 19,17" /><line x1="12" y1="17" x2="12" y2="21" /></>}
-      {kind === "arch" && <path d="M4 20 Q12 2 20 20" />}
-      {kind === "bush" && <ellipse cx="12" cy="13" rx="9" ry="6" />}
-    </svg>
-  );
-}
-
-/* ─── Sidebar Section ───────────────────────────────────────── */
-function SidebarSection({ title, children }: { title: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(true);
-  return (
-    <div style={{ borderBottom: "1px solid var(--line)" }}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-1.5 px-3.5 py-2.5 text-left"
-        style={{ fontSize: 13, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-3)", background: "transparent", border: "none", cursor: "pointer" }}
+    <div className="p-4">
+      <p
+        className="text-xs font-semibold mb-4"
+        style={{ letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-4)" }}
       >
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ transform: open ? "rotate(0)" : "rotate(-90deg)", transition: "transform 0.15s" }}>
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-        {title}
-      </button>
-      {open && <div className="px-2.5 pb-2.5">{children}</div>}
+        Layout Summary
+      </p>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between text-sm">
+          <span style={{ color: "var(--ink-3)" }}>Total props</span>
+          <span className="font-medium">{fixtureCount}</span>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <span style={{ color: "var(--ink-3)" }}>Channels used</span>
+          <span className="font-medium">{totalChannels.toLocaleString()}</span>
+        </div>
+        <div className="mt-6 rounded-xl p-4" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
+          <p className="text-xs text-center" style={{ color: "var(--ink-4)" }}>
+            Select a prop to edit details
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
+
+/* ─── Fixture Inspector (prop selected) ────────────────────── */
+function FixtureInspector({ fixture, totalChannels }: { fixture: Fixture; totalChannels: number }) {
+  const _fixtureChannels = fixture.pixelCount * 3;
+  const maxChannels = 2000;
+  const usagePct = Math.min(100, Math.round((totalChannels / maxChannels) * 100));
+
+  return (
+    <div className="p-4">
+      {/* Fixture header */}
+      <div className="flex items-center gap-2.5 mb-4">
+        <span
+          className="w-3 h-3 rounded-full shrink-0"
+          style={{ background: FIXTURE_KIND_COLORS[fixture.kind] ?? "#6b7280" }}
+        />
+        <span className="text-sm font-semibold flex-1">{fixture.name}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs" style={{ color: "var(--ink-4)" }}>Enabled</span>
+          <div
+            className="w-7 h-4 rounded-full relative"
+            style={{ background: "var(--accent)", cursor: "default" }}
+          >
+            <div
+              className="w-3 h-3 rounded-full absolute top-0.5"
+              style={{ background: "#fff", right: 2 }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Properties */}
+      <p
+        className="text-xs font-semibold mb-2"
+        style={{ letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-4)" }}
+      >
+        Properties
+      </p>
+      <div className="space-y-2 mb-4">
+        <InspectorField label="Pixel Count" value={String(fixture.pixelCount)} />
+        <InspectorField label="Universe" value={String(fixture.universe ?? 1)} />
+        <InspectorField label="Start Channel" value={String(fixture.startChannel)} />
+        <InspectorField label="Direction" value={fixture.direction === "rtl" ? "Right to Left" : "Left to Right"} />
+      </div>
+
+      {/* Mapping status */}
+      <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+        <span className="text-xs font-medium" style={{ color: "#15803d" }}>Mapping valid</span>
+      </div>
+
+      {/* Channel usage */}
+      <p
+        className="text-xs font-semibold mb-2"
+        style={{ letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-4)" }}
+      >
+        Channel Usage
+      </p>
+      <p className="text-xs mb-1.5" style={{ color: "var(--ink-3)" }}>
+        {totalChannels.toLocaleString()} / {maxChannels.toLocaleString()} channels — {usagePct}%
+      </p>
+      <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "var(--panel)" }}>
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${usagePct}%`, background: "var(--accent)" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function InspectorField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-xs" style={{ color: "var(--ink-3)" }}>{label}</span>
+      <span
+        className="text-xs font-mono px-2 py-0.5 rounded"
+        style={{ background: "var(--panel)", color: "var(--ink-2)", border: "1px solid var(--line)" }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+/* ─── Sequence Overview (bottom bar) ───────────────────────── */
+function SequenceOverview({
+  projectId,
+  audioAnalysis,
+  blockCount,
+  duration,
+}: {
+  projectId: string;
+  audioAnalysis: AudioAnalysis | null;
+  blockCount: number;
+  duration: number;
+}) {
+  const sections = audioAnalysis?.sections;
+  const durationStr = duration > 0
+    ? `${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, "0")}`
+    : "0:00";
+
+  return (
+    <div
+      className="flex items-center gap-4 px-4 shrink-0"
+      style={{ height: 72, borderTop: "1px solid var(--line)", background: "#FFFFFF" }}
+    >
+      {/* Play button + time */}
+      <div className="flex items-center gap-3 shrink-0">
+        <button
+          className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+          style={{ background: "var(--panel)", border: "1px solid var(--line)", color: "var(--ink-2)" }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3" />
+          </svg>
+        </button>
+        <div className="text-xs font-mono" style={{ color: "var(--ink-3)" }}>
+          0:00 / {durationStr}
+        </div>
+      </div>
+
+      {/* Section blocks */}
+      <div className="flex-1 flex items-center gap-1 min-w-0 px-2">
+        {sections && sections.length > 0 ? (
+          sections.map((sec, i) => {
+            const widthPct = duration > 0 ? ((sec.endTime - sec.startTime) / duration) * 100 : 0;
+            return (
+              <div
+                key={i}
+                className="h-8 rounded-md flex items-center justify-center text-xs font-medium capitalize"
+                style={{
+                  width: `${widthPct}%`,
+                  minWidth: 40,
+                  background: SECTION_COLORS[sec.label] ?? "#e5e7eb",
+                  color: "#1e293b",
+                }}
+              >
+                {sec.label}
+              </div>
+            );
+          })
+        ) : (
+          <div
+            className="flex-1 h-8 rounded-md flex items-center justify-center text-xs font-medium"
+            style={{ background: "#e0e7ef", color: "var(--ink-3)" }}
+          >
+            {duration > 0 ? "Full Song" : "No audio loaded"}
+          </div>
+        )}
+      </div>
+
+      {/* Effect count + Edit Timeline link */}
+      <div className="flex items-center gap-3 shrink-0">
+        <span className="text-xs" style={{ color: "var(--ink-4)" }}>
+          {blockCount} effect{blockCount !== 1 ? "s" : ""}
+        </span>
+        <Link
+          href={`/timeline?project=${projectId}`}
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold transition-colors"
+          style={{ background: "var(--accent)", color: "#fff" }}
+        >
+          Edit Timeline
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Fixture Kind Colors (module level) ───────────────────── */
+// Already defined at top of file
