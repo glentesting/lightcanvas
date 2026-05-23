@@ -2,8 +2,8 @@
 
 **The single source of truth for the project. Read this first. Update this last.**
 
-Last updated: 2026-05-11
-Updated by: Claude (Track B Seven-Priority Rebuild Pass)
+Last updated: 2026-05-23
+Updated by: Claude (Layout Editor Premium Rebuild)
 
 ---
 
@@ -31,7 +31,7 @@ The app is a real working product running on Vercel from `github.com/glentesting
 - Onboarding (4 steps: sequencer, decorating, lights, audio)
 - Dashboard with Shows + Projects, project CRUD, show grouping
 - Split-view editor (preview top, timeline bottom — no tabs)
-- Layout editor on a separate route (`/project/[id]/layout`)
+- Layout editor on a separate route (`/project/[id]/layout`) — premium three-column workspace with: action toolbar (Photo View/Night Preview toggle, AI assistant, Validate, Add Prop), left panel (Props/Layers tabs, search, per-prop visibility toggles + status dots, per-group Add Prop), center canvas (polished blue/white overlays with anchor nodes + label pills, floating toolbar with Select/Draw/Move/Resize/Snap/Zoom/Fullscreen), right panel (Layout Summary stat cards or inspector with Properties/Mapping/Channels/Preview tabs), 3-step Add Prop modal (Choose Type → Details → Placement Method), AI Layout Assistant popover (8 suggestions), validation strip, Night Preview mode (dark overlay + glowing colored props)
 - Audio upload to Supabase Storage (`songs` bucket), WaveSurfer waveform, Meyda beat detection with BPM octave correction
 - Timeline editor: fixture tracks, group tracks, 10 effect types, drag/drop, beat snap, resize, multi-select, parameter panel, undo/redo
 - Preset system: 6 built-ins, user save, immutability rules, "Modified from" indicator
@@ -59,7 +59,9 @@ The app is a real working product running on Vercel from `github.com/glentesting
 
 **Stripe / billing not wired.** Placeholder route + UI exists. Real subscription handling — not built. Needs a fresh scoping pass before launch.
 
-**v4 visual rebuild in progress.** Track B Step 1 (sidebar shell) complete — left sidebar with 9 nav items, app top bar, (app) route group wrapping authenticated pages. Dashboard and settings stripped of standalone navs. --bg token updated to #FFFFFF.
+**v4 visual rebuild in progress.** Track B Steps 1–3 complete (sidebar shell, dashboard, designer, projects, layout editor). Steps 4–9 (Timeline, AI Studio, Audio, Preflight, Exports, Settings refresh) are still stub pages — not yet built. Sidebar now dynamically links to project-scoped routes when a project is loaded; stub tabs redirect to /projects when no project context exists.
+
+**5 sidebar tabs are stub pages.** Timeline, AI Studio, Audio, Preflight, and Exports all show "Coming Soon" placeholders. These are the next major build targets (Track B Steps 4–9).
 
 ### Tech stack (locked, don't change)
 
@@ -70,6 +72,9 @@ No `@anthropic-ai/sdk` dependency — direct `fetch` to Anthropic API. No `jszip
 ### Current key files
 
 - `src/lib/store/editor-store.ts` (270 lines) — Zustand store
+- `src/components/LayoutEditor.tsx` (~1200 lines) — premium layout editor (three-column, overlays, floating toolbar, inspector tabs, night preview)
+- `src/components/AppSidebar.tsx` — global sidebar (9 nav items, project-aware routing)
+- `src/components/AppTopBar.tsx` — global top bar (project name from store, save status, Open Designer CTA)
 - `src/components/Timeline.tsx` (852 lines) — main timeline UI
 - `src/components/AIPanel.tsx` (541 lines) — AI sidebar
 - `src/components/PreviewPanel.tsx` (159 lines) — preview render
@@ -453,28 +458,47 @@ Steps 1–3 alone close 70% of the perceived UX gap.
 - Sentry + PostHog SDKs installed when ready
 - Stripe / billing scoping pass
 
-### Track B — STARTING NOW (v4 design rebuild)
+### Track B — v4 design rebuild (IN PROGRESS)
 
-Order per Section 5:
+#### DONE
 
-1. **Sidebar nav shell + global frame** — left rail (Dashboard, Projects, Designer, Timeline, AI Studio, Audio, Preflight, Exports, Settings), top bar, profile chip bottom-left
-2. **Dashboard rebuild** — hero card, readiness, quick actions, controller status, tonight's show
-3. **Designer rebuild** — categorized prop tree, real house photo, Properties/Mapping/Channels tabs
+✅ **Step 1: Sidebar nav shell + global frame** — left rail with 9 nav items, AppTopBar (project selector, search, save status, Open Designer), profile chip bottom-left, (app) route group. `--bg` token → `#FFFFFF`. Sidebar now reads projectId from editor store and dynamically routes project-scoped tabs to `/project/[id]`. Tabs without a loaded project redirect to `/projects`.
+
+✅ **Step 2: Dashboard rebuild** — hero project card with house photo + prop labels, Show Readiness ring, Design Overview tiles, Next Action card, Continue Where You Left Off, AI Suggestions card, empty state with upload prompt.
+
+✅ **Step 3a: Designer rebuild** — categorized prop tree, real house photo with prop overlays, Properties/Mapping/Channels tabs in inspector, sequence overview bar.
+
+✅ **Step 3b: Projects page** — Active/Drafts/Archived/Templates tabs, project cards with readiness rings, sort controls, template packs.
+
+✅ **Step 3c: Layout Editor premium rebuild (2026-05-23)** — full redesign:
+- Page header with "Back to Designer" + title
+- Action toolbar: Photo View / Night Preview toggle, Replace Photo, AI Layout Assistant, Validate Layout, + Add Prop
+- Left panel: Props/Layers tabs, search, per-prop visibility toggles + status dots (green=placed, amber=needs), per-group Add Prop buttons, category icons
+- Center canvas: blue/white prop overlays with anchor nodes + label pills, floating toolbar (Select/Draw/Move/Resize/Snap/Fit/Zoom/Fullscreen)
+- Right panel (no selection): Layout Summary with stat cards (props mapped, channels, controllers, readiness %), readiness bar, issue alerts
+- Right panel (selected): Inspector with Properties/Mapping/Channels/Preview tabs, brightness limit slider, enabled toggle, geometry fields, channel overlap detection
+- 3-step Add Prop modal: Choose Type → Basic Details → Placement Method (Draw/AI/Copy)
+- AI Layout Assistant popover: 8 layout-specific AI suggestions
+- Validation strip: friendly messaging with auto-fix and review actions
+- Night Preview mode: dark canvas overlay, per-kind colored glowing props with SVG glow filter
+
+#### NEXT — NOT STARTED (stub pages)
+
 4. **Timeline rebuild** — dedicated route, Sections/Waveform/Beat Grid, AI Timing Assist
 5. **AI Studio rebuild** — dedicated page, 3-variant generation
-6. **Preflight (new)** — readiness score, tonight's show framing
-7. **Audio Analysis (promotion)** — dedicated page
+6. **Preflight (new)** — readiness score + checks + tonight's show framing
+7. **Audio Analysis (promotion)** — dedicated page from inline waveform
 8. **Exports rebuild** — 4-step wizard
-9. **Projects + Settings refresh** — tabbed Projects, new Settings tab order
+9. **Projects + Settings refresh** — updated Settings tab order (Profile/Playback/Exports/AI/Notifications/Billing/Connections)
 
-Concurrent with implementation:
-- `--bg` token changes from warm cream to true white (`#FFFFFF`)
-- Dark mode toggle removed from v4 Settings mockup → not implemented
-- Audio Analysis demo data updated to hobbyist-appropriate content
+Steps 4–9 are currently "Coming Soon" stub pages. The sidebar links to them but they show placeholder content.
 
-### Next Claude Code prompt (suggested for Step 1)
-
-> Read PROJECT-STATUS.md and CLAUDE.md fully. Then start Track B Step 1: Sidebar shell + global frame against the v4 design set in the parent folder's reference set (`LightCanvas_v4_Full_Image_Set/`). The 9 sidebar destinations are: Dashboard, Projects, Designer, Timeline, AI Studio, Audio, Preflight, Exports, Settings. Light mode only — no dark mode toggle. Background is true white (`#FFFFFF`), not cream — update the `--bg` design token accordingly. Update PROJECT-STATUS.md before pushing.
+#### Concurrent items completed
+- ✅ `--bg` token changed from warm cream to true white (`#FFFFFF`)
+- ✅ Dark mode toggle not implemented (locked out)
+- ✅ Demo data uses hobbyist content ("Wizards in Winter"), not "LightCanvas Worship"
+- ✅ AppTopBar shows real project name from store + live save status
+- ✅ Sidebar dynamically links to project-scoped routes when a project is loaded
 
 ---
 
@@ -482,6 +506,7 @@ Concurrent with implementation:
 
 When you make significant changes, add a one-line entry here. Newest at the top.
 
+- 2026-05-23 — Layout Editor premium rebuild (7 phases): action toolbar, left panel (Props/Layers tabs, visibility, status dots, per-group add), canvas (blue/white overlays, anchor nodes, label pills, floating toolbar), right panel (stat cards, inspector tabs), 3-step Add Prop modal, AI Layout Assistant popover, validation strip, Night Preview mode. Also fixed: sidebar now reads projectId from store and dynamically routes project-scoped tabs; AppTopBar shows real project name + save status; stub tabs redirect to /projects when no project loaded. TypeScript clean, lint 0/0, build passes.
 - 2026-05-11 — Track B Seven-Priority Rebuild: P1 demo data verified clean, P2 hero nighttime treatment (dusk overlay + warm amber glow), P3 Projects page rebuilt to v4 library (tabs, sort, project cards, templates), P4 Continue Where You Left Off card, P5 Designer rebuilt (props tree + preview + inspector + sequence overview) + Timeline graduated (full waveform + tracks + effects), P6 Layout rebuilt as three-column workspace (props left + canvas center + inspector right), P7 consistency sweep (cream→white on legal/share/mobile).
 - 2026-05-11 — Track B Step 2c: Photo sync (house_custom_svg added to projects API select), editor light-mode (preview canvas → warm cream, sidebar → #FFFFFF, props grouped by category with colored dots, breadcrumb removed), dashboard AI Suggestions card + hero empty-state polish (camera icon, warm glow, warmer copy) + dynamic prop pills from real fixtures.
 - 2026-05-11 — Track B Step 2b: Dashboard visual polish — 400px hero card with starfield + upload prompt (no-photo) or full-bleed photo with prop pills, 48px Fraunces welcome, Design Overview tiles with colored icons + progress bars + percentages, 96px readiness ring, Next Action card with accent header + lightbulb icon, generous spacing/shadows throughout.

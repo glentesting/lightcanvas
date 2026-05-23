@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUser, UserButton } from "@clerk/nextjs";
+import { useEditorStore } from "@/lib/store/editor-store";
+
+// Items that require an active project to navigate
+const PROJECT_SCOPED_IDS = new Set(["designer", "timeline", "ai-studio", "audio", "preflight", "exports"]);
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: DashboardIcon },
@@ -19,13 +23,24 @@ const NAV_ITEMS = [
 export default function AppSidebar() {
   const pathname = usePathname();
   const { user } = useUser();
+  const projectId = useEditorStore((s) => s.projectId);
+
+  // When a project is loaded, rewrite project-scoped links to /project/[id] routes
+  function getHref(item: typeof NAV_ITEMS[number]): string {
+    if (!projectId || !PROJECT_SCOPED_IDS.has(item.id)) return item.href;
+    // Designer goes to the main project editor page
+    if (item.id === "designer") return `/project/${projectId}`;
+    // Other project-scoped tabs go to /project/[id] with a tab hint as query param
+    // (until dedicated sub-routes exist, the main project page handles these)
+    return `/project/${projectId}?tab=${item.id}`;
+  }
 
   function isActive(href: string, id: string): boolean {
     if (id === "dashboard" && pathname === "/dashboard") return true;
-    if (id === "projects" && pathname === "/dashboard") return false; // Dashboard takes priority
+    if (id === "projects" && pathname === "/projects") return true;
     if (id === "designer" && pathname.startsWith("/project/") && !pathname.includes("/layout")) return true;
-    if (id === "timeline" && pathname.startsWith("/project/") && !pathname.includes("/layout")) return false; // Designer takes priority for editor
-    if (href !== "/dashboard" && pathname.startsWith(href)) return true;
+    if (id === "settings" && pathname.startsWith("/settings")) return true;
+    if (href !== "/dashboard" && href !== "/projects" && pathname.startsWith(href)) return true;
     return false;
   }
 
@@ -59,15 +74,17 @@ export default function AppSidebar() {
       {/* Nav items */}
       <nav className="flex-1 px-3 flex flex-col gap-0.5">
         {NAV_ITEMS.map((item) => {
-          const active = isActive(item.href, item.id);
+          const href = getHref(item);
+          const active = isActive(href, item.id);
           const Icon = item.icon;
+          const needsProject = PROJECT_SCOPED_IDS.has(item.id) && !projectId;
           return (
             <Link
               key={item.id}
-              href={item.href}
+              href={needsProject ? "/projects" : href}
               className="flex items-center gap-3 px-3 h-9 rounded-lg text-[13.5px] font-medium transition-colors"
               style={{
-                color: active ? "#1e3a5f" : "var(--ink-3)",
+                color: active ? "#1e3a5f" : needsProject ? "var(--ink-4)" : "var(--ink-3)",
                 background: active ? "#f0f4f8" : "transparent",
                 fontWeight: active ? 600 : 500,
               }}
@@ -77,6 +94,7 @@ export default function AppSidebar() {
               onMouseLeave={(e) => {
                 if (!active) (e.currentTarget as HTMLElement).style.background = "transparent";
               }}
+              title={needsProject ? "Select a project first" : undefined}
             >
               <Icon active={active} />
               {item.label}
