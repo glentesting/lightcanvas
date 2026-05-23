@@ -25,22 +25,25 @@ export default function AppSidebar() {
   const { user } = useUser();
   const projectId = useEditorStore((s) => s.projectId);
 
-  // When a project is loaded, rewrite project-scoped links to /project/[id] routes
+  // When a project is loaded, rewrite project-scoped links to their real routes
   function getHref(item: typeof NAV_ITEMS[number]): string {
     if (!projectId || !PROJECT_SCOPED_IDS.has(item.id)) return item.href;
-    // Designer goes to the main project editor page
     if (item.id === "designer") return `/project/${projectId}`;
-    // Other project-scoped tabs go to /project/[id] with a tab hint as query param
-    // (until dedicated sub-routes exist, the main project page handles these)
-    return `/project/${projectId}?tab=${item.id}`;
+    if (item.id === "timeline") return `/timeline?project=${projectId}`;
+    // Stubs keep their standalone route — they show "Coming Soon" with project context
+    return item.href;
   }
 
-  function isActive(href: string, id: string): boolean {
+  function isActive(_href: string, id: string): boolean {
     if (id === "dashboard" && pathname === "/dashboard") return true;
     if (id === "projects" && pathname === "/projects") return true;
     if (id === "designer" && pathname.startsWith("/project/") && !pathname.includes("/layout")) return true;
+    if (id === "timeline" && pathname === "/timeline") return true;
     if (id === "settings" && pathname.startsWith("/settings")) return true;
-    if (href !== "/dashboard" && href !== "/projects" && pathname.startsWith(href)) return true;
+    if (id === "ai-studio" && pathname === "/ai-studio") return true;
+    if (id === "audio" && pathname === "/audio") return true;
+    if (id === "preflight" && pathname === "/preflight") return true;
+    if (id === "exports" && pathname === "/exports") return true;
     return false;
   }
 
