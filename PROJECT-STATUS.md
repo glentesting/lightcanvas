@@ -485,10 +485,10 @@ Steps 1–3 alone close 70% of the perceived UX gap.
 #### NEXT — NOT STARTED (stub pages)
 
 4. **Timeline rebuild** — dedicated route, Sections/Waveform/Beat Grid, AI Timing Assist
-5. **AI Studio rebuild** — dedicated page, 3-variant generation
-6. **Preflight (new)** — readiness score + checks + tonight's show framing
-7. **Audio Analysis (promotion)** — dedicated page from inline waveform
-8. **Exports rebuild** — 4-step wizard
+5. **AI Studio rebuild** — dedicated page, 3-variant generation — NOT STARTED
+6. **Preflight (new)** — readiness score + checks + tonight's show framing — NOT STARTED
+7. **Audio Analysis (promotion)** — DONE (2026-05-23): header strip with song info + 4 metric tiles, structure overview (section blocks + waveform + intensity + beat grid), detected sections table, analysis summary rail, quick actions, tip card. Reads real BPM/beats/sections/loudness from store.
+8. **Exports rebuild** — 4-step wizard — NOT STARTED
 9. **Projects + Settings refresh** — updated Settings tab order (Profile/Playback/Exports/AI/Notifications/Billing/Connections)
 
 Steps 4–9 are currently "Coming Soon" stub pages. The sidebar links to them but they show placeholder content.

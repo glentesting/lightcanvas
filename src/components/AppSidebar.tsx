@@ -29,9 +29,8 @@ export default function AppSidebar() {
   function getHref(item: typeof NAV_ITEMS[number]): string {
     if (!projectId || !PROJECT_SCOPED_IDS.has(item.id)) return item.href;
     if (item.id === "designer") return `/project/${projectId}`;
-    if (item.id === "timeline") return `/timeline?project=${projectId}`;
-    // Stubs keep their standalone route — they show "Coming Soon" with project context
-    return item.href;
+    // All other project-scoped tabs use ?project= query param
+    return `${item.href}?project=${projectId}`;
   }
 
   function isActive(_href: string, id: string): boolean {
