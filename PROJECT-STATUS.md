@@ -485,7 +485,7 @@ Steps 1–3 alone close 70% of the perceived UX gap.
 #### NEXT — NOT STARTED (stub pages)
 
 4. **Timeline rebuild** — dedicated route, Sections/Waveform/Beat Grid, AI Timing Assist
-5. **AI Studio rebuild** — dedicated page, 3-variant generation — NOT STARTED
+5. **AI Studio rebuild** — DONE (2026-05-23): prompt textarea with character count, 6 filter pills (Mood/Energy/Palette/Duration/Beat Aware/Targets), 3-variant effect generation cards with preview thumbnails + tags + best match badge, Edit Effect right rail (Intensity/Speed/Complexity sliders, palette swatches, beat awareness toggle, Apply To checkboxes), Apply to Timeline CTA.
 6. **Preflight (new)** — DONE (2026-05-23): readiness score ring, 3-column hero strip (readiness/tonight's show/summary), 6 check cards (display, timing, controller, audio, export, brightness) with real validation, bottom callout strip. Uses real fixture validation data.
 7. **Audio Analysis (promotion)** — DONE (2026-05-23): header strip with song info + 4 metric tiles, structure overview (section blocks + waveform + intensity + beat grid), detected sections table, analysis summary rail, quick actions, tip card. Reads real BPM/beats/sections/loudness from store.
 8. **Exports rebuild** — DONE (2026-05-23): 4-step wizard (Destination → Validation → Package → Export), 3 export type cards (xLights/LOR/Video) with radio selection, package options checkboxes, validation step with real engine, Export Summary right rail, progress strip, download button. Uses real validation data.
