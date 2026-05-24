@@ -488,7 +488,7 @@ Steps 1–3 alone close 70% of the perceived UX gap.
 5. **AI Studio rebuild** — dedicated page, 3-variant generation — NOT STARTED
 6. **Preflight (new)** — DONE (2026-05-23): readiness score ring, 3-column hero strip (readiness/tonight's show/summary), 6 check cards (display, timing, controller, audio, export, brightness) with real validation, bottom callout strip. Uses real fixture validation data.
 7. **Audio Analysis (promotion)** — DONE (2026-05-23): header strip with song info + 4 metric tiles, structure overview (section blocks + waveform + intensity + beat grid), detected sections table, analysis summary rail, quick actions, tip card. Reads real BPM/beats/sections/loudness from store.
-8. **Exports rebuild** — 4-step wizard — NOT STARTED
+8. **Exports rebuild** — DONE (2026-05-23): 4-step wizard (Destination → Validation → Package → Export), 3 export type cards (xLights/LOR/Video) with radio selection, package options checkboxes, validation step with real engine, Export Summary right rail, progress strip, download button. Uses real validation data.
 9. **Projects + Settings refresh** — updated Settings tab order (Profile/Playback/Exports/AI/Notifications/Billing/Connections)
 
 Steps 4–9 are currently "Coming Soon" stub pages. The sidebar links to them but they show placeholder content.
