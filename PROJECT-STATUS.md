@@ -3,7 +3,7 @@
 **The single source of truth for the project. Read this first. Update this last.**
 
 Last updated: 2026-05-23
-Updated by: Claude (Layout Editor Premium Rebuild)
+Updated by: Claude (Track B Stub Graduation — Audio, Preflight, Exports, AI Studio)
 
 ---
 
@@ -61,7 +61,7 @@ The app is a real working product running on Vercel from `github.com/glentesting
 
 **v4 visual rebuild in progress.** Track B Steps 1–3 complete (sidebar shell, dashboard, designer, projects, layout editor). Steps 4–9 (Timeline, AI Studio, Audio, Preflight, Exports, Settings refresh) are still stub pages — not yet built. Sidebar now dynamically links to project-scoped routes when a project is loaded; stub tabs redirect to /projects when no project context exists.
 
-**5 sidebar tabs are stub pages.** Timeline, AI Studio, Audio, Preflight, and Exports all show "Coming Soon" placeholders. These are the next major build targets (Track B Steps 4–9).
+**All 9 sidebar destinations now render real pages.** No more stubs or ComingSoon placeholders. ComingSoon.tsx has been deleted from the codebase.
 
 ### Tech stack (locked, don't change)
 
@@ -491,7 +491,7 @@ Steps 1–3 alone close 70% of the perceived UX gap.
 8. **Exports rebuild** — DONE (2026-05-23): 4-step wizard (Destination → Validation → Package → Export), 3 export type cards (xLights/LOR/Video) with radio selection, package options checkboxes, validation step with real engine, Export Summary right rail, progress strip, download button. Uses real validation data.
 9. **Projects + Settings refresh** — updated Settings tab order (Profile/Playback/Exports/AI/Notifications/Billing/Connections)
 
-Steps 4–9 are currently "Coming Soon" stub pages. The sidebar links to them but they show placeholder content.
+All sidebar destinations now render real v4-polish pages. ComingSoon.tsx has been deleted. Only Settings tab refresh remains as Step 9.
 
 #### Concurrent items completed
 - ✅ `--bg` token changed from warm cream to true white (`#FFFFFF`)
@@ -506,6 +506,7 @@ Steps 4–9 are currently "Coming Soon" stub pages. The sidebar links to them bu
 
 When you make significant changes, add a one-line entry here. Newest at the top.
 
+- 2026-05-23 — Track B stub graduation complete: Audio Analysis (header + structure overview + sections table + summary rail), Preflight (readiness ring + 3-col hero + 6 check cards + callout), Exports (4-step wizard + validation + summary rail), AI Studio (prompt + filters + 3-variant cards + edit effect rail). ComingSoon.tsx deleted. All 9 sidebar destinations now render real pages. Designer standalone route redirects to active project.
 - 2026-05-23 — Layout Editor premium rebuild (7 phases): action toolbar, left panel (Props/Layers tabs, visibility, status dots, per-group add), canvas (blue/white overlays, anchor nodes, label pills, floating toolbar), right panel (stat cards, inspector tabs), 3-step Add Prop modal, AI Layout Assistant popover, validation strip, Night Preview mode. Also fixed: sidebar now reads projectId from store and dynamically routes project-scoped tabs; AppTopBar shows real project name + save status; stub tabs redirect to /projects when no project loaded. TypeScript clean, lint 0/0, build passes.
 - 2026-05-11 — Track B Seven-Priority Rebuild: P1 demo data verified clean, P2 hero nighttime treatment (dusk overlay + warm amber glow), P3 Projects page rebuilt to v4 library (tabs, sort, project cards, templates), P4 Continue Where You Left Off card, P5 Designer rebuilt (props tree + preview + inspector + sequence overview) + Timeline graduated (full waveform + tracks + effects), P6 Layout rebuilt as three-column workspace (props left + canvas center + inspector right), P7 consistency sweep (cream→white on legal/share/mobile).
 - 2026-05-11 — Track B Step 2c: Photo sync (house_custom_svg added to projects API select), editor light-mode (preview canvas → warm cream, sidebar → #FFFFFF, props grouped by category with colored dots, breadcrumb removed), dashboard AI Suggestions card + hero empty-state polish (camera icon, warm glow, warmer copy) + dynamic prop pills from real fixtures.
