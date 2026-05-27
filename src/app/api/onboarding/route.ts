@@ -1,17 +1,15 @@
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api/withAuth";
+import { onboardingPatchSchema, onboardingSubmitSchema } from "@/lib/schemas/ai";
 
-export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
+export const POST = withAuth(async (request, { userId }) => {
   const body = await request.json();
-  const validDecorating = ["house", "yard", "both"];
-  const decorating = validDecorating.includes(body.decorating) ? body.decorating : "house";
-  const lightCount = typeof body.lightCount === "number" && body.lightCount >= 100 && body.lightCount <= 10000
-    ? body.lightCount : 500;
-  const validSequencers = ["xlights", "lor", "vixen", "other"];
-  const sequencer = validSequencers.includes(body.sequencer) ? body.sequencer : "xlights";
+  const parsed = onboardingSubmitSchema.safeParse(body);
+  // Behavior preserved: fall back to defaults for invalid/missing fields rather than 400
+  const decorating = parsed.success ? parsed.data.decorating ?? "house" : "house";
+  const lightCount = parsed.success ? parsed.data.lightCount ?? 500 : 500;
+  const sequencer = parsed.success ? parsed.data.sequencer ?? "xlights" : "xlights";
 
   const client = await clerkClient();
   await client.users.updateUser(userId, {
@@ -24,33 +22,26 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json({ success: true });
-}
+});
 
-export async function PATCH(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
+export const PATCH = withAuth(async (request, { userId }) => {
   const body = await request.json();
-  const validSequencers = ["xlights", "lor", "vixen", "other"];
-  const validControllers = ["falcon-f16v3", "alphapix-16", "wled-esp32", "lor-controller", "other"];
+  const parsed = onboardingPatchSchema.safeParse(body);
 
-  const updates: Record<string, string> = {};
-
-  if (body.sequencer) {
-    const sequencer = validSequencers.includes(body.sequencer) ? body.sequencer : undefined;
-    if (!sequencer) {
+  // Preserve original messages: explicit invalid value -> 400 with field-specific error
+  if (!parsed.success) {
+    if (body?.sequencer !== undefined) {
       return NextResponse.json({ error: "Invalid sequencer" }, { status: 400 });
     }
-    updates.sequencer = sequencer;
-  }
-
-  if (body.controllerType) {
-    const controllerType = validControllers.includes(body.controllerType) ? body.controllerType : undefined;
-    if (!controllerType) {
+    if (body?.controllerType !== undefined) {
       return NextResponse.json({ error: "Invalid controller type" }, { status: 400 });
     }
-    updates.controllerType = controllerType;
+    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
   }
+
+  const updates: Record<string, string> = {};
+  if (parsed.data.sequencer) updates.sequencer = parsed.data.sequencer;
+  if (parsed.data.controllerType) updates.controllerType = parsed.data.controllerType;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
@@ -66,4 +57,4 @@ export async function PATCH(request: Request) {
   });
 
   return NextResponse.json({ success: true });
-}
+});

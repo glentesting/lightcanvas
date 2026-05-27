@@ -1,42 +1,21 @@
-import { auth } from "@clerk/nextjs/server";
-import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { withAuth } from "@/lib/api/withAuth";
+import { projectAutosaveSchema } from "@/lib/schemas/projects";
 
-const autosaveSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  audioUrl: z.string().nullable().optional(),
-  audioFile: z.string().nullable().optional(),
-  audio: z.any().nullable().optional(),
-  fixtures: z.array(z.any()).optional(),
-  groups: z.array(z.any()).optional(),
-  sequence: z.object({
-    tracks: z.array(z.any()),
-    blocks: z.array(z.any()),
-    bpm: z.number(),
-    beatGridOffset: z.number(),
-    xlightsNameMap: z.record(z.string(), z.string()).optional(),
-  }).optional(),
-  houseTemplate: z.string().optional(),
-});
+type Params = { id: string };
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { id } = await params;
+export const POST = withAuth<Params>(async (request, { userId, supabase, params }) => {
   const body = await request.json();
-  const parsed = autosaveSchema.safeParse(body);
+  const parsed = projectAutosaveSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid payload", details: parsed.error.flatten() },
+      { status: 400 },
+    );
   }
 
   const data = parsed.data;
-  const supabase = createServiceClient();
 
   // Build the update object, mapping camelCase to snake_case
   const update: Record<string, unknown> = {};
@@ -52,9 +31,9 @@ export async function POST(
   const { error } = await supabase
     .from("projects")
     .update(update)
-    .eq("id", id)
+    .eq("id", params.id)
     .eq("owner_id", userId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
-}
+});

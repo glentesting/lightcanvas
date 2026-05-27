@@ -1,12 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
-import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api/withAuth";
+import { showCreateSchema } from "@/lib/schemas/shows";
 
-export async function GET() {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const supabase = createServiceClient();
+export const GET = withAuth(async (_req, { userId, supabase }) => {
   const { data, error } = await supabase
     .from("shows")
     .select("*")
@@ -15,26 +11,21 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
-}
+});
 
-export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
+export const POST = withAuth(async (request, { userId, supabase }) => {
   const body = await request.json();
-  const { name, season_year } = body;
-
-  if (!name || typeof name !== "string" || name.trim().length === 0) {
+  const parsed = showCreateSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
-  const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("shows")
     .insert({
       owner_id: userId,
-      name: name.trim(),
-      season_year: season_year || new Date().getFullYear(),
+      name: parsed.data.name,
+      season_year: parsed.data.season_year ?? new Date().getFullYear(),
       is_active: true,
       song_order: [],
     })
@@ -43,4 +34,4 @@ export async function POST(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data, { status: 201 });
-}
+});
