@@ -13,6 +13,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { useEditorStore } from "@/lib/store/editor-store";
+import { useSelectionStore } from "@/lib/store/selection-store";
 import { useTransportStore } from "@/lib/store/transport-store";
 import { EFFECT_COLORS, EFFECT_NAMES, DEFAULT_EFFECT_PARAMS } from "@/lib/timeline/constants";
 import { secondsToPx, pxToSeconds, snapToBeat } from "@/lib/timeline/snapping";
@@ -36,8 +37,8 @@ export default function Timeline({ analysis }: TimelineProps) {
   const blocks = useEditorStore((s) => s.sequence.blocks);
   const fixtures = useEditorStore((s) => s.fixtures);
   const groups = useEditorStore((s) => s.groups);
-  const selectedBlockIds = useEditorStore((s) => s.selectedBlockIds);
-  const clearSelection = useEditorStore((s) => s.clearSelection);
+  const selectedBlockIds = useSelectionStore((s) => s.selectedBlockIds);
+  const clearSelection = useSelectionStore((s) => s.clearSelection);
 
   const zoom = useTransportStore((s) => s.zoom);
 
@@ -300,10 +301,10 @@ function EffectBlockComponent({
   zoom: number;
   analysis: AudioAnalysis | null;
 }) {
-  const setSelection = useEditorStore((s) => s.setSelection);
+  const setSelection = useSelectionStore((s) => s.setSelection);
   const moveBlocks = useEditorStore((s) => s.moveBlocks);
   const resizeBlock = useEditorStore((s) => s.resizeBlock);
-  const selectedBlockIds = useEditorStore((s) => s.selectedBlockIds);
+  const selectedBlockIds = useSelectionStore((s) => s.selectedBlockIds);
 
   const beats = useMemo(() => analysis?.beats ?? [], [analysis?.beats]);
   const [dragging, setDragging] = useState<"move" | "resize-left" | "resize-right" | null>(null);
@@ -434,7 +435,8 @@ export function useTimelineShortcuts() {
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
 
       const state = useEditorStore.getState();
-      const { selectedBlockIds } = state;
+      const selection = useSelectionStore.getState();
+      const { selectedBlockIds } = selection;
 
       // Delete / Backspace — delete selected blocks
       if ((e.key === "Delete" || e.key === "Backspace") && selectedBlockIds.length > 0) {
@@ -451,12 +453,12 @@ export function useTimelineShortcuts() {
       // Cmd+A — select all
       if ((e.metaKey || e.ctrlKey) && e.key === "a") {
         e.preventDefault();
-        state.setSelection(state.sequence.blocks.map((b) => b.id));
+        selection.setSelection(state.sequence.blocks.map((b) => b.id));
       }
 
       // Escape — clear selection
       if (e.key === "Escape") {
-        state.clearSelection();
+        selection.clearSelection();
       }
 
       // Cmd+Z — undo
@@ -480,7 +482,7 @@ export function useTimelineShortcuts() {
 /* ─── DnD wrapper — wraps the entire editor body ──────────── */
 export function TimelineDndProvider({ children }: { children: React.ReactNode }) {
   const addBlock = useEditorStore((s) => s.addBlock);
-  const setSelection = useEditorStore((s) => s.setSelection);
+  const setSelection = useSelectionStore((s) => s.setSelection);
   const zoom = useTransportStore((s) => s.zoom);
   const analysis = useEditorStore((s) => s.audio);
 
@@ -564,6 +566,7 @@ export function TimelineContextMenu({
   onClose: () => void;
 }) {
   const state = useEditorStore.getState();
+  const selection = useSelectionStore.getState();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -577,10 +580,10 @@ export function TimelineContextMenu({
   }, [onClose]);
 
   const items = [
-    { label: "Duplicate", shortcut: "Ctrl+D", action: () => { state.duplicateBlocks(state.selectedBlockIds); onClose(); } },
-    { label: "Delete", shortcut: "Del", action: () => { state.deleteBlocks(state.selectedBlockIds); onClose(); }, danger: true },
+    { label: "Duplicate", shortcut: "Ctrl+D", action: () => { state.duplicateBlocks(selection.selectedBlockIds); onClose(); } },
+    { label: "Delete", shortcut: "Del", action: () => { state.deleteBlocks(selection.selectedBlockIds); onClose(); }, danger: true },
     { type: "separator" as const },
-    { label: "Select All", shortcut: "Ctrl+A", action: () => { state.setSelection(state.sequence.blocks.map(b => b.id)); onClose(); } },
+    { label: "Select All", shortcut: "Ctrl+A", action: () => { selection.setSelection(state.sequence.blocks.map(b => b.id)); onClose(); } },
   ];
 
   return (
@@ -621,7 +624,7 @@ export function TimelineContextMenu({
 
 /* ─── Parameter Panel ──────────────────────────────────── */
 export function ParameterPanel() {
-  const selectedBlockIds = useEditorStore((s) => s.selectedBlockIds);
+  const selectedBlockIds = useSelectionStore((s) => s.selectedBlockIds);
   const blocks = useEditorStore((s) => s.sequence.blocks);
   const updateBlock = useEditorStore((s) => s.updateBlock);
   const [showSavePreset, setShowSavePreset] = useState(false);

@@ -8,6 +8,7 @@ import PreviewPanel from "@/components/PreviewPanel";
 import AIPanel from "@/components/AIPanel";
 import ExportDialog from "@/components/ExportDialog";
 import { useEditorStore } from "@/lib/store/editor-store";
+import { useSaveStatusStore } from "@/lib/store/save-status-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
 import { createDefaultFixtures } from "@/lib/fixtures/defaults";
@@ -76,7 +77,7 @@ export default function DesignerPage() {
   const audioAnalysis = useEditorStore((s) => s.audio);
   const fixtures = useEditorStore((s) => s.fixtures);
   const sequence = useEditorStore((s) => s.sequence);
-  const saveStatus = useEditorStore((s) => s.saveStatus);
+  const saveStatus = useSaveStatusStore((s) => s.saveStatus);
   const loadProject = useEditorStore((s) => s.loadProject);
   const setAudio = useEditorStore((s) => s.setAudio);
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import WaveformViewer from "@/components/WaveformViewer";
 import Timeline, { PaletteEffectChip, TimelineDndProvider, useTimelineShortcuts } from "@/components/Timeline";
 import { useEditorStore } from "@/lib/store/editor-store";
+import { useSaveStatusStore } from "@/lib/store/save-status-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
 import { createDefaultFixtures } from "@/lib/fixtures/defaults";
@@ -26,7 +27,7 @@ function TimelineContent() {
   const storeProjectId = useEditorStore((s) => s.projectId);
   const audioUrl = useEditorStore((s) => s.audioUrl);
   const audioAnalysis = useEditorStore((s) => s.audio);
-  const saveStatus = useEditorStore((s) => s.saveStatus);
+  const saveStatus = useSaveStatusStore((s) => s.saveStatus);
   const loadProject = useEditorStore((s) => s.loadProject);
 
   // Autosave + keyboard shortcuts
