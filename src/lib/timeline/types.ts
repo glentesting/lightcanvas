@@ -1,14 +1,5 @@
-export type EffectId =
-  | "twinkle"
-  | "chase"
-  | "fade"
-  | "strobe"
-  | "sparkle"
-  | "wave"
-  | "pulse"
-  | "wash"
-  | "meteor"
-  | "firework";
+import type { EffectId } from "@/lib/render/effects/registry";
+export type { EffectId };
 
 export type Easing = "linear" | "ease-in" | "ease-out" | "ease-in-out";
 
