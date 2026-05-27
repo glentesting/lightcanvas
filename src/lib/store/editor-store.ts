@@ -308,12 +308,15 @@ export const useEditorStore = create<EditorState>()(
       })),
       {
         // Only track project-data mutations for undo/redo (not selection or save status).
-        // Fix #2: exclude `audio` — it's a multi-MB analysis set once after upload,
-        //   tracking it in history wastes memory and inflates undo frames unnecessarily.
-        // Fix #4: exclude `name` — renames should not push undo frames.
+        // All three audio fields are excluded together — the analysis (`audio`) is
+        // multi-MB so it doesn't belong in undo frames, but if we kept the URL/path
+        // in history without the analysis, undoing a remove or upload would
+        // restore the filename while leaving the beats/duration null or stale.
+        // Autosave then writes a project that points at a song with no analysis.
+        // Treat audio as one indivisible unit; users can manage it through the
+        // upload UI rather than through undo.
+        // `name` is also excluded — renames should not push undo frames.
         partialize: (state) => ({
-          audioUrl: state.audioUrl,
-          audioFile: state.audioFile,
           fixtures: state.fixtures,
           groups: state.groups,
           sequence: state.sequence,

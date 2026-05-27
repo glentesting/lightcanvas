@@ -108,6 +108,12 @@ export default function DesignerPage() {
           };
         }
         loadProject(project);
+        // Hydrate share state from the row. projectFromRow drops share_token,
+        // and without this the Share button would offer to generate a fresh
+        // token (and invalidate the existing public link) every time an
+        // already-shared project is reopened.
+        const existingShareToken = (row.share_token as string | null | undefined) ?? null;
+        if (existingShareToken) setShareToken(existingShareToken);
         setLoaded(true);
       })
       .catch((err) => setLoadError(err.message));
