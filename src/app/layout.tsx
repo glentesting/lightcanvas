@@ -1,27 +1,42 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Inter_Tight, JetBrains_Mono, Fraunces } from "next/font/google";
+import localFont from "next/font/local";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import CookieBanner from "@/components/dialogs/CookieBanner";
 import "./globals.css";
 
-const interTight = Inter_Tight({
+// Fonts are bundled locally via @fontsource-variable/* packages to avoid a
+// build-time network dependency on Google Fonts. All three are variable fonts;
+// the latin subset is sufficient for the app's locales today.
+const interTight = localFont({
+  src: "../../node_modules/@fontsource-variable/inter-tight/files/inter-tight-latin-wght-normal.woff2",
   variable: "--font-inter-tight",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  weight: "100 900",
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const jetbrainsMono = localFont({
+  src: "../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2",
   variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
+  display: "swap",
+  weight: "100 900",
 });
 
-const fraunces = Fraunces({
+const fraunces = localFont({
+  src: [
+    {
+      path: "../../node_modules/@fontsource-variable/fraunces/files/fraunces-latin-wght-normal.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+    {
+      path: "../../node_modules/@fontsource-variable/fraunces/files/fraunces-latin-wght-italic.woff2",
+      weight: "100 900",
+      style: "italic",
+    },
+  ],
   variable: "--font-fraunces",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
