@@ -5,6 +5,25 @@ import { projectFromRow } from "@/types/domain";
 import { exportLightCanvasJson } from "@/lib/exports/lightcanvas-json";
 import { exportXlights } from "@/lib/exports/xlights";
 
+/** Sanitize a project name for use in a Content-Disposition filename. */
+function sanitizeFilename(name: string): string {
+  // Strip newlines, quotes, path separators and control characters; truncate to 100 chars
+  const sanitized = name
+    .replace(/[\r\n"/\\:]/g, "_")
+    .replace(/[\x00-\x1f\x7f]/g, "_")
+    .trim()
+    .substring(0, 100);
+  return sanitized || "project";
+}
+
+/** Build a RFC 6266-compliant Content-Disposition with ASCII fallback + UTF-8 encoded name. */
+function contentDisposition(rawName: string, extension: string): string {
+  const safe = sanitizeFilename(rawName);
+  const asciiOnly = safe.replace(/[^\x20-\x7e]/g, "_");
+  const encoded = encodeURIComponent(`${safe}.${extension}`);
+  return `attachment; filename="${asciiOnly}.${extension}"; filename*=UTF-8''${encoded}`;
+}
+
 export async function POST(request: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -43,7 +62,7 @@ export async function POST(request: Request) {
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": "application/json",
-        "Content-Disposition": `attachment; filename="${project.name || "project"}.lightcanvas.json"`,
+        "Content-Disposition": contentDisposition(`${project.name || "project"}.lightcanvas`, "json"),
       },
     });
   }
@@ -56,7 +75,7 @@ export async function POST(request: Request) {
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": "application/xml",
-        "Content-Disposition": `attachment; filename="${project.name || "project"}.xsq"`,
+        "Content-Disposition": contentDisposition(project.name || "project", "xsq"),
       },
     });
   }

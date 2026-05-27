@@ -3,16 +3,18 @@ import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+const AUDIO_URL_RE = /^(songs|lightcanvas-images)\/[A-Za-z0-9_\-./]+$/;
+
 const autosaveSchema = z.object({
   name: z.string().min(1).max(200).optional(),
-  audioUrl: z.string().nullable().optional(),
+  audioUrl: z.string().regex(AUDIO_URL_RE).nullable().optional(),
   audioFile: z.string().nullable().optional(),
   audio: z.any().nullable().optional(),
-  fixtures: z.array(z.any()).optional(),
-  groups: z.array(z.any()).optional(),
+  fixtures: z.array(z.object({ id: z.string() }).passthrough()).optional(),
+  groups: z.array(z.object({ id: z.string() }).passthrough()).optional(),
   sequence: z.object({
-    tracks: z.array(z.any()),
-    blocks: z.array(z.any()),
+    tracks: z.array(z.object({ id: z.string() }).passthrough()),
+    blocks: z.array(z.object({ id: z.string() }).passthrough()),
     bpm: z.number(),
     beatGridOffset: z.number(),
     xlightsNameMap: z.record(z.string(), z.string()).optional(),
@@ -28,6 +30,12 @@ export async function POST(
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
+
+  const contentLength = request.headers.get("content-length");
+  if (contentLength && parseInt(contentLength, 10) > 5 * 1024 * 1024) {
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+  }
+
   const body = await request.json();
   const parsed = autosaveSchema.safeParse(body);
 
@@ -55,6 +63,9 @@ export async function POST(
     .eq("id", id)
     .eq("owner_id", userId);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[POST /api/projects/:id/autosave]", error);
+    return NextResponse.json({ error: "Failed to save" }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

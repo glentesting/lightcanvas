@@ -28,11 +28,23 @@ const XL_EFFECT_MAP: Record<string, EffectId> = {
   On: "wash", // "On" is just solid color
 };
 
+/** Maximum allowed import file size (50 MB) */
+const MAX_IMPORT_BYTES = 50 * 1024 * 1024;
+
 /**
  * Parse an xLights .xsq XML string and extract fixtures + effect blocks.
  * Runs client-side using DOMParser.
  */
 export function parseXsq(xmlString: string): ImportResult {
+  if (xmlString.length > MAX_IMPORT_BYTES) {
+    return {
+      fixtures: [],
+      blocks: [],
+      warnings: [`Import file is too large (${(xmlString.length / 1024 / 1024).toFixed(1)} MB, max 50 MB)`],
+      stats: { fixtureCount: 0, blockCount: 0, unmappedEffectCount: 0, timingTrackImported: false },
+    };
+  }
+
   const parser = new DOMParser();
   const doc = parser.parseFromString(xmlString, "application/xml");
 
@@ -82,6 +94,17 @@ export function parseXsq(xmlString: string): ImportResult {
       const endMs = parseInt(eff.getAttribute("endTime") || "0", 10);
       const settings = eff.getAttribute("settings") || "";
       const palette = eff.getAttribute("palette") || "";
+
+      // Skip malformed effects
+      if (
+        Number.isNaN(startMs) ||
+        Number.isNaN(endMs) ||
+        endMs <= startMs ||
+        endMs - startMs > 60 * 60 * 1000
+      ) {
+        warnings.push(`Skipping malformed effect "${xlName}" with startTime=${startMs} endTime=${endMs}`);
+        return;
+      }
 
       const effectId = XL_EFFECT_MAP[xlName];
       if (!effectId) {

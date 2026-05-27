@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getAIProvider } from "@/lib/ai";
+import type { GenerateInput, GenerateOptions } from "@/lib/ai/provider";
 import { z } from "zod";
 
 const generateSchema = z.object({
@@ -28,17 +29,23 @@ const generateSchema = z.object({
       })
       .optional(),
   }),
-  fixtures: z.array(z.any()),
+  fixtures: z.array(z.object({ id: z.string() }).passthrough()).max(500),
   vibe: z.enum(["classic", "jazz", "edm", "cinematic", "whimsical"]),
   intensity: z.enum(["subtle", "balanced", "wild"]),
   style: z.string().optional(),
   refinementPrompt: z.string().optional(),
-  existingBlocks: z.array(z.any()).optional(),
+  existingBlocks: z.array(z.object({ id: z.string() }).passthrough()).max(2000).optional(),
 });
 
 export async function POST(request: Request) {
   const { userId } = await auth();
   if (!userId) return new NextResponse("Unauthorized", { status: 401 });
+
+  // Body size guard — reject payloads larger than 1 MB
+  const contentLength = request.headers.get("content-length");
+  if (contentLength && parseInt(contentLength, 10) > 1_048_576) {
+    return new NextResponse("Request body too large", { status: 413 });
+  }
 
   const body = await request.json();
   const parsed = generateSchema.safeParse(body);
@@ -50,17 +57,18 @@ export async function POST(request: Request) {
   const encoder = new TextEncoder();
   const { style, refinementPrompt, existingBlocks, ...input } = parsed.data;
 
-  const options = {
+  const options: GenerateOptions = {
     style,
     refinementPrompt,
-    existingBlocks,
+    existingBlocks: existingBlocks as GenerateOptions["existingBlocks"],
     sections: input.audio.sections,
+    signal: request.signal,
   };
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        for await (const event of provider.generateFromMusic(input, options)) {
+        for await (const event of provider.generateFromMusic(input as unknown as GenerateInput, options)) {
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify(event)}\n\n`)
           );

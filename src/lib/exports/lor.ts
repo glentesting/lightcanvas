@@ -10,6 +10,18 @@ import type { Project } from "@/types/domain";
 import type { EffectBlock, EffectId } from "@/lib/timeline/types";
 import { escXml, createZip } from "./zip";
 
+/**
+ * Sanitize a string for use as a ZIP entry filename.
+ * Strips path separators, forbidden chars, null bytes, and "..", truncates to 100 chars.
+ */
+function sanitizeZipName(s: string): string {
+  return s
+    .replace(/[/\\:*?"<>|]/g, "_")
+    .replace(/\x00/g, "")
+    .replace(/\.\./g, "__")
+    .slice(0, 100);
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -86,7 +98,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 }
 
 function channelIntensity(channelValue: number, blockIntensity: number): number {
-  return Math.round((channelValue / 255) * blockIntensity * 100);
+  return Math.min(100, Math.max(0, Math.round((channelValue / 255) * blockIntensity * 100)));
 }
 
 // ---------------------------------------------------------------------------
@@ -101,8 +113,8 @@ function effectElements(
   block: EffectBlock,
   intensity: number
 ): string[] {
-  const startCs = msToCs(block.start * 1000);
-  const endCs = msToCs((block.start + block.duration) * 1000);
+  const startCs = Math.round(block.start * 100);
+  const endCs = startCs + Math.max(1, Math.round(block.duration * 100));
   const lines: string[] = [];
 
   if (intensity === 0) return lines;
@@ -212,9 +224,10 @@ export function exportLor(
   const totalCentiseconds = msToCs(durationMs);
   const lines: string[] = [];
 
+  const audioBasename = project.audioFile?.split("/").pop() ?? "audio.mp3";
   lines.push(`<?xml version="1.0" encoding="UTF-8" standalone="no"?>`);
   lines.push(
-    `<sequence dacInMilliseconds="${frameRate}" songTitle="${escXml(project.name)}" comment="Created by LightCanvas" totalCentiseconds="${totalCentiseconds}" audioFilename="${escXml(project.audioFile ?? "")}">`
+    `<sequence dacInMilliseconds="${frameRate}" songTitle="${escXml(project.name)}" comment="Created by LightCanvas" totalCentiseconds="${totalCentiseconds}" audioFilename="${escXml(audioBasename)}">`
   );
   lines.push(`  <channels>`);
 
@@ -304,14 +317,15 @@ export function exportLor(
 // ---------------------------------------------------------------------------
 
 function getDurationMs(project: Project): number {
-  if (project.audio?.duration) {
-    return Math.round(project.audio.duration * 1000);
-  }
-  const maxEnd = project.sequence.blocks.reduce(
-    (max, b) => Math.max(max, (b.start + b.duration) * 1000),
-    0
+  const lastBlockEndMs = Math.max(
+    0,
+    ...project.sequence.blocks.map((b) => Math.round((b.start + b.duration) * 1000))
   );
-  return Math.round(maxEnd || 60000);
+  if (project.audio?.duration) {
+    const audioDurationMs = Math.round(project.audio.duration * 1000);
+    return Math.max(audioDurationMs, lastBlockEndMs);
+  }
+  return lastBlockEndMs || 60000;
 }
 
 // ---------------------------------------------------------------------------
@@ -376,9 +390,12 @@ export async function exportLorZip(
   // Audio data
   const audioData = new Uint8Array(await audioBlob.arrayBuffer());
 
+  const safeProjectName = sanitizeZipName(projectName);
+  const safeAudioFilename = sanitizeZipName(audioFilename);
+
   const files = [
-    { name: `${projectName}.lms`, data: lmsData },
-    { name: audioFilename, data: audioData },
+    { name: `${safeProjectName}.lms`, data: lmsData },
+    { name: safeAudioFilename, data: audioData },
     { name: "README.txt", data: readmeData },
   ];
 

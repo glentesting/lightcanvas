@@ -58,6 +58,7 @@ export async function PATCH(request: Request) {
 
   const client = await clerkClient();
   const user = await client.users.getUser(userId);
+  // Best-effort: read-then-write race is acceptable here — this is a one-shot settings flow.
   await client.users.updateUser(userId, {
     publicMetadata: {
       ...user.publicMetadata,

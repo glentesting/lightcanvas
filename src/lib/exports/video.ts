@@ -40,8 +40,31 @@ export async function exportVideo(
   audioEl.currentTime = startTime;
 
   await new Promise<void>((resolve, reject) => {
-    audioEl.oncanplaythrough = () => resolve();
-    audioEl.onerror = () => reject(new Error("Failed to load audio"));
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      audioEl.oncanplaythrough = null;
+      audioEl.onerror = null;
+      reject(new Error("Audio load timed out after 30s"));
+    }, 30000);
+
+    audioEl.oncanplaythrough = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      audioEl.oncanplaythrough = null;
+      audioEl.onerror = null;
+      resolve();
+    };
+    audioEl.onerror = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      audioEl.oncanplaythrough = null;
+      audioEl.onerror = null;
+      reject(new Error("Failed to load audio"));
+    };
     audioEl.load();
   });
 
@@ -76,7 +99,6 @@ export async function exportVideo(
     audioEl.play();
 
     const totalDuration = endTime - startTime;
-    const _frameInterval = 1000 / fps;
 
     const renderTick = () => {
       const currentTime = audioEl.currentTime;

@@ -25,7 +25,7 @@ export function renderFrame(
   if (groups) {
     for (const group of groups) {
       const groupBlocks = sequence.blocks.filter(
-        (b) => b.trackId === group.id && t >= b.start && t < b.start + b.duration
+        (b) => b.trackId === group.id && t >= b.start && t <= b.start + b.duration
       );
       if (groupBlocks.length === 0) continue;
 
@@ -49,7 +49,7 @@ export function renderFrame(
   // Second pass: render individual fixture effects (override group)
   for (const fixture of fixtures) {
     const activeBlocks = sequence.blocks.filter(
-      (b) => b.trackId === fixture.id && t >= b.start && t < b.start + b.duration
+      (b) => b.trackId === fixture.id && t >= b.start && t <= b.start + b.duration
     );
 
     if (activeBlocks.length === 0) {

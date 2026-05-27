@@ -34,9 +34,23 @@ const DISPLAY_AS_MAP: Record<FixtureKind, string> = {
 };
 
 /**
+ * Sanitize a string for use as a ZIP entry filename.
+ * Strips path separators, forbidden chars, null bytes, and "..", truncates to 100 chars.
+ */
+function sanitizeZipName(s: string): string {
+  return s
+    .replace(/[/\\:*?"<>|]/g, "_")
+    .replace(/\x00/g, "")
+    .replace(/\.\./g, "__")
+    .slice(0, 100);
+}
+
+/**
  * Convert a hex color "#rrggbb" to xLights palette format "rrggbb".
+ * Returns "000000" (black) if input is not a valid 6-digit hex color.
  */
 function hexToXl(hex: string): string {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return "000000";
   return hex.replace("#", "");
 }
 
@@ -121,12 +135,14 @@ function settingsFor(block: EffectBlock): string {
 function paletteFor(block: EffectBlock): string {
   const p = block.params;
   const parts: string[] = [];
-  parts.push(`C_BUTTON_Palette1=#${hexToXl(p.color1)}`);
-  if (p.color2) {
-    parts.push(`C_BUTTON_Palette2=#${hexToXl(p.color2)}`);
+  const color1 = p.color1 ?? "#000000";
+  const color2 = p.color2 ?? null;
+  parts.push(`C_BUTTON_Palette1=#${hexToXl(color1)}`);
+  if (color2) {
+    parts.push(`C_BUTTON_Palette2=#${hexToXl(color2)}`);
   }
   parts.push(`C_CHECKBOX_Palette1=1`);
-  if (p.color2) {
+  if (color2) {
     parts.push(`C_CHECKBOX_Palette2=1`);
   }
   return parts.join(",");
@@ -161,8 +177,9 @@ export function exportXlights(
   lines.push(`  <head>`);
   lines.push(`    <author>LightCanvas</author>`);
   lines.push(`    <version>2024.18</version>`);
+  const audioBasename = project.audioFile?.split("/").pop() ?? "audio.mp3";
   lines.push(
-    `    <songFilename>${escXml(project.audioFile ?? "")}</songFilename>`
+    `    <songFilename>${escXml(audioBasename)}</songFilename>`
   );
   lines.push(`    <sequenceTiming>${frameTime} ms</sequenceTiming>`);
   lines.push(`    <sequenceType>Media</sequenceType>`);
@@ -199,7 +216,7 @@ export function exportXlights(
       const effectName =
         XLIGHTS_EFFECT_NAME[block.effectId as EffectId] || "On";
       const startMs = Math.round(block.start * 1000);
-      const endMs = Math.round((block.start + block.duration) * 1000);
+      const endMs = startMs + Math.max(1, Math.round(block.duration * 1000));
       lines.push(
         `        <Effect ref="${i}" name="${escXml(effectName)}" startTime="${startMs}" endTime="${endMs}" settings="${escXml(settingsFor(block))}" palette="${escXml(paletteFor(block))}"/>`
       );
@@ -216,9 +233,10 @@ export function exportXlights(
     lines.push(`      <EffectLayer>`);
     const beats = project.audio.beats;
     beats.forEach((beat, i) => {
-      const next = beats[i + 1] ?? beat + 0.5;
+      const beatMs = Math.round(beat * 1000);
+      const nextBeatMs = i + 1 < beats.length ? Math.round(beats[i + 1] * 1000) : beatMs + 500;
       lines.push(
-        `        <Effect label="" startTime="${Math.round(beat * 1000)}" endTime="${Math.round(next * 1000)}"/>`
+        `        <Effect label="" startTime="${beatMs}" endTime="${nextBeatMs}"/>`
       );
     });
     lines.push(`      </EffectLayer>`);
@@ -234,15 +252,15 @@ export function exportXlights(
 }
 
 function getDurationMs(project: Project): string {
-  if (project.audio?.duration) {
-    return Math.round(project.audio.duration * 1000).toString();
-  }
-  // Fall back to latest block end time
-  const maxEnd = project.sequence.blocks.reduce(
-    (max, b) => Math.max(max, (b.start + b.duration) * 1000),
-    0
+  const lastBlockEndMs = Math.max(
+    0,
+    ...project.sequence.blocks.map((b) => Math.round((b.start + b.duration) * 1000))
   );
-  return Math.round(maxEnd || 60000).toString();
+  if (project.audio?.duration) {
+    const audioDurationMs = Math.round(project.audio.duration * 1000);
+    return Math.max(audioDurationMs, lastBlockEndMs).toString();
+  }
+  return (lastBlockEndMs || 60000).toString();
 }
 
 /**
@@ -370,11 +388,12 @@ export async function exportXlightsZip(
   // Audio data
   const audioData = new Uint8Array(await audioBlob.arrayBuffer());
 
-  const projectName = project.name || "project";
+  const projectName = sanitizeZipName(project.name || "project");
+  const safeAudioFilename = sanitizeZipName(audioFilename);
 
   const files = [
     { name: `${projectName}.xsq`, data: xsqData },
-    { name: audioFilename, data: audioData },
+    { name: safeAudioFilename, data: audioData },
     { name: "xlights_rgbeffects.xml", data: rgbData },
     { name: "README.txt", data: readmeData },
   ];

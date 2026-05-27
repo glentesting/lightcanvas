@@ -22,9 +22,10 @@ export const FIXTURE_TEMPLATES: FixtureTemplate[] = [
  */
 export function nextStartChannel(fixtures: Fixture[]): number {
   if (fixtures.length === 0) return 1;
-  const maxEnd = Math.max(
-    ...fixtures.map((f) => f.startChannel + f.pixelCount * 3)
-  );
+  // Fix #12: use reduce instead of spread to avoid call-stack limit with large arrays
+  const maxEnd = fixtures
+    .map((f) => f.startChannel + f.pixelCount * 3)
+    .reduce((m, x) => Math.max(m, x), 0);
   return maxEnd + 1;
 }
 

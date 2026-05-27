@@ -8,6 +8,7 @@ export function getAIProvider(): AIProvider {
     return new AnthropicAIProvider(apiKey);
   }
   // Fallback to mock when no API key is configured
+  console.warn("[ai] ANTHROPIC_API_KEY not set — using MockAIProvider. AI output will be canned.");
   return new MockAIProvider();
 }
 

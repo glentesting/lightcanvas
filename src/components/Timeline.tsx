@@ -9,6 +9,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
   PointerSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -488,7 +489,8 @@ export function TimelineDndProvider({ children }: { children: React.ReactNode })
   const beats = useMemo(() => analysis?.beats ?? [], [analysis?.beats]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor)
   );
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -511,8 +513,20 @@ export function TimelineDndProvider({ children }: { children: React.ReactNode })
         const trackId = overData.trackId as string;
         const effectId = activeData.effectId as EffectId;
 
-        const deltaX = event.delta.x;
-        let dropTime = pxToSeconds(Math.max(0, deltaX), zoom);
+        // Compute drop position in timeline pixels:
+        // event.active.rect.current.translated is the dragged element's rect at drop time.
+        // over.rect is the droppable track container's rect.
+        // The difference gives us the offset into the track area.
+        const translatedRect = event.active.rect.current?.translated;
+        const overRect = over.rect;
+        let dropPx = 0;
+        if (translatedRect && overRect) {
+          dropPx = Math.max(0, translatedRect.left - overRect.left);
+        } else {
+          // Fallback: use delta from drag start (less accurate)
+          dropPx = Math.max(0, event.delta.x);
+        }
+        let dropTime = pxToSeconds(dropPx, zoom);
         dropTime = snapToBeat(dropTime, beats);
         dropTime = Math.max(0, dropTime);
 

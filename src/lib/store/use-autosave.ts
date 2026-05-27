@@ -1,13 +1,19 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { shallow } from "zustand/shallow";
 import { useEditorStore } from "./editor-store";
 
 export function useAutosave(projectId: string) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Tracks the inner "flip saved→idle" timer so it can be cleared on unmount (fix #5)
+  const savedIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedRef = useRef<string>("");
 
   useEffect(() => {
+    // Fix #1: pass `shallow` as the equality function so the selector object
+    // is compared field-by-field rather than by reference, preventing a
+    // subscription callback on every unrelated store change.
     const unsubscribe = useEditorStore.subscribe(
       (state) => ({
         name: state.name,
@@ -37,7 +43,8 @@ export function useAutosave(projectId: string) {
             if (res.ok) {
               lastSavedRef.current = serialized;
               useEditorStore.getState().setSaveStatus("saved");
-              setTimeout(() => {
+              // Fix #5: track this inner timer so it can be cleared on unmount
+              savedIdleTimerRef.current = setTimeout(() => {
                 if (useEditorStore.getState().saveStatus === "saved") {
                   useEditorStore.getState().setSaveStatus("idle");
                 }
@@ -49,12 +56,17 @@ export function useAutosave(projectId: string) {
             useEditorStore.getState().setSaveStatus("error");
           }
         }, 1200);
-      }
+      },
+      // Fix #1: shallow equality prevents spurious callbacks when unrelated
+      // state (e.g. selectedBlockIds, saveStatus) changes.
+      { equalityFn: shallow }
     );
 
     return () => {
       unsubscribe();
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      // Fix #5: also clear the inner saved→idle timer on unmount
+      if (savedIdleTimerRef.current) clearTimeout(savedIdleTimerRef.current);
     };
   }, [projectId]);
 }

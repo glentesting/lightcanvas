@@ -63,6 +63,9 @@ export default function DesignerPage() {
   const projectId = params.id as string;
   const [showAI, setShowAI] = useState(false);
   const [showExport, setShowExport] = useState(false);
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [showSharePopover, setShowSharePopover] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const loadedRef = useRef(false);
@@ -116,6 +119,41 @@ export default function DesignerPage() {
     },
     [setAudio]
   );
+
+  const handleShare = useCallback(async () => {
+    setShareLoading(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "share" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setShareToken(data.share_token as string);
+        setShowSharePopover(true);
+      }
+    } finally {
+      setShareLoading(false);
+    }
+  }, [projectId]);
+
+  const handleUnshare = useCallback(async () => {
+    setShareLoading(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "unshare" }),
+      });
+      if (res.ok) {
+        setShareToken(null);
+        setShowSharePopover(false);
+      }
+    } finally {
+      setShareLoading(false);
+    }
+  }, [projectId]);
 
   const toggleGroup = useCallback((label: string) => {
     setCollapsedGroups((prev) => {
@@ -182,6 +220,54 @@ export default function DesignerPage() {
           <span className="text-xs" style={{ color: "var(--ink-4)" }}>
             {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : saveStatus === "error" ? "Unsaved" : ""}
           </span>
+          {/* Share button */}
+          <div className="relative">
+            <button
+              onClick={() => shareToken ? setShowSharePopover(!showSharePopover) : handleShare()}
+              disabled={shareLoading}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium transition-colors"
+              style={{ background: "var(--panel)", border: "1px solid var(--line)", color: "var(--ink-2)", opacity: shareLoading ? 0.6 : 1 }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+              </svg>
+              {shareLoading ? "..." : shareToken ? "Shared" : "Share"}
+            </button>
+            {showSharePopover && shareToken && (
+              <div
+                className="absolute right-0 top-10 z-50 rounded-xl p-4 shadow-lg"
+                style={{ background: "#fff", border: "1px solid var(--line)", width: 300, boxShadow: "0 8px 24px rgba(0,0,0,.12)" }}
+              >
+                <p className="text-xs font-semibold mb-2" style={{ color: "var(--ink)" }}>Share link</p>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    readOnly
+                    value={`${typeof window !== "undefined" ? window.location.origin : ""}/p/${shareToken}`}
+                    className="flex-1 h-7 px-2 rounded-md text-xs"
+                    style={{ background: "var(--panel)", border: "1px solid var(--line)", color: "var(--ink-3)" }}
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                  />
+                  <button
+                    onClick={() => navigator.clipboard.writeText(`${window.location.origin}/p/${shareToken}`)}
+                    className="h-7 px-2.5 rounded-md text-xs font-medium"
+                    style={{ background: "var(--accent)", color: "#fff" }}
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="text-xs mb-3" style={{ color: "var(--ink-3)" }}>Anyone with this link can view the project (read-only).</p>
+                <button
+                  onClick={handleUnshare}
+                  disabled={shareLoading}
+                  className="text-xs font-medium"
+                  style={{ color: "#dc2626", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                >
+                  Remove link
+                </button>
+              </div>
+            )}
+          </div>
           <Link
             href={`/timeline?project=${projectId}`}
             className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg text-xs font-semibold transition-colors"

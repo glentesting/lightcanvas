@@ -2,6 +2,12 @@ import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
+const ALLOWED_BUCKETS = ["songs", "lightcanvas-images"] as const;
+
+function isAllowedBucket(bucket: string): boolean {
+  return (ALLOWED_BUCKETS as readonly string[]).includes(bucket);
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ projectId: string }> }
@@ -33,14 +39,22 @@ export async function GET(
   if (audioUrl.startsWith("http")) {
     const match = audioUrl.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
     if (!match) {
-      return NextResponse.json({ error: "Cannot parse audio URL" }, { status: 500 });
+      return NextResponse.json({ error: "Invalid audio URL" }, { status: 400 });
     }
     bucket = match[1];
     filePath = match[2];
   } else {
     const slashIndex = audioUrl.indexOf("/");
+    if (slashIndex === -1) {
+      return NextResponse.json({ error: "Invalid audio URL" }, { status: 400 });
+    }
     bucket = audioUrl.substring(0, slashIndex);
     filePath = audioUrl.substring(slashIndex + 1);
+  }
+
+  if (!isAllowedBucket(bucket)) {
+    console.error("[GET /api/audio/:projectId] Rejected disallowed bucket:", bucket);
+    return NextResponse.json({ error: "Invalid audio URL" }, { status: 400 });
   }
 
   // Generate signed URL (songs bucket is public, but signed is cleaner)

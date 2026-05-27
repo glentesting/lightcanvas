@@ -89,20 +89,14 @@ No `jszip` dep (hand-rolled ZIP writer in `src/lib/exports/zip.ts`).
 
 **See PROJECT-STATUS.md §1 for the canonical issue list.** Highlights:
 
-1. **Storage bucket mismatch.** Migration 002 creates `lumen-audio`, all routes use `songs`.
-   House photos also wrongly use `songs`. Needs cleanup + separate `lightcanvas-images` bucket.
-2. **Telemetry not actually wired.** `analytics.ts` is a `console.log` stub. No Sentry installed,
+1. **Telemetry not actually wired.** `analytics.ts` is a `console.log` stub. No Sentry installed,
    no PostHog installed. Cookie banner mentions PostHog dishonestly.
-3. **Anthropic model string** in `anthropic-provider.ts` is `claude-sonnet-4-5-20250514` —
-   verify this resolves on current API.
-4. **Lint not clean.** 19 errors, 13 warnings. Not blocking, but should be clean before launch.
-5. **Google Fonts at build time.** Bundle locally for build resilience.
-6. **Legal pages are placeholder.** Need real counsel-written copy before launch.
-7. **BPM correction.** If detected BPM >160, halved; if <60, doubled. Working as designed.
-8. **WaveSurfer destroy race.** Cleanup defers destroy until `ready` or `error` fires.
-9. **Storage RLS.** References `auth.jwt() ->> 'sub'` for Clerk JWT.
-10. **Windows paths.** Always `cd` to project folder first before any bash command.
-11. **ANTHROPIC_API_KEY.** Required in env for real AI generation; silently falls back to mock without it.
+2. **Legal pages are placeholder.** Need real counsel-written copy before launch.
+3. **AI rate limiting not wired.** No per-user quota on `/api/ai/generate`. Needs Redis/KV + design discussion.
+4. **BPM correction.** If detected BPM >160, halved; if <60, doubled. Working as designed.
+5. **Storage RLS.** References `auth.jwt() ->> 'sub'` for Clerk JWT (migrations 002 + 005).
+6. **Windows paths.** Always `cd` to project folder first before any bash command.
+7. **ANTHROPIC_API_KEY.** Required in env for real AI generation; falls back to mock with `console.warn` without it.
 
 ## Working Rules
 

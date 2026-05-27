@@ -2,6 +2,13 @@ import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
+const ALLOWED_BUCKETS = ["songs", "lightcanvas-images"] as const;
+type AllowedBucket = typeof ALLOWED_BUCKETS[number];
+
+function isAllowedBucket(bucket: string): bucket is AllowedBucket {
+  return (ALLOWED_BUCKETS as readonly string[]).includes(bucket);
+}
+
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: RouteContext) {
@@ -17,7 +24,10 @@ export async function GET(_request: Request, { params }: RouteContext) {
     .eq("owner_id", userId)
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 404 });
+  if (error) {
+    console.error("[GET /api/projects/:id]", error);
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   return NextResponse.json(data);
 }
 
@@ -42,7 +52,10 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 404 });
+  if (error) {
+    console.error("[PATCH /api/projects/:id]", error);
+    return NextResponse.json({ error: "Failed to save" }, { status: 500 });
+  }
   return NextResponse.json(data);
 }
 
@@ -74,8 +87,22 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
       const parts = urlPath.split("/");
       const bucket = parts[1];
       const filePath = parts.slice(2).join("/");
-      if (bucket && filePath) {
+      if (bucket && filePath && isAllowedBucket(bucket)) {
         await supabase.storage.from(bucket).remove([filePath]);
+      } else if (bucket && !isAllowedBucket(bucket)) {
+        console.error("[DELETE /api/projects/:id] Rejected disallowed bucket:", bucket);
+      }
+    } else {
+      // Handle "bucket/path" short format (no /storage/v1/object/ prefix)
+      const slashIndex = project.audio_url.indexOf("/");
+      if (slashIndex !== -1) {
+        const bucket = project.audio_url.substring(0, slashIndex);
+        const filePath = project.audio_url.substring(slashIndex + 1);
+        if (isAllowedBucket(bucket) && filePath) {
+          await supabase.storage.from(bucket).remove([filePath]);
+        } else if (!isAllowedBucket(bucket)) {
+          console.error("[DELETE /api/projects/:id] Rejected disallowed bucket:", bucket);
+        }
       }
     }
   }
@@ -86,7 +113,10 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     .eq("id", id)
     .eq("owner_id", userId);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("[DELETE /api/projects/:id]", error);
+    return NextResponse.json({ error: "Failed to delete project" }, { status: 500 });
+  }
   return NextResponse.json({ success: true });
 }
 
@@ -96,6 +126,39 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   const { id } = await params;
   const body = await request.json();
+
+  // ── Share / Unshare action ──────────────────────────────────────────────────
+  if (body.action === "share") {
+    const supabase = createServiceClient();
+    const shareToken = crypto.randomUUID();
+    const { data, error } = await supabase
+      .from("projects")
+      .update({ share_token: shareToken, shared_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("owner_id", userId)
+      .select("share_token")
+      .single();
+    if (error || !data) {
+      console.error("[POST /api/projects/:id share]", error);
+      return NextResponse.json({ error: "Failed to generate share link" }, { status: 500 });
+    }
+    return NextResponse.json({ share_token: data.share_token });
+  }
+
+  if (body.action === "unshare") {
+    const supabase = createServiceClient();
+    const { error } = await supabase
+      .from("projects")
+      .update({ share_token: null, shared_at: null })
+      .eq("id", id)
+      .eq("owner_id", userId);
+    if (error) {
+      console.error("[POST /api/projects/:id unshare]", error);
+      return NextResponse.json({ error: "Failed to remove share link" }, { status: 500 });
+    }
+    return NextResponse.json({ success: true });
+  }
+  // ── End share/unshare ───────────────────────────────────────────────────────
 
   if (body.action !== "duplicate") {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
@@ -131,6 +194,9 @@ export async function POST(request: Request, { params }: RouteContext) {
     .select()
     .single();
 
-  if (insertErr) return NextResponse.json({ error: insertErr.message }, { status: 500 });
+  if (insertErr) {
+    console.error("[POST /api/projects/:id duplicate]", insertErr);
+    return NextResponse.json({ error: "Failed to duplicate project" }, { status: 500 });
+  }
   return NextResponse.json(copy, { status: 201 });
 }

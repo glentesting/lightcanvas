@@ -14,9 +14,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "file and projectId required" }, { status: 400 });
   }
 
-  // Validate file type
-  if (!file.type.startsWith("image/")) {
-    return NextResponse.json({ error: "File must be an image" }, { status: 400 });
+  // Validate file type — explicit allowlist; image/svg+xml excluded to prevent stored XSS
+  const ALLOWED_IMAGE_MIME_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+  ];
+  const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // 8 MB
+
+  if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.type)) {
+    return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
+  }
+
+  if (file.size > MAX_PHOTO_BYTES) {
+    return NextResponse.json({ error: "File too large" }, { status: 400 });
   }
 
   const supabase = createServiceClient();
@@ -46,11 +59,12 @@ export async function POST(request: Request) {
   // Get public URL
   const { data: urlData } = supabase.storage.from("lightcanvas-images").getPublicUrl(filePath);
 
-  // Update project with custom house photo URL
+  // Update project with custom house photo URL — include owner_id to prevent TOCTOU race
   await supabase
     .from("projects")
     .update({ house_custom_svg: urlData.publicUrl })
-    .eq("id", projectId);
+    .eq("id", projectId)
+    .eq("owner_id", userId);
 
   return NextResponse.json({ url: urlData.publicUrl }, { status: 201 });
 }

@@ -50,6 +50,21 @@ export function createZip(files: Array<{ name: string; data: Uint8Array }>): Blo
 
   const encoder = new TextEncoder();
 
+  // zip64 safety: check cumulative offset won't overflow 32-bit
+  let runningSize = 0;
+  for (const file of files) {
+    if (file.data.length >= 0xFFFFFFFF) {
+      throw new Error(`File too large for zip32: ${file.name} is ${file.data.length} bytes (max 4 GiB)`);
+    }
+    runningSize += 30 + encoder.encode(file.name).length + file.data.length;
+    if (runningSize >= 0xFFFFFFFF) {
+      throw new Error(`File too large for zip32: ${file.name} is ${file.data.length} bytes (max 4 GiB)`);
+    }
+  }
+
+  // UTF-8 flag (bit 11 = 0x0800) — filenames are UTF-8 encoded via TextEncoder
+  const UTF8_FLAG = 0x0800;
+
   for (const file of files) {
     const nameBytes = encoder.encode(file.name);
     const fileCrc = crc32(file.data);
@@ -59,7 +74,7 @@ export function createZip(files: Array<{ name: string; data: Uint8Array }>): Blo
     const hv = new DataView(header.buffer);
     hv.setUint32(0, 0x04034b50, true); // signature
     hv.setUint16(4, 20, true); // version needed
-    hv.setUint16(6, 0, true); // flags
+    hv.setUint16(6, UTF8_FLAG, true); // flags — bit 11 signals UTF-8 filename
     hv.setUint16(8, 0, true); // compression (store)
     hv.setUint16(10, 0, true); // mod time
     hv.setUint16(12, 0, true); // mod date
@@ -85,7 +100,7 @@ export function createZip(files: Array<{ name: string; data: Uint8Array }>): Blo
     cv.setUint32(0, 0x02014b50, true);
     cv.setUint16(4, 20, true);
     cv.setUint16(6, 20, true);
-    cv.setUint16(8, 0, true);
+    cv.setUint16(8, UTF8_FLAG, true); // flags — bit 11 signals UTF-8 filename
     cv.setUint16(10, 0, true);
     cv.setUint16(12, 0, true);
     cv.setUint16(14, 0, true);

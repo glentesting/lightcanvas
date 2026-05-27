@@ -24,7 +24,7 @@ export default function DashboardPage() {
     fetch("/api/projects")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
-        setProjects(data);
+        setProjects(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch(() => setLoading(false));

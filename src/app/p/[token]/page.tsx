@@ -11,15 +11,16 @@ interface SharePageProps {
 export default async function SharePage({ params }: SharePageProps) {
   const { token } = await params;
 
-  // Look up project by ID (using project ID as share token for now)
+  // Look up project by share_token (not by id — prevents guessing project IDs)
   const supabase = createServiceClient();
   const { data: row, error } = await supabase
     .from("projects")
-    .select("*")
-    .eq("id", token)
+    .select("id, name, fixtures, sequence, audio_file, audio, house_template, house_custom_svg, share_token")
+    .eq("share_token", token)
+    .not("share_token", "is", null)
     .single();
 
-  if (error || !row) {
+  if (error || !row || !row.share_token) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: "#FFFFFF" }}>
         <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-4" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>

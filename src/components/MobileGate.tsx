@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 const DISMISS_KEY = "lightcanvas-mobile-dismissed";
 
@@ -10,10 +11,26 @@ export default function MobileGate() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const dismissed = sessionStorage.getItem(DISMISS_KEY);
-    if (!dismissed && window.innerWidth < 768) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setShow(true);
+    if (dismissed) return;
+
+    const mq = window.matchMedia("(max-width: 767px)");
+
+    function handleChange(e: MediaQueryListEvent | MediaQueryList) {
+      const isDismissed = sessionStorage.getItem(DISMISS_KEY);
+      if (!isDismissed && e.matches) {
+        setShow(true);
+      } else if (!e.matches) {
+        setShow(false);
+      }
     }
+
+    // Initial check — one-shot mount sync from external matchMedia state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (mq.matches) setShow(true);
+
+    // Listen for changes (e.g. rotating device or resizing window)
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
   }, []);
 
   if (!show) return null;
@@ -78,13 +95,13 @@ export default function MobileGate() {
         >
           Continue anyway
         </button>
-        <a
+        <Link
           href="/dashboard"
           className="h-11 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1"
           style={{ background: "var(--panel)", border: "1px solid var(--line)", color: "var(--ink)" }}
         >
           Back to dashboard
-        </a>
+        </Link>
       </div>
     </div>
   );

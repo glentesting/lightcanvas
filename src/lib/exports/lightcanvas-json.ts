@@ -72,8 +72,13 @@ const FixtureSchema = z.object({
   id: z.string(),
   kind: z.string(),
   name: z.string(),
-  pixelCount: z.number(),
+  pixelCount: z.number().int().nonnegative(),
   startChannel: z.number(),
+  universe: z.number().int().optional(),
+  direction: z.string().optional(),
+  geometry: z.any().optional(),
+  controllerType: z.string().optional(),
+  brightnessLimit: z.number().optional(),
   layout: z
     .object({
       points: z.array(z.object({ x: z.number(), y: z.number() })),

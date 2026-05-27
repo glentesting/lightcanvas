@@ -2,6 +2,20 @@ import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
+const MAX_AUDIO_BYTES = 50 * 1024 * 1024; // 50 MB
+const ALLOWED_AUDIO_MIME_TYPES = [
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/ogg",
+  "audio/flac",
+  "audio/x-flac",
+  "audio/mp4",
+  "audio/x-m4a",
+  "audio/aac",
+];
+
 export async function POST(request: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -12,6 +26,14 @@ export async function POST(request: Request) {
 
   if (!file || !projectId) {
     return NextResponse.json({ error: "file and projectId required" }, { status: 400 });
+  }
+
+  if (!ALLOWED_AUDIO_MIME_TYPES.includes(file.type)) {
+    return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
+  }
+
+  if (file.size > MAX_AUDIO_BYTES) {
+    return NextResponse.json({ error: "File too large" }, { status: 400 });
   }
 
   const supabase = createServiceClient();
@@ -42,11 +64,12 @@ export async function POST(request: Request) {
   // Store the bucket path (not the public URL) so we can generate signed URLs on demand
   const storagePath = `${bucket}/${filePath}`;
 
-  // Update project row with audio info
+  // Update project row with audio info — include owner_id to prevent TOCTOU race
   const { error: dbError } = await supabase
     .from("projects")
     .update({ audio_url: storagePath, audio_file: file.name })
-    .eq("id", projectId);
+    .eq("id", projectId)
+    .eq("owner_id", userId);
 
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 

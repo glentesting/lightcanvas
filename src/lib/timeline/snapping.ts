@@ -3,6 +3,8 @@ export function secondsToPx(s: number, zoom: number): number {
 }
 
 export function pxToSeconds(x: number, zoom: number): number {
+  // Fix #6: guard against zero/negative zoom to avoid NaN/Infinity results
+  if (zoom <= 0) return 0;
   return x / zoom;
 }
 

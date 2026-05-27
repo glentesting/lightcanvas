@@ -28,6 +28,8 @@ export interface GenerateOptions {
   refinementPrompt?: string;
   existingBlocks?: EffectBlock[];
   sections?: AudioSection[];
+  /** Optional AbortSignal forwarded to the upstream AI fetch. */
+  signal?: AbortSignal;
 }
 
 export interface AIProvider {

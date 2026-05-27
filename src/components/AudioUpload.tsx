@@ -198,14 +198,16 @@ export default function AudioUpload({ projectId, onUploaded }: AudioUploadProps)
           </div>
         )}
       </div>
-      <label
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={!rightsConfirmed || uploading || analyzing}
         className="flex items-center justify-center gap-2 w-full h-8 rounded-md cursor-pointer text-xs font-medium transition-colors"
         style={{
           background: "var(--accent-50)",
           color: "var(--accent-ink)",
           border: "1px solid var(--accent-200)",
           opacity: rightsConfirmed ? 1 : 0.5,
-          pointerEvents: rightsConfirmed ? "auto" : "none",
         }}
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -214,14 +216,7 @@ export default function AudioUpload({ projectId, onUploaded }: AudioUploadProps)
           <line x1="12" y1="3" x2="12" y2="15" />
         </svg>
         {uploading ? "Uploading..." : "Upload song"}
-        <input
-          type="file"
-          accept="audio/*"
-          onChange={handleUpload}
-          disabled={!rightsConfirmed || uploading || analyzing}
-          className="hidden"
-        />
-      </label>
+      </button>
       {error && <p className="text-xs mt-2" style={{ color: "#d44" }}>{error}</p>}
     </div>
   );

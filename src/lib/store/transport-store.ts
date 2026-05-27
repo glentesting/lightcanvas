@@ -28,7 +28,8 @@ export const useTransportStore = create<TransportState>((set) => ({
   pause: () => set({ isPlaying: false }),
   toggle: () => set((s) => ({ isPlaying: !s.isPlaying })),
   seek: (t) => set({ currentTime: t }),
-  setZoom: (z) => set({ zoom: z }),
+  // Fix #6: clamp zoom to a safe range to prevent pxToSeconds returning NaN/Infinity
+  setZoom: (z) => set({ zoom: Math.min(100, Math.max(0.1, z)) }),
   setScrollX: (x) => set({ scrollX: x }),
   setCurrentTime: (t) => set({ currentTime: t }),
   setPlaying: (playing) => set({ isPlaying: playing }),

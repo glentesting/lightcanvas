@@ -242,10 +242,13 @@ export default function LayoutEditor({
                   const isPlaced = !!(f.layout?.points.length);
                   const isHidden = hiddenIds.has(f.id);
                   return (
-                    <button
+                    <div
                       key={f.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => setSelectedId(f.id)}
-                      className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors group"
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedId(f.id); } }}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors group cursor-pointer"
                       style={{
                         background: f.id === selectedId ? "#f0f4ff" : "transparent",
                         borderBottom: "1px solid #f5f5f5",
@@ -275,14 +278,14 @@ export default function LayoutEditor({
                       <span className="shrink-0" style={{ color: "var(--ink-4)", fontSize: 10, fontVariantNumeric: "tabular-nums" }}>
                         {f.pixelCount}px
                       </span>
-                      {/* Visibility toggle */}
-                      <span
-                        role="button"
-                        tabIndex={-1}
-                        className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={{ color: isHidden ? "var(--ink-4)" : "var(--ink-3)" }}
+                      {/* Visibility toggle — separate button so it doesn't nest inside the row button */}
+                      <button
+                        tabIndex={0}
+                        className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity rounded"
+                        style={{ color: isHidden ? "var(--ink-4)" : "var(--ink-3)", background: "none", border: "none", padding: 0, cursor: "pointer" }}
                         onClick={(e) => { e.stopPropagation(); toggleVisibility(f.id); }}
-                        onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); toggleVisibility(f.id); } }}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); toggleVisibility(f.id); } }}
+                        title={isHidden ? "Show" : "Hide"}
                       >
                         {isHidden ? (
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -296,8 +299,8 @@ export default function LayoutEditor({
                             <circle cx="12" cy="12" r="3" />
                           </svg>
                         )}
-                      </span>
-                    </button>
+                      </button>
+                    </div>
                   );
                 })}
 

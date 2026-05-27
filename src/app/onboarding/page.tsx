@@ -31,10 +31,12 @@ export default function OnboardingPage() {
   const [lightCount, setLightCount] = useState(500);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [finishError, setFinishError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function handleFinish() {
     setSubmitting(true);
+    setFinishError(null);
 
     try {
       const onboardRes = await fetch("/api/onboarding", {
@@ -67,7 +69,8 @@ export default function OnboardingPage() {
       }
 
       router.push("/dashboard?from=onboarding");
-    } catch {
+    } catch (err) {
+      setFinishError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setSubmitting(false);
     }
   }
@@ -204,7 +207,12 @@ export default function OnboardingPage() {
         )}
 
         {/* Navigation */}
-        <div className="flex justify-between mt-8">
+        {finishError && (
+          <p className="mt-4 text-sm text-center rounded-lg px-4 py-2" style={{ background: "#fee2e2", color: "#b91c1c", border: "1px solid #fca5a5" }}>
+            {finishError}
+          </p>
+        )}
+        <div className="flex justify-between mt-4">
           {step > 1 ? (
             <button onClick={() => setStep(step - 1)} className="px-4 py-2 rounded-md text-sm font-medium transition-colors" style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink)" }}>
               Back

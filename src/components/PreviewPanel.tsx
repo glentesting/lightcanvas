@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import Link from "next/link";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { useTransportStore } from "@/lib/store/transport-store";
@@ -49,14 +49,17 @@ export default function PreviewPanel({ projectId }: { projectId: string }) {
     return () => ro.disconnect();
   }, []);
 
-  // Compute pixel states from render engine
-  let lights: Record<string, { color: string; intensity: number; outline?: boolean }> = {};
-  try {
-    const pixelStates = renderFrame(sequence, fixtures, effectiveTime, audio?.beats, groups);
-    lights = buildHouseLights(pixelStates, fixtures);
-  } catch (e) {
-    console.warn("Preview render error:", e);
-  }
+  // Compute pixel states from render engine — memoized on time + fixtures + sequence blocks
+  const lights = useMemo<Record<string, { color: string; intensity: number; outline?: boolean }>>(() => {
+    try {
+      const pixelStates = renderFrame(sequence, fixtures, effectiveTime, audio?.beats, groups);
+      return buildHouseLights(pixelStates, fixtures);
+    } catch (e) {
+      console.error("Preview render error:", e);
+      return {};
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveTime, fixtures, sequence.blocks, groups, audio?.beats]);
 
   const activeEffects = sequence.blocks.filter(
     (b) => effectiveTime >= b.start && effectiveTime < b.start + b.duration

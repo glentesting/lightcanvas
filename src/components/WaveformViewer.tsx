@@ -58,6 +58,9 @@ export default function WaveformViewer({ audioUrl, analysis }: WaveformViewerPro
       }
     });
 
+    // Safety: track whether a deferred destroy has already been scheduled
+    let destroyScheduled = false;
+
     ws.on("audioprocess", () => {
       if (!cancelled) setCurrentTime(ws.getCurrentTime());
     });
@@ -76,7 +79,27 @@ export default function WaveformViewer({ audioUrl, analysis }: WaveformViewerPro
     return () => {
       cancelled = true;
       wavesurferRef.current = null;
-      if (isReady) ws.destroy();
+
+      if (isReady) {
+        // Already settled — safe to destroy immediately.
+        ws.destroy();
+      } else if (!destroyScheduled) {
+        // Still loading: attach one-shot handlers that destroy once WaveSurfer
+        // settles, plus a 10 s safety timeout in case neither event fires.
+        destroyScheduled = true;
+
+        const onSettle = () => {
+          clearTimeout(safetyTimer);
+          ws.destroy();
+        };
+
+        const safetyTimer = setTimeout(() => {
+          ws.destroy();
+        }, 10_000);
+
+        ws.once("ready", onSettle);
+        ws.once("error", onSettle);
+      }
     };
   }, [audioUrl]);
 
@@ -323,8 +346,16 @@ function BeatOverlay({
   );
 }
 
-/** Check if an input/textarea is focused (don't capture space there) */
+/** Check if an input/textarea (or equivalent) is focused (don't capture space there) */
 function isInputFocused(): boolean {
-  const tag = document.activeElement?.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+  const el = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  // Also skip contenteditable elements, ARIA textboxes, and elements inside dialogs.
+  const ce = (el as HTMLElement).getAttribute?.("contenteditable");
+  if (ce === "" || ce === "true") return true;
+  if (el.getAttribute("role") === "textbox") return true;
+  if ((el as HTMLElement).closest?.("dialog")) return true;
+  return false;
 }

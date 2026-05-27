@@ -1,15 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useEditorStore } from "@/lib/store/editor-store";
-import { redirect } from "next/navigation";
 
 export default function DesignerPage() {
   const projectId = useEditorStore((s) => s.projectId);
+  const router = useRouter();
 
   // If a project is loaded in the store, redirect to it
+  useEffect(() => {
+    if (projectId) {
+      router.replace(`/project/${projectId}`);
+    }
+  }, [projectId, router]);
+
   if (projectId) {
-    redirect(`/project/${projectId}`);
+    return null;
   }
 
   return (

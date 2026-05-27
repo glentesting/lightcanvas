@@ -1,5 +1,8 @@
 import type { EffectId } from "./types";
 
+/** Fix #10: minimum duration (seconds) for any effect block, used in resize and duplicate */
+export const MIN_BLOCK_DURATION = 0.1;
+
 export const EFFECT_COLORS: Record<EffectId, string> = {
   twinkle: "var(--fx-twinkle)",
   chase: "var(--fx-chase)",

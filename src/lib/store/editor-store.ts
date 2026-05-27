@@ -5,6 +5,7 @@ import { temporal } from "zundo";
 import type { Project, Fixture, FixtureGroup } from "@/types/domain";
 import type { EffectBlock, Sequence } from "@/lib/timeline/types";
 import type { AudioAnalysis } from "@/lib/audio/types";
+import { MIN_BLOCK_DURATION } from "@/lib/timeline/constants";
 
 export interface EditorState {
   // Project (autosaved)
@@ -77,7 +78,7 @@ export const useEditorStore = create<EditorState>()(
         hoveredBlockId: null,
         saveStatus: "idle" as const,
 
-        loadProject: (project: Project) =>
+        loadProject: (project: Project) => {
           set((state) => {
             state.projectId = project.id;
             state.name = project.name;
@@ -91,7 +92,11 @@ export const useEditorStore = create<EditorState>()(
             state.houseCustomSvg = project.houseCustomSvg;
             state.selectedBlockIds = [];
             state.selectedFixtureIds = [];
-          }),
+          });
+          // Fix #3: clear undo stack when loading a new project so undo
+          // does not revert back into a previously-loaded project's state.
+          useEditorStore.temporal.getState().clear();
+        },
 
         setName: (name: string) =>
           set((state) => {
@@ -107,25 +112,55 @@ export const useEditorStore = create<EditorState>()(
 
         addBlock: (block: EffectBlock) =>
           set((state) => {
+            // Fix #8: validate trackId exists before adding
+            const trackExists = state.sequence.tracks.some((t) => t.id === block.trackId);
+            if (!trackExists) {
+              console.warn(`addBlock: trackId "${block.trackId}" not found — block dropped`);
+              return;
+            }
             state.sequence.blocks.push(block);
           }),
 
         updateBlock: (id: string, patch: Partial<EffectBlock>) =>
           set((state) => {
             const block = state.sequence.blocks.find((b) => b.id === id);
-            if (block) Object.assign(block, patch);
+            if (!block) return;
+            // Fix #8: if the patch changes trackId, validate the new trackId exists
+            if (patch.trackId !== undefined) {
+              const trackExists = state.sequence.tracks.some((t) => t.id === patch.trackId);
+              if (!trackExists) {
+                console.warn(`updateBlock: trackId "${patch.trackId}" not found — update dropped`);
+                return;
+              }
+            }
+            Object.assign(block, patch);
           }),
 
         moveBlocks: (ids: string[], deltaSeconds: number, deltaTrackIndex: number) =>
           set((state) => {
             const tracks = state.sequence.tracks;
-            for (const block of state.sequence.blocks) {
-              if (!ids.includes(block.id)) continue;
-              block.start = Math.max(0, block.start + deltaSeconds);
-              if (deltaTrackIndex !== 0) {
+            const selectedBlocks = state.sequence.blocks.filter((b) => ids.includes(b.id));
+
+            // Fix #7: compute a single clamped deltaTrackIndex that keeps ALL
+            // selected blocks within bounds, preserving their relative offsets.
+            let clampedDelta = deltaTrackIndex;
+            if (deltaTrackIndex !== 0) {
+              for (const block of selectedBlocks) {
                 const currentIdx = tracks.findIndex((t) => t.id === block.trackId);
-                const newIdx = Math.max(0, Math.min(tracks.length - 1, currentIdx + deltaTrackIndex));
-                block.trackId = tracks[newIdx].id;
+                if (currentIdx === -1) continue;
+                const proposedIdx = currentIdx + clampedDelta;
+                if (proposedIdx < 0) clampedDelta = -currentIdx;
+                if (proposedIdx >= tracks.length) clampedDelta = tracks.length - 1 - currentIdx;
+              }
+            }
+
+            for (const block of selectedBlocks) {
+              block.start = Math.max(0, block.start + deltaSeconds);
+              if (clampedDelta !== 0) {
+                const currentIdx = tracks.findIndex((t) => t.id === block.trackId);
+                if (currentIdx !== -1) {
+                  block.trackId = tracks[currentIdx + clampedDelta].id;
+                }
               }
             }
           }),
@@ -136,10 +171,11 @@ export const useEditorStore = create<EditorState>()(
             if (!block) return;
             if (edge === "start") {
               const end = block.start + block.duration;
-              block.start = Math.max(0, Math.min(newTime, end - 0.1));
+              // Fix #10: use named constant instead of magic literal
+              block.start = Math.max(0, Math.min(newTime, end - MIN_BLOCK_DURATION));
               block.duration = end - block.start;
             } else {
-              block.duration = Math.max(0.1, newTime - block.start);
+              block.duration = Math.max(MIN_BLOCK_DURATION, newTime - block.start);
             }
           }),
 
@@ -153,12 +189,22 @@ export const useEditorStore = create<EditorState>()(
 
         duplicateBlocks: (ids: string[]) =>
           set((state) => {
+            const audioDuration = state.audio?.duration ?? Infinity;
             const toDuplicate = state.sequence.blocks.filter((b) => ids.includes(b.id));
-            const newBlocks = toDuplicate.map((b) => ({
-              ...b,
-              id: crypto.randomUUID(),
-              start: b.start + b.duration,
-            }));
+            const newBlocks = toDuplicate.map((b) => {
+              const newStart = b.start + b.duration;
+              // Fix #11: clamp duplicate's end to audio duration if known
+              const maxDuration = Math.max(
+                MIN_BLOCK_DURATION,
+                audioDuration - newStart
+              );
+              return {
+                ...b,
+                id: crypto.randomUUID(),
+                start: newStart,
+                duration: Math.min(b.duration, maxDuration),
+              };
+            });
             state.sequence.blocks.push(...newBlocks);
             state.selectedBlockIds = newBlocks.map((b) => b.id);
           }),
@@ -184,6 +230,15 @@ export const useEditorStore = create<EditorState>()(
 
         reorderTracks: (fromIndex: number, toIndex: number) =>
           set((state) => {
+            // Fix #9: bounds check before mutating
+            const len = state.sequence.tracks.length;
+            if (
+              fromIndex < 0 || fromIndex >= len ||
+              toIndex < 0 || toIndex >= len
+            ) {
+              console.warn(`reorderTracks: index out of bounds (from=${fromIndex}, to=${toIndex}, len=${len})`);
+              return;
+            }
             const [track] = state.sequence.tracks.splice(fromIndex, 1);
             state.sequence.tracks.splice(toIndex, 0, track);
           }),
@@ -252,12 +307,13 @@ export const useEditorStore = create<EditorState>()(
           }),
       })),
       {
-        // Only track project-data mutations for undo/redo (not selection or save status)
+        // Only track project-data mutations for undo/redo (not selection or save status).
+        // Fix #2: exclude `audio` — it's a multi-MB analysis set once after upload,
+        //   tracking it in history wastes memory and inflates undo frames unnecessarily.
+        // Fix #4: exclude `name` — renames should not push undo frames.
         partialize: (state) => ({
-          name: state.name,
           audioUrl: state.audioUrl,
           audioFile: state.audioFile,
-          audio: state.audio,
           fixtures: state.fixtures,
           groups: state.groups,
           sequence: state.sequence,

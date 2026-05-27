@@ -6,8 +6,12 @@ import type { AudioAnalysis, AudioSection } from "./types";
  */
 export async function analyzeAudio(file: File): Promise<AudioAnalysis> {
   const arrayBuffer = await file.arrayBuffer();
-  const audioCtx = new OfflineAudioContext(1, 1, 44100);
+  // Use a regular AudioContext so decodeAudioData uses the device native sample
+  // rate, preserving the source sample rate without forcing a 44.1 kHz resample.
+  const audioCtx = new AudioContext();
   const buffer = await audioCtx.decodeAudioData(arrayBuffer);
+  // Close the context immediately — we only needed it for decoding.
+  audioCtx.close();
 
   const sampleRate = buffer.sampleRate;
   const channelData = buffer.getChannelData(0);
@@ -18,12 +22,36 @@ export async function analyzeAudio(file: File): Promise<AudioAnalysis> {
   const hopSize = 512;
   const onsets: number[] = [];
 
-  let prevSpectrum: Float32Array | null = null;
   const fftSize = frameSize;
 
-  // We'll compute amplitude spectrum manually using a simple DFT approach
-  // For performance, use the real part of the FFT approximation
-  for (let i = 0; i + frameSize < channelData.length; i += hopSize) {
+  // Pass 1: collect all flux values so we can compute a data-driven threshold.
+  const allFlux: number[] = [];
+  {
+    let prevSpectrumPre: Float32Array | null = null;
+    for (let i = 0; i + frameSize <= channelData.length; i += hopSize) {
+      const frame = channelData.slice(i, i + frameSize);
+      const spectrum = computeSpectrum(frame, fftSize);
+      if (prevSpectrumPre) {
+        let flux = 0;
+        for (let k = 0; k < spectrum.length; k++) {
+          const diff = spectrum[k] - prevSpectrumPre[k];
+          if (diff > 0) flux += diff;
+        }
+        allFlux.push(flux);
+      }
+      prevSpectrumPre = spectrum;
+    }
+  }
+
+  // Adaptive threshold: mean flux * 1.5 (makes the existing comment truthful).
+  const meanFlux = allFlux.length > 0
+    ? allFlux.reduce((s, x) => s + x, 0) / allFlux.length
+    : 0;
+  const fluxThreshold = meanFlux * 1.5;
+
+  // Pass 2: detect onsets using the adaptive threshold.
+  let prevSpectrum: Float32Array | null = null;
+  for (let i = 0; i + frameSize <= channelData.length; i += hopSize) {
     const frame = channelData.slice(i, i + frameSize);
 
     // Compute amplitude spectrum via simple magnitude estimation
@@ -35,9 +63,10 @@ export async function analyzeAudio(file: File): Promise<AudioAnalysis> {
         const diff = spectrum[k] - prevSpectrum[k];
         if (diff > 0) flux += diff;
       }
-      // Adaptive threshold: use mean flux * multiplier
-      if (flux > 0.15) {
-        const timeInSeconds = i / sampleRate;
+      // Adaptive threshold: mean flux * 1.5
+      if (flux > fluxThreshold) {
+        // Use center of analysis frame for accurate timestamp.
+        const timeInSeconds = (i + frameSize / 2) / sampleRate;
         // Avoid double-triggers within 50ms
         if (onsets.length === 0 || timeInSeconds - onsets[onsets.length - 1] > 0.05) {
           onsets.push(timeInSeconds);
@@ -150,7 +179,7 @@ function detectSections(
   }
 
   // Normalize energy curve to 0-1
-  const maxE = Math.max(...energyWindows, 0.001);
+  const maxE = energyWindows.reduce((m, x) => (x > m ? x : m), 0.001);
   const normalized = energyWindows.map((e) => e / maxE);
 
   // Find significant transitions (>30% change between adjacent windows)
@@ -251,9 +280,9 @@ function computeSpectralFeatures(
     highEnergy.push(high);
   }
 
-  // Normalize to 0-1
-  const maxBass = Math.max(...bassEnergy, 0.001);
-  const maxHigh = Math.max(...highEnergy, 0.001);
+  // Normalize to 0-1 (avoid spread to prevent RangeError on large arrays)
+  const maxBass = bassEnergy.reduce((m, x) => (x > m ? x : m), 0.001);
+  const maxHigh = highEnergy.reduce((m, x) => (x > m ? x : m), 0.001);
 
   return {
     bassEnergy: bassEnergy.map((v) => Math.round((v / maxBass) * 1000) / 1000),
@@ -274,8 +303,9 @@ function estimateBpm(onsets: number[], _duration: number): number {
   const bpmCounts = new Map<number, number>();
   for (const interval of intervals) {
     if (interval < 0.1) continue; // too short
-    // Try multiples/divisions to find BPM in reasonable range
-    for (const mult of [1, 2, 4, 0.5, 0.25]) {
+    // Try integer multiples only (avoid 0.5/0.25 which bias toward lower BPMs).
+    // The post-estimation octave correction handles >160 / <60 cases.
+    for (const mult of [1, 2, 3]) {
       const bpm = Math.round(60 / (interval * mult));
       if (bpm >= 60 && bpm <= 200) {
         bpmCounts.set(bpm, (bpmCounts.get(bpm) || 0) + 1);

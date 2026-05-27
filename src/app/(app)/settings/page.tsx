@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Sequencer = "xlights" | "lor" | "vixen" | "other";
 type ControllerType = "falcon-f16v3" | "alphapix-16" | "wled-esp32" | "lor-controller" | "other";
@@ -39,16 +39,23 @@ const FREE_FEATURES = [
 ];
 
 export default function SettingsPage() {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const [tab, setTab] = useState<SettingsTab>("account");
 
-  // Hardware state
-  const currentSequencer = (user?.publicMetadata?.sequencer as Sequencer) || "xlights";
-  const currentController = (user?.publicMetadata?.controllerType as ControllerType) || "other";
-  const [sequencer, setSequencer] = useState<Sequencer>(currentSequencer);
-  const [controller, setController] = useState<ControllerType>(currentController);
+  // Hardware state — initialize to null until Clerk has loaded the user
+  const [sequencer, setSequencer] = useState<Sequencer | null>(null);
+  const [controller, setController] = useState<ControllerType | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // One-shot hydration from async Clerk user — sync-on-load pattern.
+  useEffect(() => {
+    if (isLoaded && user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSequencer((user.publicMetadata?.sequencer as Sequencer) || "xlights");
+      setController((user.publicMetadata?.controllerType as ControllerType) || "other");
+    }
+  }, [isLoaded, user]);
 
   // Toast state
   const [toast, setToast] = useState<string | null>(null);
@@ -60,6 +67,7 @@ export default function SettingsPage() {
   }
 
   async function handleSaveHardware() {
+    if (!sequencer || !controller) return;
     setSaving(true);
     setSaved(false);
     const res = await fetch("/api/onboarding", {
@@ -74,7 +82,9 @@ export default function SettingsPage() {
     }
   }
 
-  const hardwareChanged = sequencer !== currentSequencer || controller !== currentController;
+  const savedSequencer = (user?.publicMetadata?.sequencer as Sequencer) || "xlights";
+  const savedController = (user?.publicMetadata?.controllerType as ControllerType) || "other";
+  const hardwareChanged = sequencer !== null && controller !== null && (sequencer !== savedSequencer || controller !== savedController);
 
   return (
     <div style={{ background: "#FFFFFF" }}>

@@ -66,8 +66,8 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
   const [lorMappingReviewed, setLorMappingReviewed] = useState(false);
   const [lorDegradedExpanded, setLorDegradedExpanded] = useState(false);
 
-  const state = useEditorStore.getState();
   const fixtures = useEditorStore((s) => s.fixtures);
+  const audio = useEditorStore((s) => s.audio);
   const storedNameMap = useEditorStore((s) => s.sequence.xlightsNameMap);
   const storedLorMapping = useEditorStore((s) => s.sequence.lorMapping);
 
@@ -338,7 +338,7 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
 
   if (!open) return null;
 
-  const audioDuration = state.audio?.duration ?? 0;
+  const audioDuration = audio?.duration ?? 0;
 
   // Post-export guidance modal
   if (showGuidance) {

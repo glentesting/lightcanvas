@@ -99,8 +99,8 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
                   blockIds.push(block.id);
                 }
               }
-            } catch {
-              // skip malformed events
+            } catch (e) {
+              console.warn("[ai] SSE parse error", e);
             }
           }
         }
