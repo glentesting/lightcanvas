@@ -2,8 +2,8 @@
 
 **The single source of truth for the project. Read this first. Update this last.**
 
-Last updated: 2026-05-23
-Updated by: Claude (Track B Stub Graduation — Audio, Preflight, Exports, AI Studio)
+Last updated: 2026-05-27
+Updated by: Claude (Structural Review — Phases 1-5)
 
 ---
 
@@ -71,17 +71,17 @@ No `@anthropic-ai/sdk` dependency — direct `fetch` to Anthropic API. No `jszip
 
 ### Current key files
 
-- `src/lib/store/editor-store.ts` (270 lines) — Zustand store
-- `src/components/LayoutEditor.tsx` (~1200 lines) — premium layout editor (three-column, overlays, floating toolbar, inspector tabs, night preview)
-- `src/components/AppSidebar.tsx` — global sidebar (9 nav items, project-aware routing)
-- `src/components/AppTopBar.tsx` — global top bar (project name from store, save status, Open Designer CTA)
-- `src/components/Timeline.tsx` (852 lines) — main timeline UI
-- `src/components/AIPanel.tsx` (541 lines) — AI sidebar
-- `src/components/PreviewPanel.tsx` (159 lines) — preview render
+- `src/lib/store/editor-store.ts` — Zustand store composed of slices (project / fixture / timeline); selection + save-status live in separate stores
+- `src/components/layout-editor/` — premium layout editor split across focused files (was a 1252-line monolith)
+- `src/components/layout/AppSidebar.tsx` — global sidebar (9 nav items, project-aware routing)
+- `src/components/layout/AppTopBar.tsx` — global top bar (project name from store, save status, Open Designer CTA)
+- `src/components/timeline/` — main timeline UI split across focused files (was an 851-line monolith)
+- `src/components/ai/` — AI sidebar split across focused files (was a 541-line monolith)
+- `src/components/shared/PreviewPanel.tsx` — preview render
 - `src/lib/exports/xlights.ts` (383 lines) — XSQ generator
 - `src/lib/exports/lor.ts` (386 lines) — LMS generator
 - `src/lib/imports/xsq.ts` (157 lines), `src/lib/imports/lor.ts` (158 lines)
-- `src/lib/render/effects/index.ts` (301 lines) — 10 effect renderers
+- `src/lib/render/effects/` — registry-driven renderers, one file per effect; `EffectId` derived from `EFFECT_REGISTRY`
 - `src/lib/ai/anthropic-provider.ts` — real Anthropic call
 - `src/lib/ai/mock-provider.ts` — fallback for no-API-key
 
@@ -298,6 +298,16 @@ Validation rules:
 
 Primary: lightcanvas.ai · App: app.lightcanvas.ai · Shortcut: lightcanvas.app · Backup redirect: lightcanvas.co
 
+### Code structure (post structural review, 2026-05-27)
+
+**Stores.** `useEditorStore` is composed of slices (project / fixture / timeline) under `src/lib/store/slices/`. Selection state and save status live in separate stores (`useSelectionStore`, `useSaveStatusStore`) to keep editor history clean.
+
+**Render effects.** Registry-driven under `src/lib/render/effects/` — one file per effect, with `EFFECT_REGISTRY` as the single source of truth. `EffectId` is derived from the registry rather than hand-maintained.
+
+**Components.** Feature folders for the heavy editors (`layout-editor/`, `timeline/`, `export/`, `import/`, `ai/`), plus cross-cutting folders `shared/` (PresetLibrary, PreviewPanel, WaveformViewer, AudioUpload), `dialogs/` (CookieBanner, MobileGate), and `layout/` (AppSidebar, AppTopBar). `ErrorBoundary.tsx` stays at the components root as an app-shell concern.
+
+**API layer.** Routes use the `withAuth` wrapper from `src/lib/api/`, database access goes through helpers in `src/lib/db/`, and request/response shapes are validated against centralized Zod schemas in `src/lib/schemas/`.
+
 ---
 
 ## 5. v4 Design Direction
@@ -437,6 +447,8 @@ Steps 1–3 alone close 70% of the perceived UX gap.
 
 **Don't add `analyze-audio` or other API stubs back into the codebase.** Either implement or delete. Dead routes confuse future agents.
 
+**Build requires Supabase + Clerk env vars even in CI.** `next build` fails at page-data collection without `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, and `CLERK_SECRET_KEY`. Use dummy non-empty values for CI builds (e.g. `https://dummy.supabase.co`, `pk_test_dummy`, `sk_test_dummy`).
+
 ---
 
 ## 8. Active work / Next up
@@ -506,6 +518,7 @@ All sidebar destinations now render real v4-polish pages. ComingSoon.tsx has bee
 
 When you make significant changes, add a one-line entry here. Newest at the top.
 
+- 2026-05-27 — Structural review (Phases 1-5): split editor store into slices + extracted selection/save stores; registry-pattern for render effects (per-effect files, derived EffectId); split 5 monolith components (LayoutEditor 1252 → 7 files, ExportDialog 1086 → 6 files, Timeline 851 → 7 files, ImportDialog 583 → 4 files, AIPanel 541 → 6 files); API layer cleanup (withAuth wrapper, db helpers, centralized Zod schemas); reorganized components/ into shared/dialogs/layout. Audio bucket mismatch resolved via migration 005.
 - 2026-05-23 — Track B stub graduation complete: Audio Analysis (header + structure overview + sections table + summary rail), Preflight (readiness ring + 3-col hero + 6 check cards + callout), Exports (4-step wizard + validation + summary rail), AI Studio (prompt + filters + 3-variant cards + edit effect rail). ComingSoon.tsx deleted. All 9 sidebar destinations now render real pages. Designer standalone route redirects to active project.
 - 2026-05-23 — Layout Editor premium rebuild (7 phases): action toolbar, left panel (Props/Layers tabs, visibility, status dots, per-group add), canvas (blue/white overlays, anchor nodes, label pills, floating toolbar), right panel (stat cards, inspector tabs), 3-step Add Prop modal, AI Layout Assistant popover, validation strip, Night Preview mode. Also fixed: sidebar now reads projectId from store and dynamically routes project-scoped tabs; AppTopBar shows real project name + save status; stub tabs redirect to /projects when no project loaded. TypeScript clean, lint 0/0, build passes.
 - 2026-05-11 — Track B Seven-Priority Rebuild: P1 demo data verified clean, P2 hero nighttime treatment (dusk overlay + warm amber glow), P3 Projects page rebuilt to v4 library (tabs, sort, project cards, templates), P4 Continue Where You Left Off card, P5 Designer rebuilt (props tree + preview + inspector + sequence overview) + Timeline graduated (full waveform + tracks + effects), P6 Layout rebuilt as three-column workspace (props left + canvas center + inspector right), P7 consistency sweep (cream→white on legal/share/mobile).
