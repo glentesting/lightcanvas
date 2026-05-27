@@ -1,3 +1,4 @@
+import { getPixelGroups } from "@/lib/fixtures/geometry";
 import type { EffectFn, RGB } from "./types";
 import { hexToRgb, lerpRgb, scale } from "./utils";
 
@@ -7,27 +8,27 @@ export const wave: EffectFn = ({ block, fixture, t }) => {
   const rgb2 = color2 ? hexToRgb(color2) : rgb1;
   const n = fixture.pixelCount;
   const localT = (t - block.start) * speed;
-  const geo = fixture.geometry;
+  const groups = getPixelGroups(fixture);
 
-  // Mega-tree: wave across strands
-  if (fixture.kind === "mega-tree" && geo?.strandCount && geo.strandCount > 1) {
-    const strandCount = geo.strandCount;
-    const pixelsPerStrand = Math.floor(n / strandCount);
+  // Multi-group: wave across groups (strand-by-strand). Each group gets a single color
+  // derived from its normalized position; that color is applied uniformly across its pixels.
+  if (groups.length > 1) {
     const pixels: RGB[] = Array.from({ length: n }, () => [0, 0, 0] as RGB);
-    for (let s = 0; s < strandCount; s++) {
-      const phase = (s / strandCount) * Math.PI * 2 + localT * Math.PI * 2;
+    for (let g = 0; g < groups.length; g++) {
+      const group = groups[g];
+      const phase = group.position * Math.PI * 2 + localT * Math.PI * 2;
       const v = (Math.sin(phase) + 1) / 2;
       const rgb = color2 ? lerpRgb(rgb1, rgb2, v) : rgb1;
       const px = scale(rgb, v * intensity);
-      for (let p = 0; p < pixelsPerStrand; p++) {
-        const idx = s * pixelsPerStrand + p;
-        if (idx < n) pixels[idx] = px;
+      const groupPixels = group.pixels;
+      for (let p = 0; p < groupPixels.length; p++) {
+        pixels[groupPixels[p]] = px;
       }
     }
     return pixels;
   }
 
-  // Default: pixel-linear wave
+  // Single group: pixel-linear wave across all the fixture's pixels.
   return Array.from({ length: n }, (_, i) => {
     const phase = (i / n) * Math.PI * 2 + localT * Math.PI * 2;
     const v = (Math.sin(phase) + 1) / 2;

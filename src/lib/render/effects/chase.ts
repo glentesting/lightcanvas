@@ -1,3 +1,4 @@
+import { getPixelGroups } from "@/lib/fixtures/geometry";
 import type { EffectFn, RGB } from "./types";
 import { hexToRgb, scale } from "./utils";
 
@@ -6,43 +7,27 @@ export const chase: EffectFn = ({ block, fixture, t }) => {
   const rgb = hexToRgb(color1);
   const n = fixture.pixelCount;
   const localT = (t - block.start) * speed;
-  const geo = fixture.geometry;
+  const groups = getPixelGroups(fixture);
 
-  // Mega-tree: chase strand-by-strand
-  if (fixture.kind === "mega-tree" && geo?.strandCount && geo.strandCount > 1) {
-    const strandCount = geo.strandCount;
-    const pixelsPerStrand = Math.floor(n / strandCount);
-    const strandPhase = (localT * 2) % strandCount;
+  // Multi-group: chase across groups (strand-by-strand or row/column-by-line) with uniform
+  // per-group brightness. Brightness is a triangle wave keyed off the group index, matching
+  // the original mega-tree / matrix inline math exactly.
+  if (groups.length > 1) {
+    const groupCount = groups.length;
+    const groupPhase = (localT * 2) % groupCount;
     const pixels: RGB[] = Array.from({ length: n }, () => [0, 0, 0] as RGB);
-    for (let s = 0; s < strandCount; s++) {
-      const brightness = Math.max(0, 1 - Math.abs(s - strandPhase) * 0.5) * intensity;
-      for (let p = 0; p < pixelsPerStrand; p++) {
-        const idx = s * pixelsPerStrand + p;
-        if (idx < n) pixels[idx] = scale(rgb, brightness);
+    for (let g = 0; g < groupCount; g++) {
+      const brightness = Math.max(0, 1 - Math.abs(g - groupPhase) * 0.5) * intensity;
+      const color = scale(rgb, brightness);
+      const groupPixels = groups[g].pixels;
+      for (let p = 0; p < groupPixels.length; p++) {
+        pixels[groupPixels[p]] = color;
       }
     }
     return pixels;
   }
 
-  // Matrix: chase across rows or columns
-  if (fixture.kind === "matrix" && geo?.rows && geo?.cols) {
-    const { rows, cols } = geo;
-    const horizontal = geo.wiringDirection !== "vertical";
-    const lineCount = horizontal ? rows : cols;
-    const linePhase = (localT * 2) % lineCount;
-    const pixels: RGB[] = Array.from({ length: n }, () => [0, 0, 0] as RGB);
-    for (let line = 0; line < lineCount; line++) {
-      const brightness = Math.max(0, 1 - Math.abs(line - linePhase) * 0.5) * intensity;
-      const lineLen = horizontal ? cols : rows;
-      for (let p = 0; p < lineLen; p++) {
-        const idx = horizontal ? line * cols + p : p * cols + line;
-        if (idx < n) pixels[idx] = scale(rgb, brightness);
-      }
-    }
-    return pixels;
-  }
-
-  // Default: pixel-linear chase
+  // Single group: pixel-linear chase along all the fixture's pixels.
   const headPos = (localT * n * 0.5) % n;
   return Array.from({ length: n }, (_, i) => {
     const idx = direction === "backward" ? n - 1 - i : i;

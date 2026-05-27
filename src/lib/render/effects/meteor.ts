@@ -1,3 +1,4 @@
+import { getPixelGroups } from "@/lib/fixtures/geometry";
 import type { EffectFn, RGB } from "./types";
 import { hexToRgb, scale } from "./utils";
 
@@ -6,30 +7,30 @@ export const meteor: EffectFn = ({ block, fixture, t }) => {
   const rgb = hexToRgb(color1);
   const n = fixture.pixelCount;
   const localT = (t - block.start) * speed;
-  const geo = fixture.geometry;
+  const groups = getPixelGroups(fixture);
 
-  // Mega-tree: meteor falls down each strand
-  if (fixture.kind === "mega-tree" && geo?.strandCount && geo.strandCount > 1) {
-    const strandCount = geo.strandCount;
-    const pixelsPerStrand = Math.floor(n / strandCount);
+  // Multi-group: a meteor falls down each group (strand). Stagger per group index, then
+  // run the meteor head-and-trail math along the group's pixels.
+  if (groups.length > 1) {
     const pixels: RGB[] = Array.from({ length: n }, () => [0, 0, 0] as RGB);
-    for (let s = 0; s < strandCount; s++) {
-      // Stagger meteor start per strand
-      const stagger = s * 0.15;
-      const headPos = Math.floor(((localT + stagger) * pixelsPerStrand * 0.8) % (pixelsPerStrand + trailLength));
-      for (let p = 0; p < pixelsPerStrand; p++) {
+    for (let g = 0; g < groups.length; g++) {
+      const groupPixels = groups[g].pixels;
+      const groupLen = groupPixels.length;
+      if (groupLen === 0) continue;
+      const stagger = g * 0.15;
+      const headPos = Math.floor(((localT + stagger) * groupLen * 0.8) % (groupLen + trailLength));
+      for (let p = 0; p < groupLen; p++) {
         const dist = headPos - p;
         if (dist >= 0 && dist < trailLength) {
           const brightness = (1 - dist / trailLength) * intensity;
-          const idx = s * pixelsPerStrand + p;
-          if (idx < n) pixels[idx] = scale(rgb, brightness * brightness);
+          pixels[groupPixels[p]] = scale(rgb, brightness * brightness);
         }
       }
     }
     return pixels;
   }
 
-  // Default: pixel-linear meteor
+  // Single group: pixel-linear meteor across all the fixture's pixels.
   const headPos = Math.floor((localT * n * 0.8) % (n + trailLength));
   return Array.from({ length: n }, (_, i) => {
     const dist = headPos - i;
