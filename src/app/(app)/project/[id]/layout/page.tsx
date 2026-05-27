@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import LayoutEditor from "@/components/LayoutEditor";
+import LayoutEditor from "@/components/layout-editor/LayoutEditor";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
