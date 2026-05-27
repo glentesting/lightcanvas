@@ -2,8 +2,8 @@
 
 **The single source of truth for the project. Read this first. Update this last.**
 
-Last updated: 2026-05-23
-Updated by: Claude (Track B Stub Graduation — Audio, Preflight, Exports, AI Studio)
+Last updated: 2026-05-27
+Updated by: Claude (3D Layout Architecture — Scene3D foundation, house mesh, fixture renderer, interaction layer)
 
 ---
 
@@ -506,6 +506,7 @@ All sidebar destinations now render real v4-polish pages. ComingSoon.tsx has bee
 
 When you make significant changes, add a one-line entry here. Newest at the top.
 
+- 2026-05-27 — 3D Layout Architecture: replaced the SVG layout editor with a Three.js + React Three Fiber 3D scene. New `src/lib/3d/` (shared types, constants, house templates, snap, coordinate bridge for xLights/LOR exports, export adapter). New `src/components/editor/scene3d/` (Scene3D canvas, OrbitCamera, GroundPlane, House3D with parametric Colonial/Modern/Cottage templates and named anchor surfaces, StrandFixture3D, PointFixture3D, FixtureGhost, FixtureLayer, DragController, PathDrawer). New `src/components/editor/layout-panel/` (LayoutView, FixtureLibrarySidebar, PropertiesPanel, Toolstrip3D, HouseSelector). New `src/lib/store/layout3d-slice.ts` (Zustand slice with hydrate/toSnapshot). New `src/lib/hooks/` (use-3d-raycast, use-3d-drag, use-path-draw, use-layout3d-sync). Persistence is zero-migration: each `Fixture` gains an optional `layout3d` field so placements travel through the existing autosave. `/project/[id]/layout` now renders `LayoutView`. MODULES.md added at repo root as the module map (Section 5 is the 3D system). Built by orchestrator + 3 parallel sub-agents (house mesh, fixture renderer, data/store/coord bridge). TypeScript clean, Next.js production build compiles clean.
 - 2026-05-23 — Track B stub graduation complete: Audio Analysis (header + structure overview + sections table + summary rail), Preflight (readiness ring + 3-col hero + 6 check cards + callout), Exports (4-step wizard + validation + summary rail), AI Studio (prompt + filters + 3-variant cards + edit effect rail). ComingSoon.tsx deleted. All 9 sidebar destinations now render real pages. Designer standalone route redirects to active project.
 - 2026-05-23 — Layout Editor premium rebuild (7 phases): action toolbar, left panel (Props/Layers tabs, visibility, status dots, per-group add), canvas (blue/white overlays, anchor nodes, label pills, floating toolbar), right panel (stat cards, inspector tabs), 3-step Add Prop modal, AI Layout Assistant popover, validation strip, Night Preview mode. Also fixed: sidebar now reads projectId from store and dynamically routes project-scoped tabs; AppTopBar shows real project name + save status; stub tabs redirect to /projects when no project loaded. TypeScript clean, lint 0/0, build passes.
 - 2026-05-11 — Track B Seven-Priority Rebuild: P1 demo data verified clean, P2 hero nighttime treatment (dusk overlay + warm amber glow), P3 Projects page rebuilt to v4 library (tabs, sort, project cards, templates), P4 Continue Where You Left Off card, P5 Designer rebuilt (props tree + preview + inspector + sequence overview) + Timeline graduated (full waveform + tracks + effects), P6 Layout rebuilt as three-column workspace (props left + canvas center + inspector right), P7 consistency sweep (cream→white on legal/share/mobile).

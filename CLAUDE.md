@@ -6,6 +6,10 @@
 project — current state, vision, architecture, known issues, what's next, what to avoid.
 This file is the technical briefing; that file is the brain.
 
+**Open `MODULES.md` at the repo root before touching unfamiliar code.** It maps every
+module to the file that owns it. When something breaks, look it up there first — don't
+guess. When you build something new, add a row.
+
 ## ⚠️ Update protocol — non-negotiable
 
 At the **end of every Claude Code session that makes real changes**, before you push:

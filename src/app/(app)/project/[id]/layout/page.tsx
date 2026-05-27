@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import LayoutEditor from "@/components/LayoutEditor";
+import { LayoutView } from "@/components/editor/layout-panel/LayoutView";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
@@ -27,7 +27,9 @@ export default function LayoutPage() {
   const [showAiAssistant, setShowAiAssistant] = useState(false);
 
   const validationInfo = useMemo(() => {
-    const needsPlacement = fixtures.filter((f) => !f.layout?.points.length).length;
+    const needsPlacement = fixtures.filter(
+      (f) => !f.layout3d?.points.length && !f.layout?.points.length,
+    ).length;
     const total = fixtures.length;
     const placed = total - needsPlacement;
     const readiness = total === 0 ? 0 : Math.round((placed / total) * 100);
@@ -333,7 +335,7 @@ export default function LayoutPage() {
 
       {/* Editor fills remaining space */}
       <div className="flex-1 min-h-0 flex flex-col">
-        <LayoutEditor nightPreview={nightPreview} showAddDialogExternal={showAddDialog} onCloseAddDialog={() => setShowAddDialog(false)} />
+        <LayoutView />
       </div>
     </div>
   );
