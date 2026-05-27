@@ -3,15 +3,18 @@
 import { Suspense, useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import WaveformViewer from "@/components/WaveformViewer";
-import Timeline, { PaletteEffectChip, TimelineDndProvider, useTimelineShortcuts } from "@/components/Timeline";
+import WaveformViewer from "@/components/shared/WaveformViewer";
+import Timeline, { TimelineDndProvider } from "@/components/timeline/Timeline";
+import { PaletteEffectChip } from "@/components/timeline/TimelinePaletteChip";
+import { useTimelineShortcuts } from "@/components/timeline/useTimelineShortcuts";
 import { useEditorStore } from "@/lib/store/editor-store";
+import { useSaveStatusStore } from "@/lib/store/save-status-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
 import { createDefaultFixtures } from "@/lib/fixtures/defaults";
 import { EFFECT_COLORS, EFFECT_NAMES } from "@/lib/timeline/constants";
 import type { EffectId } from "@/lib/timeline/types";
-import MobileGate from "@/components/MobileGate";
+import MobileGate from "@/components/dialogs/MobileGate";
 
 function TimelineContent() {
   const searchParams = useSearchParams();
@@ -26,7 +29,7 @@ function TimelineContent() {
   const storeProjectId = useEditorStore((s) => s.projectId);
   const audioUrl = useEditorStore((s) => s.audioUrl);
   const audioAnalysis = useEditorStore((s) => s.audio);
-  const saveStatus = useEditorStore((s) => s.saveStatus);
+  const saveStatus = useSaveStatusStore((s) => s.saveStatus);
   const loadProject = useEditorStore((s) => s.loadProject);
 
   // Autosave + keyboard shortcuts

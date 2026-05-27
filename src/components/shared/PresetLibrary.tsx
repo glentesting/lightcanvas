@@ -5,6 +5,7 @@ import { BUILTIN_PRESETS } from "@/lib/presets/builtins";
 import type { EffectPreset } from "@/lib/presets/types";
 import type { EffectId, EffectParams } from "@/lib/timeline/types";
 import { useEditorStore } from "@/lib/store/editor-store";
+import { useSelectionStore } from "@/lib/store/selection-store";
 import { EFFECT_COLORS, EFFECT_NAMES } from "@/lib/timeline/constants";
 
 const USER_PRESETS_KEY = "lightcanvas-user-presets";
@@ -45,7 +46,7 @@ export default function PresetLibrary() {
   const [activeTag, setActiveTag] = useState<string>("All");
   const [userPresets, setUserPresets] = useState<EffectPreset[]>([]);
 
-  const selectedBlockIds = useEditorStore((s) => s.selectedBlockIds);
+  const selectedBlockIds = useSelectionStore((s) => s.selectedBlockIds);
   const blocks = useEditorStore((s) => s.sequence.blocks);
   const updateBlock = useEditorStore((s) => s.updateBlock);
 

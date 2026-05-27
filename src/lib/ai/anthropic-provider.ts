@@ -9,6 +9,10 @@ const VALID_EFFECTS: EffectId[] = [
   "wave", "pulse", "wash", "meteor", "firework",
 ];
 
+const MODEL_PRIMARY = "claude-sonnet-4-6";
+const MODEL_FAST = "claude-haiku-4-5";
+void MODEL_FAST;
+
 const effectBlockSchema = z.object({
   fixtureId: z.string(),
   effectId: z.enum([
@@ -138,7 +142,7 @@ export class AnthropicAIProvider implements AIProvider {
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-5-20250514",
+          model: MODEL_PRIMARY,
           max_tokens: 8192,
           messages: [{ role: "user", content: prompt }],
         }),

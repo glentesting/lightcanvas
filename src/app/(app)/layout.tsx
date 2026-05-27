@@ -1,5 +1,5 @@
-import AppSidebar from "@/components/AppSidebar";
-import AppTopBar from "@/components/AppTopBar";
+import AppSidebar from "@/components/layout/AppSidebar";
+import AppTopBar from "@/components/layout/AppTopBar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (

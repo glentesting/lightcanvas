@@ -1,29 +1,25 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase";
+import { withAuth } from "@/lib/api/withAuth";
 import { projectFromRow } from "@/types/domain";
 import { exportLightCanvasJson } from "@/lib/exports/lightcanvas-json";
 import { exportXlights } from "@/lib/exports/xlights";
+import { projectExportSchema } from "@/lib/schemas/projects";
 
-export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
+export const POST = withAuth(async (request, { userId, supabase }) => {
   const body = await request.json();
-  const { projectId, format } = body;
-
-  if (!projectId) {
-    return NextResponse.json({ error: "projectId required" }, { status: 400 });
-  }
-
-  if (!format || !["lightcanvas-json", "xlights"].includes(format)) {
+  const parsed = projectExportSchema.safeParse(body);
+  if (!parsed.success) {
+    // Match original error messages for caller compatibility
+    if (!body?.projectId) {
+      return NextResponse.json({ error: "projectId required" }, { status: 400 });
+    }
     return NextResponse.json(
       { error: "format must be 'lightcanvas-json' or 'xlights'" },
-      { status: 400 }
+      { status: 400 },
     );
   }
+  const { projectId, format } = parsed.data;
 
-  const supabase = createServiceClient();
   const { data: row, error } = await supabase
     .from("projects")
     .select("*")
@@ -49,8 +45,8 @@ export async function POST(request: Request) {
   }
 
   if (format === "xlights") {
-    const nameMap: Record<string, string> = body.nameMap || {};
-    const frameTimeMs = [20, 25, 40, 50].includes(body.frameTimeMs) ? body.frameTimeMs : 50;
+    const nameMap = parsed.data.nameMap ?? {};
+    const frameTimeMs = parsed.data.frameTimeMs ?? 50;
     const blob = exportXlights(project, nameMap, { frameTimeMs });
     const buffer = Buffer.from(await blob.arrayBuffer());
     return new NextResponse(buffer, {
@@ -62,4 +58,4 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ error: "Unknown format" }, { status: 400 });
-}
+});

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEditorStore } from "@/lib/store/editor-store";
+import { useSaveStatusStore } from "@/lib/store/save-status-store";
 
 /**
  * Global top bar for the app shell.
@@ -10,7 +11,7 @@ import { useEditorStore } from "@/lib/store/editor-store";
 export default function AppTopBar() {
   const projectId = useEditorStore((s) => s.projectId);
   const projectName = useEditorStore((s) => s.name);
-  const saveStatus = useEditorStore((s) => s.saveStatus);
+  const saveStatus = useSaveStatusStore((s) => s.saveStatus);
 
   const statusLabel =
     saveStatus === "saving" ? "Saving..." :

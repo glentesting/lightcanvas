@@ -3,16 +3,17 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState, useCallback, useRef } from "react";
-import AudioUpload from "@/components/AudioUpload";
-import PreviewPanel from "@/components/PreviewPanel";
-import AIPanel from "@/components/AIPanel";
-import ExportDialog from "@/components/ExportDialog";
+import AudioUpload from "@/components/shared/AudioUpload";
+import PreviewPanel from "@/components/shared/PreviewPanel";
+import AIPanel from "@/components/ai/AIPanel";
+import ExportDialog from "@/components/export/ExportDialog";
 import { useEditorStore } from "@/lib/store/editor-store";
+import { useSaveStatusStore } from "@/lib/store/save-status-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
 import { createDefaultFixtures } from "@/lib/fixtures/defaults";
 import type { AudioAnalysis } from "@/lib/audio/types";
-import MobileGate from "@/components/MobileGate";
+import MobileGate from "@/components/dialogs/MobileGate";
 import type { Fixture } from "@/lib/fixtures/types";
 
 /* ─── Fixture Kind Colors ──────────────────────────────────── */
@@ -76,7 +77,7 @@ export default function DesignerPage() {
   const audioAnalysis = useEditorStore((s) => s.audio);
   const fixtures = useEditorStore((s) => s.fixtures);
   const sequence = useEditorStore((s) => s.sequence);
-  const saveStatus = useEditorStore((s) => s.saveStatus);
+  const saveStatus = useSaveStatusStore((s) => s.saveStatus);
   const loadProject = useEditorStore((s) => s.loadProject);
   const setAudio = useEditorStore((s) => s.setAudio);
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useEditorStore } from "./editor-store";
+import { useSaveStatusStore } from "./save-status-store";
 
 export function useAutosave(projectId: string) {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -27,7 +28,7 @@ export function useAutosave(projectId: string) {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
         timeoutRef.current = setTimeout(async () => {
-          useEditorStore.getState().setSaveStatus("saving");
+          useSaveStatusStore.getState().setSaveStatus("saving");
           try {
             const res = await fetch(`/api/projects/${projectId}/autosave`, {
               method: "POST",
@@ -36,17 +37,17 @@ export function useAutosave(projectId: string) {
             });
             if (res.ok) {
               lastSavedRef.current = serialized;
-              useEditorStore.getState().setSaveStatus("saved");
+              useSaveStatusStore.getState().setSaveStatus("saved");
               setTimeout(() => {
-                if (useEditorStore.getState().saveStatus === "saved") {
-                  useEditorStore.getState().setSaveStatus("idle");
+                if (useSaveStatusStore.getState().saveStatus === "saved") {
+                  useSaveStatusStore.getState().setSaveStatus("idle");
                 }
               }, 2000);
             } else {
-              useEditorStore.getState().setSaveStatus("error");
+              useSaveStatusStore.getState().setSaveStatus("error");
             }
           } catch {
-            useEditorStore.getState().setSaveStatus("error");
+            useSaveStatusStore.getState().setSaveStatus("error");
           }
         }, 1200);
       }

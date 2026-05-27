@@ -1,23 +1,26 @@
-import { auth } from "@clerk/nextjs/server";
-import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api/withAuth";
+import { projectImportSchema } from "@/lib/schemas/projects";
 
-export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
+export const POST = withAuth(async (request, { userId, supabase }) => {
   const body = await request.json();
-  const { name, fixtures, sequence, audio } = body;
-
-  if (!name || typeof name !== "string") {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  const parsed = projectImportSchema.safeParse(body);
+  if (!parsed.success) {
+    // Preserve original messages for compatibility
+    if (!body?.name || typeof body.name !== "string") {
+      return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    }
+    if (!Array.isArray(body.fixtures) || body.fixtures.length === 0) {
+      return NextResponse.json(
+        { error: "At least one fixture is required" },
+        { status: 400 },
+      );
+    }
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  if (!Array.isArray(fixtures) || fixtures.length === 0) {
-    return NextResponse.json({ error: "At least one fixture is required" }, { status: 400 });
-  }
+  const { name, fixtures, sequence, audio } = parsed.data;
 
-  const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("projects")
     .insert({
@@ -32,4 +35,4 @@ export async function POST(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data, { status: 201 });
-}
+});
