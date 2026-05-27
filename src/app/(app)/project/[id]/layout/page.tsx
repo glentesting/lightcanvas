@@ -23,8 +23,6 @@ export default function LayoutPage() {
   const fixtures = useEditorStore((s) => s.fixtures);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [nightPreview, setNightPreview] = useState(false);
-  const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showAiAssistant, setShowAiAssistant] = useState(false);
 
   const validationInfo = useMemo(() => {
     const needsPlacement = fixtures.filter(
@@ -206,67 +204,8 @@ export default function LayoutPage() {
           </div>
 
           <div className="flex items-center gap-2 relative">
-            {/* Detect Props with AI */}
-            <button
-              onClick={() => setShowAiAssistant(!showAiAssistant)}
-              className="h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors"
-              style={{
-                background: showAiAssistant ? "#1e3a5f" : "#FFFFFF",
-                border: "1px solid var(--line)",
-                color: showAiAssistant ? "#FFFFFF" : "var(--ink)",
-              }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2a4 4 0 0 1 4 4c0 1.95-2 3-2 5h-4c0-2-2-3.05-2-5a4 4 0 0 1 4-4z" />
-                <line x1="10" y1="14" x2="14" y2="14" />
-                <line x1="10" y1="17" x2="14" y2="17" />
-                <line x1="11" y1="20" x2="13" y2="20" />
-              </svg>
-              AI Layout Assistant
-            </button>
-
-            {/* AI Assistant Popover */}
-            {showAiAssistant && (
-              <div
-                className="absolute top-full right-0 mt-2 w-72 rounded-xl z-50"
-                style={{ background: "#FFFFFF", border: "1px solid var(--line)", boxShadow: "var(--shadow-lg)" }}
-              >
-                <div className="px-4 pt-3 pb-2" style={{ borderBottom: "1px solid var(--line)" }}>
-                  <div className="text-xs font-semibold" style={{ color: "var(--ink)" }}>AI Layout Assistant</div>
-                  <div className="text-xs mt-0.5" style={{ color: "var(--ink-3)" }}>Smart suggestions for your layout</div>
-                </div>
-                <div className="p-2">
-                  {[
-                    { icon: "M3 17l6-6 4 4 8-8", label: "Detect rooflines from photo", desc: "Find roof edges automatically" },
-                    { icon: "M4 6h16M4 6v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2", label: "Detect window outlines", desc: "Identify windows in your photo" },
-                    { icon: "M12 22c-4 0-8-2-8-6 0-2 2-4 4-6s4-6 4-10c0 4 2 8 4 10s4 4 4 6c0 4-4 6-8 6z", label: "Suggest bush wrap zones", desc: "Find bushes and hedges" },
-                    { icon: "M12 2v20M2 12h20", label: "Add pathway lights", desc: "Trace walkways and paths" },
-                    { icon: "M4 4h16v16H4z", label: "Estimate pixel counts", desc: "Calculate pixels per prop" },
-                    { icon: "M22 11.08V12a10 10 0 1 1-5.93-9.14", label: "Check controller capacity", desc: "Verify channel limits" },
-                    { icon: "M21 12.79A9 9 0 1 1 11.21 3", label: "Generate night preview", desc: "See how it looks at night" },
-                    { icon: "M4 14h6m4 0h6M4 10h16M4 18h16", label: "Clean up prop alignment", desc: "Snap props to clean lines" },
-                  ].map((item, i) => (
-                    <button
-                      key={i}
-                      className="w-full flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors hover:bg-[#f8f8f8]"
-                    >
-                      <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5"
-                        style={{ background: "#f0f4f8" }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d={item.icon} />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="text-xs font-medium" style={{ color: "var(--ink)" }}>{item.label}</div>
-                        <div className="text-xs" style={{ color: "var(--ink-4)", fontSize: 10 }}>{item.desc}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Validate Layout */}
+            {/* Validate Layout — stub for now; surfaces channel-overlap
+                warnings from src/lib/3d/export-adapter.ts in a follow-up. */}
             <button
               className="h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors hover:border-[var(--ink-3)]"
               style={{ background: "#FFFFFF", border: "1px solid var(--line)", color: "var(--ink)" }}
@@ -276,19 +215,6 @@ export default function LayoutPage() {
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
               Validate Layout
-            </button>
-
-            {/* + Add Prop */}
-            <button
-              onClick={() => setShowAddDialog(true)}
-              className="h-8 px-4 rounded-lg text-xs font-semibold flex items-center gap-1.5"
-              style={{ background: "#1e3a5f", color: "#FFFFFF" }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              Add Prop
             </button>
           </div>
         </div>
