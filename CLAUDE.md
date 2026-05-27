@@ -93,18 +93,16 @@ No `jszip` dep (hand-rolled ZIP writer in `src/lib/exports/zip.ts`).
    House photos also wrongly use `songs`. Needs cleanup + separate `lightcanvas-images` bucket.
 2. **Telemetry not actually wired.** `analytics.ts` is a `console.log` stub. No Sentry installed,
    no PostHog installed. Cookie banner mentions PostHog dishonestly.
-3. **Two API routes are TODO stubs.** `/api/analyze-audio` (dead — analysis is client-side)
-   and `/api/auto-sequence` (unclear). Delete or implement.
-4. **Anthropic model string** in `anthropic-provider.ts` is `claude-sonnet-4-5-20250514` —
+3. **Anthropic model string** in `anthropic-provider.ts` is `claude-sonnet-4-5-20250514` —
    verify this resolves on current API.
-5. **Lint not clean.** 19 errors, 13 warnings. Not blocking, but should be clean before launch.
-6. **Google Fonts at build time.** Bundle locally for build resilience.
-7. **Legal pages are placeholder.** Need real counsel-written copy before launch.
-8. **BPM correction.** If detected BPM >160, halved; if <60, doubled. Working as designed.
-9. **WaveSurfer destroy race.** Cleanup defers destroy until `ready` or `error` fires.
-10. **Storage RLS.** References `auth.jwt() ->> 'sub'` for Clerk JWT.
-11. **Windows paths.** Always `cd` to project folder first before any bash command.
-12. **ANTHROPIC_API_KEY.** Required in env for real AI generation; silently falls back to mock without it.
+4. **Lint not clean.** 19 errors, 13 warnings. Not blocking, but should be clean before launch.
+5. **Google Fonts at build time.** Bundle locally for build resilience.
+6. **Legal pages are placeholder.** Need real counsel-written copy before launch.
+7. **BPM correction.** If detected BPM >160, halved; if <60, doubled. Working as designed.
+8. **WaveSurfer destroy race.** Cleanup defers destroy until `ready` or `error` fires.
+9. **Storage RLS.** References `auth.jwt() ->> 'sub'` for Clerk JWT.
+10. **Windows paths.** Always `cd` to project folder first before any bash command.
+11. **ANTHROPIC_API_KEY.** Required in env for real AI generation; silently falls back to mock without it.
 
 ## Working Rules
 
