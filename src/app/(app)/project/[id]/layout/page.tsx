@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import LayoutEditor from "@/components/LayoutEditor";
+import HousePhotoUploadModal from "@/components/HousePhotoUploadModal";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
@@ -16,15 +17,14 @@ export default function LayoutPage() {
   const loadedRef = useRef(false);
   const loadProject = useEditorStore((s) => s.loadProject);
 
-  const photoInputRef = useRef<HTMLInputElement>(null);
   const houseCustomSvg = useEditorStore((s) => s.houseCustomSvg);
   const setHousePhoto = useEditorStore((s) => s.setHousePhoto);
 
   const fixtures = useEditorStore((s) => s.fixtures);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [nightPreview, setNightPreview] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showAiAssistant, setShowAiAssistant] = useState(false);
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false);
 
   const validationInfo = useMemo(() => {
     const needsPlacement = fixtures.filter((f) => !f.layout?.points.length).length;
@@ -61,21 +61,12 @@ export default function LayoutPage() {
       });
   }, [projectId, loadProject]);
 
-  const handlePhotoUpload = useCallback(async (file: File) => {
-    setUploadingPhoto(true);
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("projectId", projectId);
-    try {
-      const res = await fetch("/api/upload-house-photo", { method: "POST", body: formData });
-      if (res.ok) {
-        const { url } = await res.json();
-        setHousePhoto(url);
-      }
-    } finally {
-      setUploadingPhoto(false);
-    }
-  }, [projectId, setHousePhoto]);
+  const handlePhotoUploaded = useCallback(
+    (url: string) => {
+      setHousePhoto(url);
+    },
+    [setHousePhoto],
+  );
 
   if (!loaded) {
     return (
@@ -90,17 +81,11 @@ export default function LayoutPage() {
 
   return (
     <div className="flex flex-col h-full" style={{ background: "#FFFFFF" }}>
-      {/* Hidden file input for house photo */}
-      <input
-        ref={photoInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) handlePhotoUpload(f);
-          e.target.value = "";
-        }}
+      <HousePhotoUploadModal
+        projectId={projectId}
+        open={showPhotoUpload}
+        onClose={() => setShowPhotoUpload(false)}
+        onUploaded={handlePhotoUploaded}
       />
 
       {/* Page header */}
@@ -189,8 +174,7 @@ export default function LayoutPage() {
 
             {/* Replace / Upload Photo */}
             <button
-              onClick={() => photoInputRef.current?.click()}
-              disabled={uploadingPhoto}
+              onClick={() => setShowPhotoUpload(true)}
               className="h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors hover:border-[var(--ink-3)]"
               style={{ background: "#FFFFFF", border: "1px solid var(--line)", color: "var(--ink)" }}
             >
@@ -199,7 +183,7 @@ export default function LayoutPage() {
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <polyline points="21 15 16 10 5 21" />
               </svg>
-              {uploadingPhoto ? "Uploading..." : houseCustomSvg ? "Replace Photo" : "Upload Photo"}
+              {houseCustomSvg ? "Replace Photo" : "Upload Photo"}
             </button>
           </div>
 

@@ -2,8 +2,8 @@
 
 **The single source of truth for the project. Read this first. Update this last.**
 
-Last updated: 2026-05-23
-Updated by: Claude (Track B Stub Graduation — Audio, Preflight, Exports, AI Studio)
+Last updated: 2026-05-27
+Updated by: Claude (Mobile QR house-photo upload)
 
 ---
 
@@ -506,6 +506,7 @@ All sidebar destinations now render real v4-polish pages. ComingSoon.tsx has bee
 
 When you make significant changes, add a one-line entry here. Newest at the top.
 
+- 2026-05-27 — Mobile QR house-photo upload: new `upload_sessions` table (migration 005) with Supabase Realtime publication, `POST /api/upload-sessions` to mint a 15-min token-scoped session, public `GET/POST /api/mobile-upload/[token]` for phone uploads (validates token + expiry + size + type, rejects HEIC with friendly hint), public `/mobile-upload/[token]` page with Take Photo / Choose from Library buttons, and a new `HousePhotoUploadModal` on the Layout Editor with "From computer" / "From phone (QR)" tabs. Desktop subscribes to the session row via Realtime so the editor refreshes the instant the phone upload completes. Added `qrcode.react` dep. Middleware updated to make mobile routes public. **Migration 005 not yet applied to the remote project — needs review and `supabase db push` first.**
 - 2026-05-23 — Track B stub graduation complete: Audio Analysis (header + structure overview + sections table + summary rail), Preflight (readiness ring + 3-col hero + 6 check cards + callout), Exports (4-step wizard + validation + summary rail), AI Studio (prompt + filters + 3-variant cards + edit effect rail). ComingSoon.tsx deleted. All 9 sidebar destinations now render real pages. Designer standalone route redirects to active project.
 - 2026-05-23 — Layout Editor premium rebuild (7 phases): action toolbar, left panel (Props/Layers tabs, visibility, status dots, per-group add), canvas (blue/white overlays, anchor nodes, label pills, floating toolbar), right panel (stat cards, inspector tabs), 3-step Add Prop modal, AI Layout Assistant popover, validation strip, Night Preview mode. Also fixed: sidebar now reads projectId from store and dynamically routes project-scoped tabs; AppTopBar shows real project name + save status; stub tabs redirect to /projects when no project loaded. TypeScript clean, lint 0/0, build passes.
 - 2026-05-11 — Track B Seven-Priority Rebuild: P1 demo data verified clean, P2 hero nighttime treatment (dusk overlay + warm amber glow), P3 Projects page rebuilt to v4 library (tabs, sort, project cards, templates), P4 Continue Where You Left Off card, P5 Designer rebuilt (props tree + preview + inspector + sequence overview) + Timeline graduated (full waveform + tracks + effects), P6 Layout rebuilt as three-column workspace (props left + canvas center + inspector right), P7 consistency sweep (cream→white on legal/share/mobile).
