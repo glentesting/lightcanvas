@@ -1,8 +1,13 @@
 import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { createHash } from "crypto";
 
 const MAX_BYTES = 20 * 1024 * 1024; // 20 MB
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
+
+function hashToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 function isHeic(file: File) {
   const t = file.type.toLowerCase();
@@ -12,11 +17,12 @@ function isHeic(file: File) {
 
 export async function GET(_req: Request, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
+  if (!token) return NextResponse.json({ error: "token required" }, { status: 400 });
   const supabase = createServiceClient();
   const { data: session } = await supabase
     .from("upload_sessions")
     .select("id, status, expires_at, kind")
-    .eq("token", token)
+    .eq("token_hash", hashToken(token))
     .single();
 
   if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
@@ -37,7 +43,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ token: str
   const { data: session } = await supabase
     .from("upload_sessions")
     .select("id, owner_id, project_id, status, expires_at")
-    .eq("token", token)
+    .eq("token_hash", hashToken(token))
     .single();
   if (!session) return NextResponse.json({ error: "Invalid token" }, { status: 404 });
 
@@ -62,7 +68,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ token: str
       { status: 415 },
     );
   }
-  if (!ALLOWED_TYPES.has(file.type.toLowerCase()) && !file.type.startsWith("image/")) {
+  if (!ALLOWED_TYPES.has(file.type.toLowerCase())) {
     return NextResponse.json({ error: "Only JPG, PNG, or WebP allowed" }, { status: 415 });
   }
   if (file.size > MAX_BYTES) {

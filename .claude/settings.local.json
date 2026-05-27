@@ -49,7 +49,9 @@
       "Bash(rm -rf project)",
       "Bash(sed:*)",
       "mcp__6fc25877-9bb5-4160-86b4-fb29d78ee93f__list_projects",
-      "mcp__6fc25877-9bb5-4160-86b4-fb29d78ee93f__list_tables"
+      "mcp__6fc25877-9bb5-4160-86b4-fb29d78ee93f__list_tables",
+      "mcp__6fc25877-9bb5-4160-86b4-fb29d78ee93f__execute_sql",
+      "mcp__6fc25877-9bb5-4160-86b4-fb29d78ee93f__apply_migration"
     ]
   }
 }
