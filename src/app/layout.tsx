@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Inter_Tight, JetBrains_Mono, Fraunces } from "next/font/google";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import CookieBanner from "@/components/CookieBanner";
+import CookieBanner from "@/components/dialogs/CookieBanner";
 import "./globals.css";
 
 const interTight = Inter_Tight({

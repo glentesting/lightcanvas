@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import WaveformViewer from "@/components/WaveformViewer";
+import WaveformViewer from "@/components/shared/WaveformViewer";
 import Timeline, { TimelineDndProvider } from "@/components/timeline/Timeline";
 import { PaletteEffectChip } from "@/components/timeline/TimelinePaletteChip";
 import { useTimelineShortcuts } from "@/components/timeline/useTimelineShortcuts";
@@ -14,7 +14,7 @@ import { projectFromRow } from "@/types/domain";
 import { createDefaultFixtures } from "@/lib/fixtures/defaults";
 import { EFFECT_COLORS, EFFECT_NAMES } from "@/lib/timeline/constants";
 import type { EffectId } from "@/lib/timeline/types";
-import MobileGate from "@/components/MobileGate";
+import MobileGate from "@/components/dialogs/MobileGate";
 
 function TimelineContent() {
   const searchParams = useSearchParams();

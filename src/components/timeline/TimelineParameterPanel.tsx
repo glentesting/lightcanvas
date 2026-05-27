@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { useSelectionStore } from "@/lib/store/selection-store";
 import { EFFECT_COLORS, EFFECT_NAMES } from "@/lib/timeline/constants";
-import { addUserPreset } from "@/components/PresetLibrary";
+import { addUserPreset } from "@/components/shared/PresetLibrary";
 import { BUILTIN_PRESETS } from "@/lib/presets/builtins";
 import type { EffectPreset } from "@/lib/presets/types";
 

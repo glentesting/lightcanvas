@@ -3,8 +3,8 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState, useCallback, useRef } from "react";
-import AudioUpload from "@/components/AudioUpload";
-import PreviewPanel from "@/components/PreviewPanel";
+import AudioUpload from "@/components/shared/AudioUpload";
+import PreviewPanel from "@/components/shared/PreviewPanel";
 import AIPanel from "@/components/ai/AIPanel";
 import ExportDialog from "@/components/export/ExportDialog";
 import { useEditorStore } from "@/lib/store/editor-store";
@@ -13,7 +13,7 @@ import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
 import { createDefaultFixtures } from "@/lib/fixtures/defaults";
 import type { AudioAnalysis } from "@/lib/audio/types";
-import MobileGate from "@/components/MobileGate";
+import MobileGate from "@/components/dialogs/MobileGate";
 import type { Fixture } from "@/lib/fixtures/types";
 
 /* ─── Fixture Kind Colors ──────────────────────────────────── */
