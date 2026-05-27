@@ -47,7 +47,9 @@
       "Bash(mkdir -p \"\\(app\\)/project\")",
       "Bash(cp -r project/* \"\\(app\\)/project/\")",
       "Bash(rm -rf project)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "mcp__6fc25877-9bb5-4160-86b4-fb29d78ee93f__list_projects",
+      "mcp__6fc25877-9bb5-4160-86b4-fb29d78ee93f__list_tables"
     ]
   }
 }
