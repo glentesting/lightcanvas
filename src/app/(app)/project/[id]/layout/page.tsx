@@ -25,9 +25,11 @@ export default function LayoutPage() {
   const [nightPreview, setNightPreview] = useState(false);
 
   const validationInfo = useMemo(() => {
-    const needsPlacement = fixtures.filter(
-      (f) => !f.layout3d?.points.length && !f.layout?.points.length,
-    ).length;
+    // Only count 3D placements as "placed" — the new layout view reads
+    // exclusively from layout3d (see FixtureLayer + useLayout3DSync). Legacy
+    // 2D layout entries don't render in the 3D scene, so they still need to
+    // be placed in 3D regardless of their old data.
+    const needsPlacement = fixtures.filter((f) => !f.layout3d?.points.length).length;
     const total = fixtures.length;
     const placed = total - needsPlacement;
     const readiness = total === 0 ? 0 : Math.round((placed / total) * 100);

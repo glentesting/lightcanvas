@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import type { Intersection, Object3D } from "three";
 import { useLayout3DStore } from "@/lib/store/layout3d-slice";
 import { useSurfaces } from "@/components/editor/scene3d/house/AnchorSurfaces";
 import { getHouseTemplate } from "@/lib/3d/house-templates";
@@ -18,6 +19,20 @@ export interface DragControllerProps {
   onPathFinish?: (waypoints: Vec3[], anchorSurfaceId?: string) => void;
 }
 
+const RAYCAST_IGNORE_NAME = "drag-controller-deselect";
+
+/** Skip the invisible deselect plane and the live path-drawer artifacts when
+ *  picking the closest scene hit. */
+function isRaycastIgnored(obj: Object3D): boolean {
+  let cur: Object3D | null = obj;
+  while (cur) {
+    if (cur.name === RAYCAST_IGNORE_NAME) return true;
+    if (cur.name === "path-drawer") return true;
+    cur = cur.parent;
+  }
+  return false;
+}
+
 /**
  * Orchestrates pointer-driven interactions inside the 3D scene. Lives inside
  * the R3F <Canvas> so it can use useThree() and project ground-plane positions.
@@ -29,7 +44,7 @@ export interface DragControllerProps {
  *  - Keyboard: Esc clears selection / cancels draw, Delete removes selection.
  */
 export function DragController({ onPathFinish }: DragControllerProps) {
-  const { camera, gl } = useThree();
+  const { camera, gl, scene } = useThree();
   const activeTool = useLayout3DStore((s) => s.activeTool);
   const snapEnabled = useLayout3DStore((s) => s.snapEnabled);
   const templateId = useLayout3DStore((s) => s.activeTemplateId);
@@ -49,8 +64,11 @@ export function DragController({ onPathFinish }: DragControllerProps) {
   const groundPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
 
   /**
-   * Project screen coords onto the ground plane (y = 0), then run the snap.
-   * Returns null if the ray points above the horizon.
+   * Project screen coords onto the nearest scene surface (house walls, roof,
+   * windows, ground) and run the snap. We raycast against real geometry rather
+   * than a flat ground plane so elevated anchors (rooflines, windows, gutter)
+   * can actually be reached by the snap radius. Falls back to the ground plane
+   * if the ray misses everything (e.g. cursor over open sky outside the grid).
    */
   const resolveScreenToWorld = useCallback(
     (clientX: number, clientY: number): Vec3 | null => {
@@ -66,15 +84,29 @@ export function DragController({ onPathFinish }: DragControllerProps) {
       pointer.current.x = ((clientX - rect.left) / rect.width) * 2 - 1;
       pointer.current.y = -((clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.current.setFromCamera(pointer.current, camera);
-      const target = new THREE.Vector3();
-      const hit = raycaster.current.ray.intersectPlane(groundPlane.current, target);
-      if (!hit) return null;
-      const raw: Vec3 = { x: target.x, y: target.y, z: target.z };
+
+      let raw: Vec3 | null = null;
+      const intersects: Intersection[] = raycaster.current.intersectObjects(scene.children, true);
+      for (const hit of intersects) {
+        if (!hit.object.visible) continue;
+        if (isRaycastIgnored(hit.object)) continue;
+        raw = { x: hit.point.x, y: hit.point.y, z: hit.point.z };
+        break;
+      }
+
+      // Fall back to the math ground plane if no mesh was hit.
+      if (!raw) {
+        const target = new THREE.Vector3();
+        const groundHit = raycaster.current.ray.intersectPlane(groundPlane.current, target);
+        if (!groundHit) return null;
+        raw = { x: target.x, y: target.y, z: target.z };
+      }
+
       const snap = snapPoint(raw, anchors, GRID_SNAP_STEP, snapEnabled);
       setHighlightedAnchor(snap.source === "anchor" ? (snap.surfaceId ?? null) : null);
       return snap.point;
     },
-    [camera, gl, anchors, snapEnabled, setHighlightedAnchor],
+    [camera, gl, scene, anchors, snapEnabled, setHighlightedAnchor],
   );
 
   const handlePathFinish = useCallback(
@@ -132,8 +164,11 @@ export function DragController({ onPathFinish }: DragControllerProps) {
   return (
     <>
       {activeTool === "pen" && <PathDrawer waypoints={waypoints} hover={hover} />}
-      {/* Click on the ground (handled by R3F children) deselects when in select tool. */}
+      {/* Click on the ground (handled by R3F children) deselects when in select tool.
+          Name is checked in isRaycastIgnored so this plane never wins the
+          screen-to-world raycast. */}
       <mesh
+        name={RAYCAST_IGNORE_NAME}
         position={[0, -0.001, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
         onClick={(e) => {
