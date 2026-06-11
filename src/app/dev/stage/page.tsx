@@ -15,25 +15,30 @@ import type { Sequence } from "@/lib/timeline/types";
 
 const LOOP_SECONDS = 24;
 
-// Demo layout traced against /dev/sample-house.jpg (stage space, 720×420).
+// Demo layout traced against /dev/test-photos/Frontyard.jpg (stage space,
+// 720×420). Throwaway demo tuning for one specific photo — real per-house
+// placement is the Phase 2 authoring system.
 function demoFixtures(): Fixture[] {
   return [
     {
       id: "demo-roofline",
       kind: "roofline",
       name: "Roofline",
-      pixelCount: 200,
+      pixelCount: 220,
       startChannel: 1,
       layout: {
-        // Left eave → entry eave → right wing rake, following the photo.
+        // Two-story eave → its ridge → valley → entry gable peak → main hip
+        // ridge → down to the right eave corner → back along the gutter line.
         points: [
-          { x: 146, y: 139 },
-          { x: 250, y: 167 },
-          { x: 266, y: 194 },
-          { x: 424, y: 194 },
-          { x: 465, y: 176 },
-          { x: 615, y: 59 },
-          { x: 705, y: 124 },
+          { x: 170, y: 153 },
+          { x: 197, y: 125 },
+          { x: 240, y: 125 },
+          { x: 287, y: 158 },
+          { x: 340, y: 131 },
+          { x: 372, y: 152 },
+          { x: 425, y: 151 },
+          { x: 508, y: 197 },
+          { x: 380, y: 195 },
         ],
         closed: false,
       },
@@ -41,67 +46,67 @@ function demoFixtures(): Fixture[] {
     {
       id: "demo-window-left",
       kind: "window-outline",
-      name: "Bay window",
+      name: "Upstairs window",
       pixelCount: 40,
-      startChannel: 601,
-      layout: { points: [{ x: 176, y: 248 }], closed: false },
+      startChannel: 661,
+      layout: { points: [{ x: 200, y: 180 }], closed: false },
     },
     {
       id: "demo-window-right",
       kind: "window-outline",
-      name: "Right window",
+      name: "Front window",
       pixelCount: 40,
-      startChannel: 721,
-      layout: { points: [{ x: 544, y: 251 }], closed: false },
+      startChannel: 781,
+      layout: { points: [{ x: 458, y: 214 }], closed: false },
     },
     {
       id: "demo-mega-tree",
       kind: "mega-tree",
       name: "Mega tree",
       pixelCount: 360,
-      startChannel: 841,
+      startChannel: 901,
       geometry: { strandCount: 12 },
-      layout: { points: [{ x: 465, y: 340 }], closed: false },
+      layout: { points: [{ x: 520, y: 300 }], closed: false },
     },
     {
       id: "demo-mini-1",
       kind: "mini-tree",
       name: "Mini tree 1",
       pixelCount: 50,
-      startChannel: 1921,
-      layout: { points: [{ x: 135, y: 338 }], closed: false },
+      startChannel: 1981,
+      layout: { points: [{ x: 105, y: 285 }], closed: false },
     },
     {
       id: "demo-mini-2",
       kind: "mini-tree",
       name: "Mini tree 2",
       pixelCount: 50,
-      startChannel: 2071,
-      layout: { points: [{ x: 595, y: 320 }], closed: false },
+      startChannel: 2131,
+      layout: { points: [{ x: 275, y: 300 }], closed: false },
     },
     {
       id: "demo-arch-1",
       kind: "arch",
       name: "Arch 1",
       pixelCount: 35,
-      startChannel: 2221,
-      layout: { points: [{ x: 200, y: 352 }], closed: false },
+      startChannel: 2281,
+      layout: { points: [{ x: 310, y: 332 }], closed: false },
     },
     {
       id: "demo-arch-2",
       kind: "arch",
       name: "Arch 2",
       pixelCount: 35,
-      startChannel: 2326,
-      layout: { points: [{ x: 310, y: 356 }], closed: false },
+      startChannel: 2386,
+      layout: { points: [{ x: 395, y: 336 }], closed: false },
     },
     {
       id: "demo-arch-3",
       kind: "arch",
       name: "Arch 3",
       pixelCount: 35,
-      startChannel: 2431,
-      layout: { points: [{ x: 420, y: 358 }], closed: false },
+      startChannel: 2491,
+      layout: { points: [{ x: 480, y: 334 }], closed: false },
     },
   ];
 }
@@ -148,6 +153,8 @@ function StageDevHarness() {
   // a specific photo without the file picker.
   const searchParams = useSearchParams();
   const queryPhoto = searchParams.get("photo");
+  const flat = searchParams.get("flat") === "1";
+  const day = searchParams.get("day") === "1";
   const [pickedPhoto, setPickedPhoto] = useState<string | null>(null);
   const photoUrl = pickedPhoto ?? queryPhoto ?? "/dev/sample-house.jpg";
   const fileRef = useRef<HTMLInputElement>(null);
@@ -195,6 +202,8 @@ function StageDevHarness() {
           groups={groups}
           sequence={sequence}
           getTime={getTime}
+          disableDepth={flat}
+          debugDaylight={day}
         />
       </div>
     </div>

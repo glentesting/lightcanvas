@@ -67,8 +67,8 @@ const photoFragmentShader = /* glsl */ `
     // Exposure drop, then a hard highlight shoulder, then deepened shadows:
     // full daylight white lands around 0.18, shadows keep readable detail.
     vec3 t = c * uExposure;
-    t = t / (1.0 + 1.9 * t);
-    t = pow(t, vec3(1.22));
+    t = t / (1.0 + 1.55 * t);
+    t = pow(t, vec3(1.18));
 
     // Moonlight: partially desaturate, cool the whole frame.
     float tl = dot(t, vec3(0.2126, 0.7152, 0.0722));
@@ -79,7 +79,7 @@ const photoFragmentShader = /* glsl */ `
 
     // Distant non-sky content (background trees, fences) falls off darker.
     float far = 1.0 - vDepth;
-    night *= mix(1.0, 0.62, far * far * uNight);
+    night *= mix(1.0, 0.72, far * far * uNight);
 
     // ── Sky replacement ──
     // Combine geometry (far + upper frame) with photometry (blue-dominant or
@@ -97,7 +97,7 @@ const photoFragmentShader = /* glsl */ `
     night = mix(night, skyCol, sky * uNight);
 
     // Tiny ambient floor so deep shadows stay velvet, not void.
-    night += vec3(0.004, 0.006, 0.012) * uNight;
+    night += vec3(0.007, 0.010, 0.018) * uNight;
 
     // Gentle vignette to seat the stage.
     float vd = distance(vUv, vec2(0.5, 0.45));
@@ -148,6 +148,8 @@ export interface PhotoDepthSceneOptions {
   photoUrl: string;
   /** null → flat stage (no parallax), still fully functional. */
   depth: DepthMap | null;
+  /** Debug: render the photo ungraded (uNight=0) to check light alignment. */
+  debugDaylight?: boolean;
 }
 
 export class PhotoDepthScene implements SceneProvider {
@@ -211,7 +213,7 @@ export class PhotoDepthScene implements SceneProvider {
     // Adaptive night exposure: a midday photo needs a hard crush, a dusk
     // photo only a gentle dim — anchor both to the same post-grade target.
     const avgLum = averageLuminance(this.photoTexture.image as CanvasImageSource & { width: number; height: number });
-    const exposure = THREE.MathUtils.clamp(0.33 / Math.max(avgLum, 0.05), 0.52, 1.9);
+    const exposure = THREE.MathUtils.clamp(0.40 / Math.max(avgLum, 0.05), 0.62, 2.1);
 
     const img = this.photoTexture.image as { width: number; height: number };
     const photoAspect = img.width / img.height;
@@ -236,7 +238,7 @@ export class PhotoDepthScene implements SceneProvider {
         uDepthAmp: { value: this.opts.depth ? DEPTH_AMP : 0 },
         uCoverScale: { value: coverScale },
         uExposure: { value: exposure },
-        uNight: { value: 1.0 },
+        uNight: { value: this.opts.debugDaylight ? 0.0 : 1.0 },
       },
     });
     const plane = new THREE.Mesh(this.planeGeometry, this.planeMaterial);

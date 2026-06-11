@@ -28,6 +28,10 @@ export interface NightStageProps {
   beats?: number[];
   /** Read per animation frame — return current playback time in seconds. */
   getTime: () => number;
+  /** Debug: skip depth estimation and render the flat stage (dev harness). */
+  disableDepth?: boolean;
+  /** Debug: render the photo ungraded to check light alignment (dev harness). */
+  debugDaylight?: boolean;
 }
 
 export default function NightStage({
@@ -38,6 +42,8 @@ export default function NightStage({
   sequence,
   beats,
   getTime,
+  disableDepth,
+  debugDaylight,
 }: NightStageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -84,12 +90,14 @@ export default function NightStage({
 
     (async () => {
       setMounted(false);
-      const depth = await loadOrCreateDepth(photoUrl, projectId, (s) => {
-        if (!cancelled) setStatus(s);
-      });
+      const depth = disableDepth
+        ? null
+        : await loadOrCreateDepth(photoUrl, projectId, (s) => {
+            if (!cancelled) setStatus(s);
+          });
       if (cancelled) return;
 
-      scene = new PhotoDepthScene({ photoUrl, depth });
+      scene = new PhotoDepthScene({ photoUrl, depth, debugDaylight });
       sceneRef.current = scene;
       scene.setLightPoints(expandAllFixtures(frameInputs.current.fixtures));
       scene.setOnFrame(() => {
@@ -117,7 +125,7 @@ export default function NightStage({
       scene?.dispose();
       if (sceneRef.current === scene) sceneRef.current = null;
     };
-  }, [photoUrl, projectId]);
+  }, [photoUrl, projectId, disableDepth, debugDaylight]);
 
   // Light positions follow fixture layout edits without a scene rebuild.
   useEffect(() => {
