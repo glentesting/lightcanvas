@@ -6,6 +6,9 @@
 project — current state, vision, architecture, known issues, what's next, what to avoid.
 This file is the technical briefing; that file is the brain.
 
+**`docs/CONSTITUTION.md` is the durable operating law** — the product's enduring principles.
+On any conflict of principle, it takes precedence over this file and PROJECT-STATUS.md until a human changes it.
+
 ## ⚠️ Update protocol — non-negotiable
 
 At the **end of every Claude Code session that makes real changes**, before you push:
@@ -89,22 +92,21 @@ No `jszip` dep (hand-rolled ZIP writer in `src/lib/exports/zip.ts`).
 
 **See PROJECT-STATUS.md §1 for the canonical issue list.** Highlights:
 
-1. **Storage bucket mismatch.** Migration 002 creates `lumen-audio`, all routes use `songs`.
-   House photos also wrongly use `songs`. Needs cleanup + separate `lightcanvas-images` bucket.
-2. **Telemetry not actually wired.** `analytics.ts` is a `console.log` stub. No Sentry installed,
-   no PostHog installed. Cookie banner mentions PostHog dishonestly.
-3. **Two API routes are TODO stubs.** `/api/analyze-audio` (dead — analysis is client-side)
-   and `/api/auto-sequence` (unclear). Delete or implement.
-4. **Anthropic model string** in `anthropic-provider.ts` is `claude-sonnet-4-5-20250514` —
-   verify this resolves on current API.
-5. **Lint not clean.** 19 errors, 13 warnings. Not blocking, but should be clean before launch.
-6. **Google Fonts at build time.** Bundle locally for build resilience.
-7. **Legal pages are placeholder.** Need real counsel-written copy before launch.
-8. **BPM correction.** If detected BPM >160, halved; if <60, doubled. Working as designed.
-9. **WaveSurfer destroy race.** Cleanup defers destroy until `ready` or `error` fires.
-10. **Storage RLS.** References `auth.jwt() ->> 'sub'` for Clerk JWT.
-11. **Windows paths.** Always `cd` to project folder first before any bash command.
-12. **ANTHROPIC_API_KEY.** Required in env for real AI generation; silently falls back to mock without it.
+### Still open
+1. **Legal pages are placeholder.** Need real counsel-written copy before launch.
+2. **ANTHROPIC_API_KEY in prod env.** Required for real AI generation; silently falls back to mock
+   without it. Confirm it's set in Vercel prod env.
+3. **Telemetry SDKs not installed.** `src/lib/analytics.ts` is a `console.log` stub. Install Sentry
+   and PostHog when ready and wire them through `analytics.ts`.
+4. **Manual browser smoke test not done.** Code-level test passed all 35 paths; the human-level
+   smoke test (Clerk signup, audio playback, ZIP open in xLights/LOR, mobile gate, share link) is outstanding.
+5. **Stripe / billing not wired.** Placeholder route + UI exist; real subscription handling is not built.
+
+### Quirks (by design — not bugs)
+6. **BPM correction.** If detected BPM >160, halved; if <60, doubled. Working as designed.
+7. **WaveSurfer destroy race.** Cleanup defers destroy until `ready` or `error` fires.
+8. **Storage RLS.** References `auth.jwt() ->> 'sub'` for Clerk JWT.
+9. **Windows paths.** Always `cd` to project folder first before any bash command.
 
 ## Working Rules
 

@@ -2,8 +2,11 @@
 
 **The single source of truth for the project. Read this first. Update this last.**
 
-Last updated: 2026-05-23
-Updated by: Claude (Track B Stub Graduation — Audio, Preflight, Exports, AI Studio)
+**`docs/CONSTITUTION.md` is the durable operating law** — the product's enduring principles. On any
+conflict of principle, it takes precedence over this file until a human changes it.
+
+Last updated: 2026-06-11
+Updated by: Claude (Doc cleanup — Constitution relocation, CLAUDE.md issue reconciliation, model string)
 
 ---
 
@@ -36,7 +39,7 @@ The app is a real working product running on Vercel from `github.com/glentesting
 - Timeline editor: fixture tracks, group tracks, 10 effect types, drag/drop, beat snap, resize, multi-select, parameter panel, undo/redo
 - Preset system: 6 built-ins, user save, immutability rules, "Modified from" indicator
 - Preview engine: SVG house with animated pixel rendering, geometry-aware effects
-- AI panel: Anthropic Sonnet (real API, model `claude-sonnet-4-5-20250514`) with mock fallback, 5 style presets, refine prompts
+- AI panel: Anthropic Sonnet (real API, model `claude-sonnet-4-6`) with mock fallback, 5 style presets, refine prompts
 - Export engine: custom ZIP writer (no JSZip dep), xLights .xsq + rgbeffects.xml, LOR .lms, LightCanvas JSON, video preview
 - Import: .xsq parser, .lms parser, summary modal
 - Validation: channel overlap, universe overflow, controller limits per profile
@@ -263,7 +266,7 @@ Provider interface (src/lib/ai/provider.ts)
 │
 ├── AnthropicAIProvider (anthropic-provider.ts)
 │   └── direct fetch to https://api.anthropic.com/v1/messages
-│       model: claude-sonnet-4-5-20250514 (verified)
+│       model: claude-sonnet-4-6 (verified)
 │       blended Haiku (simple ops) + Sonnet (generation) for cost
 │
 └── MockAIProvider (mock-provider.ts)
@@ -506,6 +509,7 @@ All sidebar destinations now render real v4-polish pages. ComingSoon.tsx has bee
 
 When you make significant changes, add a one-line entry here. Newest at the top.
 
+- 2026-06-11 — Doc cleanup pass: relocated the product Constitution to `docs/CONSTITUTION.md` (durable operating law, takes precedence on principles) with pointer lines added to PROJECT-STATUS.md and CLAUDE.md; archived `LightCanvas Cleanup Package.md` to `docs/_archive/`; reconciled CLAUDE.md "Known Issues" to match §1 (dropped fixed/stale items incl. the deleted analyze-audio/auto-sequence stubs); bumped Anthropic model string `claude-sonnet-4-5-20250514` → `claude-sonnet-4-6` in anthropic-provider.ts. TypeScript clean, build passes.
 - 2026-05-23 — Track B stub graduation complete: Audio Analysis (header + structure overview + sections table + summary rail), Preflight (readiness ring + 3-col hero + 6 check cards + callout), Exports (4-step wizard + validation + summary rail), AI Studio (prompt + filters + 3-variant cards + edit effect rail). ComingSoon.tsx deleted. All 9 sidebar destinations now render real pages. Designer standalone route redirects to active project.
 - 2026-05-23 — Layout Editor premium rebuild (7 phases): action toolbar, left panel (Props/Layers tabs, visibility, status dots, per-group add), canvas (blue/white overlays, anchor nodes, label pills, floating toolbar), right panel (stat cards, inspector tabs), 3-step Add Prop modal, AI Layout Assistant popover, validation strip, Night Preview mode. Also fixed: sidebar now reads projectId from store and dynamically routes project-scoped tabs; AppTopBar shows real project name + save status; stub tabs redirect to /projects when no project loaded. TypeScript clean, lint 0/0, build passes.
 - 2026-05-11 — Track B Seven-Priority Rebuild: P1 demo data verified clean, P2 hero nighttime treatment (dusk overlay + warm amber glow), P3 Projects page rebuilt to v4 library (tabs, sort, project cards, templates), P4 Continue Where You Left Off card, P5 Designer rebuilt (props tree + preview + inspector + sequence overview) + Timeline graduated (full waveform + tracks + effects), P6 Layout rebuilt as three-column workspace (props left + canvas center + inspector right), P7 consistency sweep (cream→white on legal/share/mobile).
