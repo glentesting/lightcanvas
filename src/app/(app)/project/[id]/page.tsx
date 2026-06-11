@@ -68,6 +68,9 @@ export default function DesignerPage() {
   const loadedRef = useRef(false);
   const [selectedFixtureId, setSelectedFixtureId] = useState<string | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  // The visualizer is the hero — both side panels collapse so the stage can go full-bleed.
+  const [leftOpen, setLeftOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(true);
 
   // Store selectors
   const _name = useEditorStore((s) => s.name);
@@ -198,6 +201,7 @@ export default function DesignerPage() {
       {/* Main body: left panel + center preview + right inspector */}
       <div className="flex flex-1 min-h-0">
         {/* Left Panel — Props tree */}
+        {leftOpen && (
         <aside
           className="flex flex-col shrink-0 overflow-hidden"
           style={{ width: 240, borderRight: "1px solid var(--line)", background: "#FFFFFF" }}
@@ -339,50 +343,21 @@ export default function DesignerPage() {
             </div>
           </div>
         </aside>
+        )}
 
-        {/* Center — Preview canvas */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0">
-          {/* Preview toolbar */}
-          <div
-            className="flex items-center gap-2 px-4 shrink-0"
-            style={{ height: 40, borderBottom: "1px solid var(--line)", background: "#FFFFFF" }}
-          >
-            <div className="flex items-center gap-0.5 rounded-lg p-0.5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
-              {["Select", "Move", "Scale"].map((tool, i) => (
-                <button
-                  key={tool}
-                  className="px-2.5 py-1 rounded-md text-xs font-medium transition-colors"
-                  style={{
-                    background: i === 0 ? "#FFFFFF" : "transparent",
-                    color: i === 0 ? "var(--ink)" : "var(--ink-4)",
-                    boxShadow: i === 0 ? "0 1px 2px rgba(0,0,0,.06)" : "none",
-                  }}
-                >
-                  {tool}
-                </button>
-              ))}
-            </div>
-            <div className="flex-1" />
-            <span className="text-xs font-mono" style={{ color: "var(--ink-4)" }}>100%</span>
-            <Link
-              href={`/timeline?project=${projectId}`}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors hover:bg-[var(--panel)]"
-              style={{ color: "var(--ink-3)", border: "1px solid var(--line)" }}
-            >
-              Edit Timeline
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ opacity: 0.5 }}>
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </Link>
-          </div>
-
-          {/* Preview canvas area */}
+        {/* Center — Preview canvas (the hero) */}
+        <div className="relative flex-1 flex flex-col min-w-0 min-h-0">
           <div className="flex-1 min-h-0">
             <PreviewPanel projectId={projectId} />
           </div>
+
+          {/* Panel toggles — tucked to the stage edges */}
+          <PanelToggle side="left" open={leftOpen} onClick={() => setLeftOpen((v) => !v)} />
+          <PanelToggle side="right" open={rightOpen} onClick={() => setRightOpen((v) => !v)} />
         </div>
 
         {/* Right Panel — Selected Prop Inspector */}
+        {rightOpen && (
         <aside
           className="flex flex-col shrink-0 overflow-y-auto"
           style={{ width: 280, borderLeft: "1px solid var(--line)", background: "#FFFFFF" }}
@@ -393,6 +368,7 @@ export default function DesignerPage() {
             <LayoutSummary fixtureCount={fixtures.length} totalChannels={totalChannels} />
           )}
         </aside>
+        )}
       </div>
 
       {/* Bottom — Sequence Overview */}
@@ -406,6 +382,44 @@ export default function DesignerPage() {
       <AIPanel open={showAI} onClose={() => setShowAI(false)} />
       <ExportDialog open={showExport} onClose={() => setShowExport(false)} />
     </div>
+  );
+}
+
+/* ─── Panel toggle (stage edge chevrons) ───────────────────── */
+function PanelToggle({ side, open, onClick }: { side: "left" | "right"; open: boolean; onClick: () => void }) {
+  const pointsOut = (side === "left") === open; // chevron points toward collapse direction
+  return (
+    <button
+      onClick={onClick}
+      aria-label={`${open ? "Hide" : "Show"} ${side} panel`}
+      className="absolute z-10 flex items-center justify-center transition-opacity hover:opacity-100"
+      style={{
+        [side]: 8,
+        top: "50%",
+        transform: "translateY(-50%)",
+        width: 20,
+        height: 44,
+        borderRadius: 8,
+        background: "rgba(16, 20, 34, 0.55)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        color: "rgba(255,255,255,0.8)",
+        backdropFilter: "blur(6px)",
+        opacity: 0.55,
+        cursor: "pointer",
+      }}
+    >
+      <svg
+        width="11"
+        height="11"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        style={{ transform: pointsOut ? "rotate(180deg)" : "none" }}
+      >
+        <polyline points="9 18 15 12 9 6" />
+      </svg>
+    </button>
   );
 }
 

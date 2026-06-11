@@ -2,6 +2,11 @@ import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
+/**
+ * Persists the client-computed depth map PNG next to the house photo
+ * (`{userId}/{projectId}/depth.png` in lightcanvas-images). The night-stage
+ * derives this URL from the photo URL by convention — no DB column involved.
+ */
 export async function POST(request: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -13,15 +18,12 @@ export async function POST(request: Request) {
   if (!file || !projectId) {
     return NextResponse.json({ error: "file and projectId required" }, { status: 400 });
   }
-
-  // Validate file type
-  if (!file.type.startsWith("image/")) {
-    return NextResponse.json({ error: "File must be an image" }, { status: 400 });
+  if (file.type !== "image/png") {
+    return NextResponse.json({ error: "Depth map must be a PNG" }, { status: 400 });
   }
 
   const supabase = createServiceClient();
 
-  // Verify project ownership
   const { data: project } = await supabase
     .from("projects")
     .select("id")
@@ -31,32 +33,15 @@ export async function POST(request: Request) {
 
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-  // Upload to Supabase Storage — use "lightcanvas-images" bucket for now (it exists)
-  const fileExt = file.name.split(".").pop();
-  const filePath = `${userId}/${projectId}/house.${fileExt}`;
-
+  const filePath = `${userId}/${projectId}/depth.png`;
   const { error: uploadError } = await supabase.storage
     .from("lightcanvas-images")
-    .upload(filePath, file, { contentType: file.type, upsert: true });
+    .upload(filePath, file, { contentType: "image/png", upsert: true });
 
   if (uploadError) {
     return NextResponse.json({ error: uploadError.message }, { status: 500 });
   }
 
-  // A new photo invalidates the previously computed depth map — the night
-  // stage will re-estimate and re-persist it on next open.
-  await supabase.storage
-    .from("lightcanvas-images")
-    .remove([`${userId}/${projectId}/depth.png`]);
-
-  // Get public URL
   const { data: urlData } = supabase.storage.from("lightcanvas-images").getPublicUrl(filePath);
-
-  // Update project with custom house photo URL
-  await supabase
-    .from("projects")
-    .update({ house_custom_svg: urlData.publicUrl })
-    .eq("id", projectId);
-
   return NextResponse.json({ url: urlData.publicUrl }, { status: 201 });
 }

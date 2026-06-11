@@ -47,6 +47,8 @@ PROJECT-STATUS.md for the full vision.
 - **WaveSurfer.js v7** — audio playback + waveform rendering
 - **Meyda** — client-side beat detection (BPM, onsets, sections, spectral features)
 - **@dnd-kit/core** — drag-and-drop on timeline + layout
+- **three** — photo night-stage preview (depth-displaced 2.5D scene, bloom, light points)
+- **@huggingface/transformers** — client-side depth estimation (Depth Anything V2 Small); never runs server-side, `onnxruntime-node` is aliased out in next.config.ts
 - **Tailwind CSS 4** — light mode only, LightCanvas design tokens
 - **zod** — API + export validation
 - **Vercel** — hosting (auto-deploys from GitHub on push to main)

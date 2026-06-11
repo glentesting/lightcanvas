@@ -6,7 +6,7 @@
 conflict of principle, it takes precedence over this file until a human changes it.
 
 Last updated: 2026-06-11
-Updated by: Claude (Doc cleanup — Constitution relocation, CLAUDE.md issue reconciliation, model string)
+Updated by: Claude (Visualizer Mission 1A Phase 1 — photo night-stage preview replaces SVG preview)
 
 ---
 
@@ -38,7 +38,7 @@ The app is a real working product running on Vercel from `github.com/glentesting
 - Audio upload to Supabase Storage (`songs` bucket), WaveSurfer waveform, Meyda beat detection with BPM octave correction
 - Timeline editor: fixture tracks, group tracks, 10 effect types, drag/drop, beat snap, resize, multi-select, parameter panel, undo/redo
 - Preset system: 6 built-ins, user save, immutability rules, "Modified from" indicator
-- Preview engine: SVG house with animated pixel rendering, geometry-aware effects
+- **Preview engine — photo night-stage (NEW, Visualizer Mission 1A Phase 1):** with a house photo uploaded, the editor preview renders the real photo as a depth-displaced 2.5D night stage (three.js): client-side AI depth map (Transformers.js + Depth Anything V2 Small, WebGPU→WASM fallback, computed once and persisted as `depth.png` next to the photo), in-shader night grade, per-pixel additive glowing light points + bloom, lean-and-slide parallax camera (pointer-driven, idle drift). Scene sits behind a `SceneProvider` interface so a future `SplatScene` can drop in. The SVG house remains the no-photo fallback only. Dev harness at `/dev/stage` (404s in prod)
 - AI panel: Anthropic Sonnet (real API, model `claude-sonnet-4-6`) with mock fallback, 5 style presets, refine prompts
 - Export engine: custom ZIP writer (no JSZip dep), xLights .xsq + rgbeffects.xml, LOR .lms, LightCanvas JSON, video preview
 - Import: .xsq parser, .lms parser, summary modal
@@ -75,6 +75,8 @@ No `@anthropic-ai/sdk` dependency — direct `fetch` to Anthropic API. No `jszip
 ### Current key files
 
 - `src/lib/store/editor-store.ts` (270 lines) — Zustand store
+- `src/lib/scene/` — night-stage scene layer: `types.ts` (SceneProvider interface + stage space), `photo-depth-scene.ts` (three.js provider: depth-displaced photo plane, night grade, light points, bloom, camera rig), `pixel-geometry.ts` (fixture → per-pixel stage positions, ordering matches effect renderers), `depth/` (Transformers.js estimation + persistence)
+- `src/components/scene/NightStage.tsx` — props-driven night-stage React wrapper (used by PreviewPanel; store-free so share page / dev harness can reuse)
 - `src/components/LayoutEditor.tsx` (~1200 lines) — premium layout editor (three-column, overlays, floating toolbar, inspector tabs, night preview)
 - `src/components/AppSidebar.tsx` — global sidebar (9 nav items, project-aware routing)
 - `src/components/AppTopBar.tsx` — global top bar (project name from store, save status, Open Designer CTA)
@@ -256,7 +258,28 @@ API Routes (src/app/api/)
 ├── projects, projects/[id], projects/[id]/autosave — CRUD + autosave
 ├── shows, shows/[id] — CRUD
 ├── upload-audio — audio to songs bucket
-└── upload-house-photo — house photo to lightcanvas-images bucket
+├── upload-house-photo — house photo to lightcanvas-images bucket (also deletes stale depth.png)
+└── upload-depth-map — client-computed depth PNG to lightcanvas-images (path convention: {userId}/{projectId}/depth.png — no DB column; URL derived from photo URL)
+```
+
+### Scene layer (preview / visualizer)
+
+```
+SceneProvider interface (src/lib/scene/types.ts)
+│   mount / setLightPoints / setLightFrame / setPointer / setOnFrame / resize / dispose
+│   Stage space = 720×420 (same as layout editor overlay; photo cover-cropped to 12:7)
+│
+├── PhotoDepthScene (photo-depth-scene.ts) — CURRENT
+│   three.js: depth-displaced plane + night-grade shader + per-pixel additive
+│   light sprites + UnrealBloom + lean-and-slide camera (clamped, no orbit)
+│   Depth: Transformers.js (Depth Anything V2 Small) client-side, WebGPU→WASM
+│   fallback, computed once per photo, persisted as depth.png; flat stage if
+│   depth unavailable
+│
+└── SplatScene — FUTURE (Gaussian splatting from video; seam exists, not built)
+
+Playback: NightStage.tsx runs renderFrame() inside the scene's rAF loop,
+reading transport time imperatively — zero React re-renders per frame.
 ```
 
 ### AI
@@ -440,6 +463,12 @@ Steps 1–3 alone close 70% of the perceived UX gap.
 
 **Don't add `analyze-audio` or other API stubs back into the codebase.** Either implement or delete. Dead routes confuse future agents.
 
+**Don't let `onnxruntime-node` get bundled.** `@huggingface/transformers` is client-only here; `next.config.ts` aliases `onnxruntime-node` to a stub for both Turbopack and webpack, plus `serverExternalPackages`. Removing those aliases breaks the build/runtime.
+
+**Don't bypass the SceneProvider interface.** Playback and (future) authoring code talk to `SceneProvider`, never to three.js objects directly — that seam is what lets SplatScene drop in later without a rewrite.
+
+**Don't change the 720×420 stage space or the photo's cover-crop fit.** Fixture anchor points, the layout editor overlay, the depth map, and the night-stage UV math all assume it. PROP_SIZES lives in `src/lib/fixtures/prop-sizes.ts` (shared by LayoutEditor and pixel-geometry — keep it the single source).
+
 ---
 
 ## 8. Active work / Next up
@@ -496,6 +525,14 @@ Steps 1–3 alone close 70% of the perceived UX gap.
 
 All sidebar destinations now render real v4-polish pages. ComingSoon.tsx has been deleted. Only Settings tab refresh remains as Step 9.
 
+### Visualizer Mission (docs/LightCanvas Visualizer Mission.md) — IN PROGRESS
+
+✅ **Mission 1A Phase 1 (2026-06-11): photo night-stage** — replaces the SVG preview whenever a house photo exists. Client-side depth (Transformers.js), three.js 2.5D parallax stage, night grade, per-pixel additive lights + bloom, SceneProvider seam for future SplatScene, hero composition on `/project/[id]` (placeholder Select/Move/Scale toolbar removed, side panels collapsible). Dev harness `/dev/stage` + `scripts/stage-screenshot.mjs` for look iteration. **Awaiting human look-approval before Phase 2.**
+
+⏳ **Phase 2 (1B): smart-template prop authoring on the night stage** — template registry (Mega Tree, Mini Tree, Arches, Stakes, Snowflake, Star, Spinner, Candy Cane, Wreath, Matrix, Singing Face), the Run tool (trace rooflines/eaves on the photo), drag-and-drop placement feel, group arrays ("8 arches across the front") with group effects, per-template effect vocabulary, depth-based scaling. Gated on Phase 1 approval.
+
+NOT this mission: Gaussian splatting (seam only), phone/QR capture, FSEQ compile, AI sequence engine, new export formats.
+
 #### Concurrent items completed
 - ✅ `--bg` token changed from warm cream to true white (`#FFFFFF`)
 - ✅ Dark mode toggle not implemented (locked out)
@@ -509,6 +546,7 @@ All sidebar destinations now render real v4-polish pages. ComingSoon.tsx has bee
 
 When you make significant changes, add a one-line entry here. Newest at the top.
 
+- 2026-06-11 — Visualizer Mission 1A Phase 1: photo night-stage preview. New scene layer (`src/lib/scene/`: SceneProvider interface, PhotoDepthScene three.js provider, pixel-geometry, client-side depth via Transformers.js/Depth Anything V2 Small with depth.png persistence + upload-depth-map route), NightStage component, PreviewPanel uses it when a photo exists (SVG = fallback), project page hero composition (toolbar removed, collapsible panels), `/dev/stage` harness + screenshot script, PROP_SIZES extracted to shared module, /dev/* public in middleware (404s in prod). Deps added: three, @huggingface/transformers, puppeteer-core (dev). Lint 0/0, TypeScript clean, build passes. Phase 2 (smart templates) gated on look approval.
 - 2026-06-11 — Doc cleanup pass: relocated the product Constitution to `docs/CONSTITUTION.md` (durable operating law, takes precedence on principles) with pointer lines added to PROJECT-STATUS.md and CLAUDE.md; archived `LightCanvas Cleanup Package.md` to `docs/_archive/`; reconciled CLAUDE.md "Known Issues" to match §1 (dropped fixed/stale items incl. the deleted analyze-audio/auto-sequence stubs); bumped Anthropic model string `claude-sonnet-4-5-20250514` → `claude-sonnet-4-6` in anthropic-provider.ts. TypeScript clean, build passes.
 - 2026-05-23 — Track B stub graduation complete: Audio Analysis (header + structure overview + sections table + summary rail), Preflight (readiness ring + 3-col hero + 6 check cards + callout), Exports (4-step wizard + validation + summary rail), AI Studio (prompt + filters + 3-variant cards + edit effect rail). ComingSoon.tsx deleted. All 9 sidebar destinations now render real pages. Designer standalone route redirects to active project.
 - 2026-05-23 — Layout Editor premium rebuild (7 phases): action toolbar, left panel (Props/Layers tabs, visibility, status dots, per-group add), canvas (blue/white overlays, anchor nodes, label pills, floating toolbar), right panel (stat cards, inspector tabs), 3-step Add Prop modal, AI Layout Assistant popover, validation strip, Night Preview mode. Also fixed: sidebar now reads projectId from store and dynamically routes project-scoped tabs; AppTopBar shows real project name + save status; stub tabs redirect to /projects when no project loaded. TypeScript clean, lint 0/0, build passes.

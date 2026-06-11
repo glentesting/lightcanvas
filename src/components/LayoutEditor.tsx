@@ -4,18 +4,11 @@ import { useState, useCallback, useRef, useMemo } from "react";
 import { useEditorStore } from "@/lib/store/editor-store";
 import type { Fixture, FixtureKind } from "@/lib/fixtures/types";
 import { FIXTURE_TEMPLATES, nextStartChannel, autoName } from "@/lib/fixtures/library";
+import { PROP_SIZES } from "@/lib/fixtures/prop-sizes";
 import House from "@/components/editor/house";
 
 // Each prop kind has a default size (in SVG viewBox units out of 720x420)
-const PROP_DEFAULTS: Record<string, { w: number; h: number; cx: number; cy: number }> = {
-  roofline:         { w: 380, h: 20, cx: 360, cy: 155 },
-  "window-outline": { w: 44, h: 54, cx: 240, cy: 255 },
-  bush:             { w: 56, h: 28, cx: 260, cy: 320 },
-  "mega-tree":      { w: 64, h: 160, cx: 690, cy: 240 },
-  "mini-tree":      { w: 36, h: 55, cx: 310, cy: 295 },
-  arch:             { w: 80, h: 50, cx: 360, cy: 295 },
-  matrix:           { w: 80, h: 50, cx: 500, cy: 240 },
-};
+const PROP_DEFAULTS = PROP_SIZES;
 
 // Category grouping for the props list
 const KIND_CATEGORIES: { label: string; kinds: FixtureKind[] }[] = [
