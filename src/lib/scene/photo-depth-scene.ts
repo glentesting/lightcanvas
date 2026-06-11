@@ -59,25 +59,49 @@ const photoFragmentShader = /* glsl */ `
     // object-fit: cover does, so anchor points line up with photo features.
     vec2 uv = 0.5 + (vUv - 0.5) * uCoverScale;
     vec3 c = texture2D(uPhoto, uv).rgb;
+    float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
 
-    // Night grade: dusk, not blackout — the house must stay clearly readable
-    // (it's the whole point), just dark enough that lights glow against it.
-    vec3 cool = c * vec3(0.62, 0.72, 1.00);
-    vec3 night = mix(c, cool, uNight) * uExposure;
-    night = pow(night, vec3(1.12));
+    // ── Night tone mapping ──
+    // Most uploads are bright daytime photos, so a multiplicative dim isn't
+    // enough — near-white pixels (sunlit brick, pale lawn) must be CRUSHED.
+    // Exposure drop, then a hard highlight shoulder, then deepened shadows:
+    // full daylight white lands around 0.18, shadows keep readable detail.
+    vec3 t = c * uExposure;
+    t = t / (1.0 + 1.9 * t);
+    t = pow(t, vec3(1.22));
 
-    // Distant content (sky, background) falls off darker than the near house.
+    // Moonlight: partially desaturate, cool the whole frame.
+    float tl = dot(t, vec3(0.2126, 0.7152, 0.0722));
+    t = mix(t, vec3(tl), 0.30);
+    t *= vec3(0.70, 0.77, 1.06);
+
+    vec3 night = mix(c, t, uNight);
+
+    // Distant non-sky content (background trees, fences) falls off darker.
     float far = 1.0 - vDepth;
     night *= mix(1.0, 0.62, far * far * uNight);
 
-    // Sky kill: anything in the top of frame that is far gets pushed toward
-    // night sky, but keeps a hint of texture. (uv v=1 is the top of frame.)
-    float sky = smoothstep(0.55, 0.95, vUv.y) * smoothstep(0.45, 0.85, far);
-    night = mix(night, vec3(0.010, 0.016, 0.034), sky * uNight * 0.75);
+    // ── Sky replacement ──
+    // Combine geometry (far + upper frame) with photometry (blue-dominant or
+    // blown-bright pixels), so a midday sky dies even where depth is fuzzy.
+    float topW = smoothstep(0.30, 0.75, vUv.y);
+    float geoSky = smoothstep(0.55, 0.90, far);
+    float blueDom = smoothstep(0.02, 0.18, c.b - max(c.r, c.g));
+    float photoSky = max(
+      blueDom * smoothstep(0.25, 0.55, lum),
+      smoothstep(0.82, 0.97, lum) * 0.9
+    );
+    float sky = topW * clamp(max(geoSky * 0.85, photoSky), 0.0, 1.0);
+    // Night sky with a faint horizon glow at the bottom of the sky band.
+    vec3 skyCol = mix(vec3(0.030, 0.045, 0.085), vec3(0.010, 0.016, 0.040), vUv.y);
+    night = mix(night, skyCol, sky * uNight);
+
+    // Tiny ambient floor so deep shadows stay velvet, not void.
+    night += vec3(0.004, 0.006, 0.012) * uNight;
 
     // Gentle vignette to seat the stage.
     float vd = distance(vUv, vec2(0.5, 0.45));
-    night *= 0.82 + 0.18 * smoothstep(0.85, 0.35, vd);
+    night *= 0.84 + 0.16 * smoothstep(0.85, 0.35, vd);
 
     gl_FragColor = vec4(night, 1.0);
   }
@@ -184,6 +208,11 @@ export class PhotoDepthScene implements SceneProvider {
 
     this.depthTexture = buildDepthTexture(this.opts.depth);
 
+    // Adaptive night exposure: a midday photo needs a hard crush, a dusk
+    // photo only a gentle dim — anchor both to the same post-grade target.
+    const avgLum = averageLuminance(this.photoTexture.image as CanvasImageSource & { width: number; height: number });
+    const exposure = THREE.MathUtils.clamp(0.33 / Math.max(avgLum, 0.05), 0.52, 1.9);
+
     const img = this.photoTexture.image as { width: number; height: number };
     const photoAspect = img.width / img.height;
     const stageAspect = WORLD_W / WORLD_H;
@@ -206,7 +235,7 @@ export class PhotoDepthScene implements SceneProvider {
         uDepth: { value: this.depthTexture },
         uDepthAmp: { value: this.opts.depth ? DEPTH_AMP : 0 },
         uCoverScale: { value: coverScale },
-        uExposure: { value: 0.95 },
+        uExposure: { value: exposure },
         uNight: { value: 1.0 },
       },
     });
@@ -395,6 +424,29 @@ function loadTexture(url: string): Promise<THREE.Texture> {
     loader.setCrossOrigin("anonymous");
     loader.load(url, resolve, undefined, reject);
   });
+}
+
+/**
+ * Mean luminance of the photo (0..1), sampled via a small offscreen canvas.
+ * Drives the adaptive night exposure.
+ */
+function averageLuminance(image: CanvasImageSource & { width: number; height: number }): number {
+  const canvas = document.createElement("canvas");
+  canvas.width = 32;
+  canvas.height = 32;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return 0.4;
+  try {
+    ctx.drawImage(image, 0, 0, 32, 32);
+    const px = ctx.getImageData(0, 0, 32, 32).data;
+    let sum = 0;
+    for (let i = 0; i < px.length; i += 4) {
+      sum += 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+    }
+    return sum / (px.length / 4) / 255;
+  } catch {
+    return 0.4; // tainted canvas etc. — assume a middling photo
+  }
 }
 
 /** Depth as an R8 texture (filters linearly everywhere, unlike float textures). */

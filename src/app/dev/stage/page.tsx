@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
-import { notFound } from "next/navigation";
+import { Suspense, useCallback, useMemo, useRef, useState } from "react";
+import { notFound, useSearchParams } from "next/navigation";
 import NightStage from "@/components/scene/NightStage";
 import type { Fixture, FixtureGroup } from "@/lib/fixtures/types";
 import type { Sequence } from "@/lib/timeline/types";
@@ -134,9 +134,22 @@ function demoSequence(fixtures: Fixture[]): Sequence {
 }
 
 export default function StageDevPage() {
+  return (
+    <Suspense fallback={null}>
+      <StageDevHarness />
+    </Suspense>
+  );
+}
+
+function StageDevHarness() {
   if (process.env.NODE_ENV === "production") notFound();
 
-  const [photoUrl, setPhotoUrl] = useState("/dev/sample-house.jpg");
+  // ?photo=/dev/test-photos/whatever.jpg — lets scripts and manual tests load
+  // a specific photo without the file picker.
+  const searchParams = useSearchParams();
+  const queryPhoto = searchParams.get("photo");
+  const [pickedPhoto, setPickedPhoto] = useState<string | null>(null);
+  const photoUrl = pickedPhoto ?? queryPhoto ?? "/dev/sample-house.jpg";
   const fileRef = useRef<HTMLInputElement>(null);
 
   const fixtures = useMemo(() => demoFixtures(), []);
@@ -169,7 +182,7 @@ export default function StageDevPage() {
             className="hidden"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) setPhotoUrl(URL.createObjectURL(f));
+              if (f) setPickedPhoto(URL.createObjectURL(f));
             }}
           />
         </div>
