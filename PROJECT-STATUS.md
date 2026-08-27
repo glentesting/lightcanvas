@@ -6,7 +6,7 @@
 conflict of principle, it takes precedence over this file until a human changes it.
 
 Last updated: 2026-08-27
-Updated by: Claude Code (.loredit exporter — LOR S6 template fill, wired into the editor)
+Updated by: Claude Code (AI sequencer redesign: two-layer plan+expand pipeline, 30× density)
 
 ---
 
@@ -39,7 +39,7 @@ The app is a real working product running on Vercel from `github.com/glentesting
 - Timeline editor: fixture tracks, group tracks, 10 effect types, drag/drop, beat snap, resize, multi-select, parameter panel, undo/redo
 - Preset system: 6 built-ins, user save, immutability rules, "Modified from" indicator
 - **Preview engine — photo night-stage (NEW, Visualizer Mission 1A Phase 1):** with a house photo uploaded, the editor preview renders the real photo as a depth-displaced 2.5D night stage (three.js): client-side AI depth map (Transformers.js + Depth Anything V2 Small, WebGPU→WASM fallback, computed once and persisted as `depth.png` next to the photo), in-shader night grade, per-pixel additive glowing light points + bloom, lean-and-slide parallax camera (pointer-driven, idle drift). Scene sits behind a `SceneProvider` interface so a future `SplatScene` can drop in. The SVG house remains the no-photo fallback only. Dev harness at `/dev/stage` (404s in prod)
-- AI panel: Anthropic Sonnet (real API, model `claude-sonnet-4-6`) with mock fallback, 5 style presets, refine prompts
+- **AI sequencer (redesigned 2026-08-27): two-layer plan+expand pipeline** (`src/lib/ai/sequencer/`). Layer 1 (model `claude-opus-5`, direct fetch, one call per batch of ≤4 song sections) returns compact musical-direction plans — energy, active fixture groups, effect/palette/rhythm/movement, transitions — fed by the FULL analysis (per-section beat counts, loudness, onset density, spectral means; no more 20-beat truncation). Layer 2 (deterministic code) expands plans into beat-snapped effect blocks: chases, staggers, phrase-split beds, transitions — every block start is a real detected beat. Measured density: **2,925 blocks** for a 5.4-min song across 20 fixtures (old pipeline: ~60–100). Truncation (`stop_reason: max_tokens`), refusal, and partial-JSON salvage all handled explicitly. No silent mock: missing `ANTHROPIC_API_KEY` fails loudly (503); `AI_USE_MOCK=1` enables an explicit, UI-labeled deterministic mock. 5 style presets and refine prompts kept (a refine pass replaces the previous generation). See AI-PIPELINE-STATUS.md.
 - **Export engine (rebuilt 2026-08-27): LOR S6 `.loredit` via template fill** (`src/lib/exports/loredit/`), plus LightCanvas JSON and video preview. Reachable from the editor header Export button → ExportDialog. The user supplies a template `.loredit` (any purchased RGBPlus sequence); PreviewClass and TimingGrids are kept verbatim, all effects stripped, and the LightCanvas sequence written on via a fixture→prop mapping (seeded from the owner's hardware, confirmed once, persisted on `sequence.loreditPropMap`). Detected beats are written as a "LightCanvas Beats" TimingGridFree. The old xLights `.xsq` and LOR `.lms` exporters, `/api/export`, and `/api/presets` were dead/wrong-format code and are deleted.
 - Import: .xsq parser, .lms parser, summary modal
 - Validation: channel overlap, universe overflow, controller limits per profile
@@ -54,7 +54,7 @@ The app is a real working product running on Vercel from `github.com/glentesting
 
 **Legal pages are placeholder content.** Need real counsel-written copy before public launch.
 
-**ANTHROPIC_API_KEY in production env.** Without it, the app falls back to mock AI silently. Confirm it's set in Vercel prod env.
+**ANTHROPIC_API_KEY not set — locally or (unconfirmed) in Vercel prod.** Since the 2026-08-27 redesign the app fails loudly without it (503 + clear message in the AI panel) instead of silently mocking. A live `claude-opus-5` generation has therefore never been run — set the key in `.env.local` and Vercel, then generate once from the AI panel (see AI-PIPELINE-STATUS.md "What's unverified").
 
 **Telemetry SDKs not installed.** `src/lib/analytics.ts` is a `console.log` stub. Cookie banner consent UX is in place. Install Sentry and PostHog when ready and wire them through `analytics.ts`.
 
@@ -89,8 +89,10 @@ No `@anthropic-ai/sdk` dependency — direct `fetch` to Anthropic API. No `jszip
 - `scripts/loredit/` — verification scripts (`npx tsx scripts/loredit/verify-roundtrip.mts`, `verify-export.mts`) run against gitignored fixtures in `scripts/loredit-spike/test-fixtures/`
 - `src/lib/imports/xsq.ts` (157 lines), `src/lib/imports/lor.ts` (158 lines)
 - `src/lib/render/effects/index.ts` (301 lines) — 10 effect renderers
-- `src/lib/ai/anthropic-provider.ts` — real Anthropic call
-- `src/lib/ai/mock-provider.ts` — fallback for no-API-key
+- `src/lib/ai/sequencer/` — two-layer AI sequencer: `schema.ts` (zod section-plan schema + salvage), `groups.ts` (fixture-group vocabulary), `sections.ts` (section normalization + musical stats), `prompt.ts` (Layer-1 prompt), `expander.ts` (deterministic plan→blocks expansion), `orchestrator.ts` (batching, truncation retry, streaming; injectable model caller)
+- `src/lib/ai/anthropic-provider.ts` — thin `claude-opus-5` caller into the orchestrator
+- `src/lib/ai/mock-provider.ts` — explicit dev mock (AI_USE_MOCK=1 only, UI-labeled); deterministic plans through the same pipeline
+- `scripts/ai/verify-pipeline.mts` — end-to-end verification against a real MP3 (`npx tsx scripts/ai/verify-pipeline.mts`)
 
 ---
 
@@ -550,6 +552,7 @@ NOT this mission: Gaussian splatting (seam only), phone/QR capture, FSEQ compile
 
 When you make significant changes, add a one-line entry here. Newest at the top.
 
+- 2026-08-27 — AI sequencer redesigned as two layers: model plans musical direction per section (full analysis in the prompt: sections, loudness envelope, onset density, spectral means — replacing the 20-beat truncation), deterministic expander turns plans into beat-snapped blocks (chases/staggers/beds in code; every start on a real detected beat). Measured on a real 5.4-min MP3: 2,925 blocks / 20 fixtures / 100% beat-aligned, exported to .loredit with zero grammar violations (`npx tsx scripts/ai/verify-pipeline.mts`). Model → claude-opus-5; max_tokens truncation and refusal handled explicitly; silent mock killed (loud 503 without key; AI_USE_MOCK=1 = explicit labeled mock). Store gained bulk addBlocks; refine now replaces the prior generation. Live-API round trip still unverified — no key on this machine. TypeScript clean, build passes.
 - 2026-08-27 — .loredit exporter shipped: spike promoted to `src/lib/exports/loredit/` (byte-fidelity XML core, template parse/strip, fixture→prop mapping with hardware-doc default seeding, effect translation honoring the channel/track grammar rule, beats → "LightCanvas Beats" timing grid). ExportDialog rebuilt around it (template file picker + mapping table) and finally reachable via a new Export button in the editor header. Deleted dead export code: `.lms` + `.xsq` exporters, `/api/export`, `/api/presets`, meyda dep. Sequence gains `loreditPropMap` (store setter + autosave schema; `xlightsNameMap`/`lorMapping` removed). Verified by running code: round-trip byte-identical, template-filled export re-parses with zero grammar violations (see LOREDIT-EXPORT-STATUS.md). S6 open test pending. TypeScript clean, build passes.
 - 2026-06-12 — Added an isolated photographic visualizer v2 prototype at `/dev/visualizer-v2`: stable 2D source plate, adaptive night grade, receiver-masked spill, independent halos and crisp cores, adjustable look controls, documentation, and screenshot automation. Existing visualizer remains unchanged. Targeted ESLint clean, TypeScript clean, production build passes.
 - 2026-06-11 — Demo-layout proof on a real photo: /dev/stage demo fixtures re-traced to the owner's daytime house photo (gitignored), verified via 2D grid/overlay calibration + a daylight-debug render (?day=1) proving lights sit on the real roof/windows; night grade lifted for house readability (target 0.40, softer shoulder, higher ambient + far floor); NightStage gains disableDepth/debugDaylight debug props (?flat=1/?day=1). Lint 0/0, TypeScript clean, build passes.

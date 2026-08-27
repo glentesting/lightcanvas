@@ -18,7 +18,7 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
   const audio = useEditorStore((s) => s.audio);
   const fixtures = useEditorStore((s) => s.fixtures);
   const sequence = useEditorStore((s) => s.sequence);
-  const addBlock = useEditorStore((s) => s.addBlock);
+  const addBlocks = useEditorStore((s) => s.addBlocks);
   const deleteBlocks = useEditorStore((s) => s.deleteBlocks);
 
   const [vibe, setVibe] = useState<Vibe>("classic");
@@ -35,10 +35,12 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
       setRunning(true);
       setEvents([]);
 
-      // If refining, keep existing generated block IDs; otherwise reset
-      if (!refinementPrompt) {
-        setGeneratedBlockIds([]);
+      // Generation is dense now — a refine pass regenerates the show, so the
+      // previous AI-generated blocks are removed before the new ones stream in.
+      if (generatedBlockIds.length > 0) {
+        deleteBlocks(generatedBlockIds);
       }
+      setGeneratedBlockIds([]);
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -92,12 +94,10 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
               const event: AIEvent = JSON.parse(json);
               setEvents((prev) => [...prev, event]);
 
-              // Apply patches immediately
+              // Apply patches immediately — one store update per batch
               if (event.type === "patch" && event.patch.addBlocks) {
-                for (const block of event.patch.addBlocks) {
-                  addBlock(block as EffectBlock);
-                  blockIds.push(block.id);
-                }
+                addBlocks(event.patch.addBlocks as EffectBlock[]);
+                for (const block of event.patch.addBlocks) blockIds.push(block.id);
               }
             } catch {
               // skip malformed events
@@ -105,9 +105,7 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
           }
         }
 
-        setGeneratedBlockIds((prev) =>
-          refinementPrompt ? [...prev, ...blockIds] : blockIds
-        );
+        setGeneratedBlockIds(blockIds);
       } catch (e) {
         if ((e as Error).name !== "AbortError") {
           setEvents((prev) => [
@@ -118,7 +116,7 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
       }
       setRunning(false);
     },
-    [audio, fixtures, sequence, vibe, intensity, styleId, addBlock]
+    [audio, fixtures, sequence, vibe, intensity, styleId, addBlocks, deleteBlocks, generatedBlockIds]
   );
 
   const handleGenerate = useCallback(() => {
@@ -151,6 +149,7 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
   const thoughts = events.filter((e) => e.type === "thought");
   const doneEvent = events.find((e) => e.type === "done");
   const errorEvent = events.find((e) => e.type === "error");
+  const mockEvent = events.find((e) => e.type === "mode" && e.mock);
 
   return (
     <div
@@ -207,6 +206,18 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4">
+        {mockEvent && (
+          <div
+            className="flex items-start gap-2 text-xs p-2.5 rounded-md mb-3"
+            style={{ background: "#fffbeb", border: "1px solid #f59e0b", color: "#92400e" }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" className="shrink-0 mt-0.5">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span>{"message" in mockEvent ? mockEvent.message : "Mock mode active — not real AI."}</span>
+          </div>
+        )}
         {!running && !doneEvent && (
           <>
             {/* Style preset selector */}

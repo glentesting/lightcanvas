@@ -45,7 +45,7 @@ PROJECT-STATUS.md for the full vision.
 - **Supabase** — Postgres (projects + shows tables, JSONB) + Storage (audio)
 - **Zustand** + **immer** + **zundo** — editor state with undo/redo
 - **WaveSurfer.js v7** — audio playback + waveform rendering
-- **Meyda** — client-side beat detection (BPM, onsets, sections, spectral features)
+- **Hand-rolled beat detection** (`src/lib/audio/beat-detector.ts`) — client-side BPM, onsets, sections, spectral features (the meyda dep was never used and was removed 2026-08-27)
 - **@dnd-kit/core** — drag-and-drop on timeline + layout
 - **three** — photo night-stage preview (depth-displaced 2.5D scene, bloom, light points)
 - **@huggingface/transformers** — client-side depth estimation (Depth Anything V2 Small); never runs server-side, `onnxruntime-node` is aliased out in next.config.ts
@@ -96,8 +96,10 @@ No `jszip` dep (hand-rolled ZIP writer in `src/lib/exports/zip.ts`).
 
 ### Still open
 1. **Legal pages are placeholder.** Need real counsel-written copy before launch.
-2. **ANTHROPIC_API_KEY in prod env.** Required for real AI generation; silently falls back to mock
-   without it. Confirm it's set in Vercel prod env.
+2. **ANTHROPIC_API_KEY not set anywhere yet.** Required for AI generation; without it the app now
+   fails loudly (503 + clear message — the silent mock fallback was removed 2026-08-27). Set it in
+   `.env.local` and Vercel prod, then run one live generation (never yet done). `AI_USE_MOCK=1`
+   enables an explicit, UI-labeled deterministic mock for development.
 3. **Telemetry SDKs not installed.** `src/lib/analytics.ts` is a `console.log` stub. Install Sentry
    and PostHog when ready and wire them through `analytics.ts`.
 4. **Manual browser smoke test not done.** Code-level test passed all 35 paths; the human-level
@@ -147,7 +149,8 @@ NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
-ANTHROPIC_API_KEY (required for real AI; silent mock fallback without it)
+ANTHROPIC_API_KEY (required for AI generation; fails loudly without it)
+AI_USE_MOCK=1 (optional dev flag: explicit deterministic mock planner, labeled in the UI)
 ```
 
 ## Doc Structure

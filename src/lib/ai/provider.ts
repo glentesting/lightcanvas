@@ -13,7 +13,9 @@ export type AIEvent =
   | { type: "thought"; text: string }
   | { type: "patch"; patch: ProjectPatch }
   | { type: "done"; summary: string }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  /** emitted first by the explicit mock provider so the UI can label it honestly */
+  | { type: "mode"; mock: boolean; message: string };
 
 export interface GenerateInput {
   audio: AudioAnalysis;

@@ -33,6 +33,8 @@ export interface EditorState {
   setAudio: (url: string, fileName: string, analysis: AudioAnalysis | null) => void;
 
   addBlock: (block: EffectBlock) => void;
+  /** bulk insert in a single store update — AI generation adds thousands of blocks */
+  addBlocks: (blocks: EffectBlock[]) => void;
   updateBlock: (id: string, patch: Partial<EffectBlock>) => void;
   moveBlocks: (ids: string[], deltaSeconds: number, deltaTrackIndex: number) => void;
   resizeBlock: (id: string, edge: "start" | "end", newTime: number) => void;
@@ -107,6 +109,11 @@ export const useEditorStore = create<EditorState>()(
         addBlock: (block: EffectBlock) =>
           set((state) => {
             state.sequence.blocks.push(block);
+          }),
+
+        addBlocks: (blocks: EffectBlock[]) =>
+          set((state) => {
+            state.sequence.blocks.push(...blocks);
           }),
 
         updateBlock: (id: string, patch: Partial<EffectBlock>) =>

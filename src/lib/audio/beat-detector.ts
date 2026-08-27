@@ -8,10 +8,16 @@ export async function analyzeAudio(file: File): Promise<AudioAnalysis> {
   const arrayBuffer = await file.arrayBuffer();
   const audioCtx = new OfflineAudioContext(1, 1, 44100);
   const buffer = await audioCtx.decodeAudioData(arrayBuffer);
+  return analyzeChannelData(buffer.getChannelData(0), buffer.sampleRate);
+}
 
-  const sampleRate = buffer.sampleRate;
-  const channelData = buffer.getChannelData(0);
-  const duration = buffer.duration;
+/**
+ * The decode-free analysis core. Split out so it can also run in Node
+ * (verification scripts decode with a JS decoder and call this directly) —
+ * the browser path above is unchanged.
+ */
+export function analyzeChannelData(channelData: Float32Array, sampleRate: number): AudioAnalysis {
+  const duration = channelData.length / sampleRate;
 
   // --- Onset detection via spectral flux ---
   const frameSize = 1024;

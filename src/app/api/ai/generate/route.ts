@@ -46,7 +46,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
-  const provider = getAIProvider();
+  let provider;
+  try {
+    provider = getAIProvider();
+  } catch (e) {
+    // No silent mock fallback — surface the configuration problem loudly.
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "AI provider unavailable" },
+      { status: 503 }
+    );
+  }
   const encoder = new TextEncoder();
   const { style, refinementPrompt, existingBlocks, ...input } = parsed.data;
 
