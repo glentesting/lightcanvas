@@ -5,8 +5,8 @@
 **`docs/CONSTITUTION.md` is the durable operating law** — the product's enduring principles. On any
 conflict of principle, it takes precedence over this file until a human changes it.
 
-Last updated: 2026-06-12
-Updated by: Codex (isolated photographic visualizer v2 prototype)
+Last updated: 2026-08-27
+Updated by: Claude Code (.loredit exporter — LOR S6 template fill, wired into the editor)
 
 ---
 
@@ -35,12 +35,12 @@ The app is a real working product running on Vercel from `github.com/glentesting
 - Dashboard with Shows + Projects, project CRUD, show grouping
 - Split-view editor (preview top, timeline bottom — no tabs)
 - Layout editor on a separate route (`/project/[id]/layout`) — premium three-column workspace with: action toolbar (Photo View/Night Preview toggle, AI assistant, Validate, Add Prop), left panel (Props/Layers tabs, search, per-prop visibility toggles + status dots, per-group Add Prop), center canvas (polished blue/white overlays with anchor nodes + label pills, floating toolbar with Select/Draw/Move/Resize/Snap/Zoom/Fullscreen), right panel (Layout Summary stat cards or inspector with Properties/Mapping/Channels/Preview tabs), 3-step Add Prop modal (Choose Type → Details → Placement Method), AI Layout Assistant popover (8 suggestions), validation strip, Night Preview mode (dark overlay + glowing colored props)
-- Audio upload to Supabase Storage (`songs` bucket), WaveSurfer waveform, Meyda beat detection with BPM octave correction
+- Audio upload to Supabase Storage (`songs` bucket), WaveSurfer waveform, hand-rolled client-side beat detection with BPM octave correction (`src/lib/audio/beat-detector.ts` — Meyda was never actually used and has been removed)
 - Timeline editor: fixture tracks, group tracks, 10 effect types, drag/drop, beat snap, resize, multi-select, parameter panel, undo/redo
 - Preset system: 6 built-ins, user save, immutability rules, "Modified from" indicator
 - **Preview engine — photo night-stage (NEW, Visualizer Mission 1A Phase 1):** with a house photo uploaded, the editor preview renders the real photo as a depth-displaced 2.5D night stage (three.js): client-side AI depth map (Transformers.js + Depth Anything V2 Small, WebGPU→WASM fallback, computed once and persisted as `depth.png` next to the photo), in-shader night grade, per-pixel additive glowing light points + bloom, lean-and-slide parallax camera (pointer-driven, idle drift). Scene sits behind a `SceneProvider` interface so a future `SplatScene` can drop in. The SVG house remains the no-photo fallback only. Dev harness at `/dev/stage` (404s in prod)
 - AI panel: Anthropic Sonnet (real API, model `claude-sonnet-4-6`) with mock fallback, 5 style presets, refine prompts
-- Export engine: custom ZIP writer (no JSZip dep), xLights .xsq + rgbeffects.xml, LOR .lms, LightCanvas JSON, video preview
+- **Export engine (rebuilt 2026-08-27): LOR S6 `.loredit` via template fill** (`src/lib/exports/loredit/`), plus LightCanvas JSON and video preview. Reachable from the editor header Export button → ExportDialog. The user supplies a template `.loredit` (any purchased RGBPlus sequence); PreviewClass and TimingGrids are kept verbatim, all effects stripped, and the LightCanvas sequence written on via a fixture→prop mapping (seeded from the owner's hardware, confirmed once, persisted on `sequence.loreditPropMap`). Detected beats are written as a "LightCanvas Beats" TimingGridFree. The old xLights `.xsq` and LOR `.lms` exporters, `/api/export`, and `/api/presets` were dead/wrong-format code and are deleted.
 - Import: .xsq parser, .lms parser, summary modal
 - Validation: channel overlap, universe overflow, controller limits per profile
 - Settings (3 tabs today: Account, Hardware, Billing placeholder)
@@ -58,7 +58,9 @@ The app is a real working product running on Vercel from `github.com/glentesting
 
 **Telemetry SDKs not installed.** `src/lib/analytics.ts` is a `console.log` stub. Cookie banner consent UX is in place. Install Sentry and PostHog when ready and wire them through `analytics.ts`.
 
-**Manual browser smoke test not done.** Code-level test passed all 35 paths. Human-level test (Clerk signup, audio playback, ZIP open in xLights and LOR, mobile gate, public share link) needs an hour with the live URL.
+**Manual browser smoke test not done.** Code-level test passed all 35 paths. Human-level test (Clerk signup, audio playback, mobile gate, public share link) needs an hour with the live URL.
+
+**`.loredit` export not yet opened in S6.** The exporter is code-verified (byte-identical round-trip, grammar checks, re-parse) but the true acceptance test — LOR S6 v6.6.12 opening a LightCanvas-exported file and showing effects on the right props — is a manual GUI step. See `LOREDIT-EXPORT-STATUS.md` for the exact file to open.
 
 **Stripe / billing not wired.** Placeholder route + UI exists. Real subscription handling — not built. Needs a fresh scoping pass before launch.
 
@@ -68,7 +70,7 @@ The app is a real working product running on Vercel from `github.com/glentesting
 
 ### Tech stack (locked, don't change)
 
-Next.js 16.2.4 (App Router) · React 19.2.4 · TypeScript · Tailwind CSS 4 · Clerk auth · Supabase (Postgres + Storage) · Zustand + immer + zundo · WaveSurfer.js v7 · Meyda · dnd-kit · zod · Vercel deployment.
+Next.js 16.2.4 (App Router) · React 19.2.4 · TypeScript · Tailwind CSS 4 · Clerk auth · Supabase (Postgres + Storage) · Zustand + immer + zundo · WaveSurfer.js v7 · dnd-kit · zod · Vercel deployment.
 
 No `@anthropic-ai/sdk` dependency — direct `fetch` to Anthropic API. No `jszip` — hand-rolled ZIP writer in `src/lib/exports/zip.ts`. Both are correct choices.
 
@@ -83,8 +85,8 @@ No `@anthropic-ai/sdk` dependency — direct `fetch` to Anthropic API. No `jszip
 - `src/components/Timeline.tsx` (852 lines) — main timeline UI
 - `src/components/AIPanel.tsx` (541 lines) — AI sidebar
 - `src/components/PreviewPanel.tsx` (159 lines) — preview render
-- `src/lib/exports/xlights.ts` (383 lines) — XSQ generator
-- `src/lib/exports/lor.ts` (386 lines) — LMS generator
+- `src/lib/exports/loredit/` — LOR S6 `.loredit` exporter: `xml.ts` (byte-fidelity XML parse/generate, proven round-trip), `template.ts` (template parse + effect strip), `mapping.ts` (fixture→prop mapping + hardware-doc default seeding), `effects.ts` (block → INTENSITY/SHIMMER/TWINKLE, packed-ARGB DumbRGB, colorwash motion effects), `index.ts` (exportLoredit + grammar checker)
+- `scripts/loredit/` — verification scripts (`npx tsx scripts/loredit/verify-roundtrip.mts`, `verify-export.mts`) run against gitignored fixtures in `scripts/loredit-spike/test-fixtures/`
 - `src/lib/imports/xsq.ts` (157 lines), `src/lib/imports/lor.ts` (158 lines)
 - `src/lib/render/effects/index.ts` (301 lines) — 10 effect renderers
 - `src/lib/ai/anthropic-provider.ts` — real Anthropic call
@@ -548,6 +550,7 @@ NOT this mission: Gaussian splatting (seam only), phone/QR capture, FSEQ compile
 
 When you make significant changes, add a one-line entry here. Newest at the top.
 
+- 2026-08-27 — .loredit exporter shipped: spike promoted to `src/lib/exports/loredit/` (byte-fidelity XML core, template parse/strip, fixture→prop mapping with hardware-doc default seeding, effect translation honoring the channel/track grammar rule, beats → "LightCanvas Beats" timing grid). ExportDialog rebuilt around it (template file picker + mapping table) and finally reachable via a new Export button in the editor header. Deleted dead export code: `.lms` + `.xsq` exporters, `/api/export`, `/api/presets`, meyda dep. Sequence gains `loreditPropMap` (store setter + autosave schema; `xlightsNameMap`/`lorMapping` removed). Verified by running code: round-trip byte-identical, template-filled export re-parses with zero grammar violations (see LOREDIT-EXPORT-STATUS.md). S6 open test pending. TypeScript clean, build passes.
 - 2026-06-12 — Added an isolated photographic visualizer v2 prototype at `/dev/visualizer-v2`: stable 2D source plate, adaptive night grade, receiver-masked spill, independent halos and crisp cores, adjustable look controls, documentation, and screenshot automation. Existing visualizer remains unchanged. Targeted ESLint clean, TypeScript clean, production build passes.
 - 2026-06-11 — Demo-layout proof on a real photo: /dev/stage demo fixtures re-traced to the owner's daytime house photo (gitignored), verified via 2D grid/overlay calibration + a daylight-debug render (?day=1) proving lights sit on the real roof/windows; night grade lifted for house readability (target 0.40, softer shoulder, higher ambient + far floor); NightStage gains disableDepth/debugDaylight debug props (?flat=1/?day=1). Lint 0/0, TypeScript clean, build passes.
 - 2026-06-11 — Night grade made daytime-proof: adaptive exposure from photo mean luminance, highlight-shoulder tone compression, photometric + geometric sky replacement, moonlight desat/cool. Verified against a real midday photo (frontyard test, gitignored under public/dev/test-photos/) and the dusk sample. /dev/stage now accepts ?photo=. Lint 0/0, TypeScript clean, build passes.

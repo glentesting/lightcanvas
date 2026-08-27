@@ -48,6 +48,6 @@ export interface Sequence {
   blocks: EffectBlock[];
   bpm: number;
   beatGridOffset: number;
-  xlightsNameMap?: Record<string, string>;
-  lorMapping?: Record<string, { unit: number; circuit: number }>;
+  /** LOR .loredit export: fixtureId → template SeqProp name, confirmed once by the user */
+  loreditPropMap?: Record<string, string>;
 }

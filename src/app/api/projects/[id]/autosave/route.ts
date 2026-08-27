@@ -15,7 +15,7 @@ const autosaveSchema = z.object({
     blocks: z.array(z.any()),
     bpm: z.number(),
     beatGridOffset: z.number(),
-    xlightsNameMap: z.record(z.string(), z.string()).optional(),
+    loreditPropMap: z.record(z.string(), z.string()).optional(),
   }).optional(),
   houseTemplate: z.string().optional(),
 });

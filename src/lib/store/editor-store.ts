@@ -44,8 +44,7 @@ export interface EditorState {
   deleteFixture: (id: string) => void;
   reorderTracks: (fromIndex: number, toIndex: number) => void;
 
-  setXlightsNameMap: (map: Record<string, string>) => void;
-  setLorMapping: (map: Record<string, { unit: number; circuit: number }>) => void;
+  setLoreditPropMap: (map: Record<string, string>) => void;
   setHousePhoto: (url: string | undefined) => void;
   addGroup: (group: FixtureGroup) => void;
   updateGroup: (id: string, patch: Partial<FixtureGroup>) => void;
@@ -208,14 +207,9 @@ export const useEditorStore = create<EditorState>()(
             state.sequence.blocks = state.sequence.blocks.filter((b) => b.trackId !== id);
           }),
 
-        setXlightsNameMap: (map: Record<string, string>) =>
+        setLoreditPropMap: (map: Record<string, string>) =>
           set((state) => {
-            state.sequence.xlightsNameMap = map;
-          }),
-
-        setLorMapping: (map: Record<string, { unit: number; circuit: number }>) =>
-          set((state) => {
-            state.sequence.lorMapping = map;
+            state.sequence.loreditPropMap = map;
           }),
 
         setHousePhoto: (url: string | undefined) =>
