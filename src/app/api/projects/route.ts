@@ -1,17 +1,16 @@
-import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import { createDefaultFixtures } from "@/lib/fixtures/defaults";
 
-export async function GET() {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+// Single-user tool: no auth, no owner filtering. Rows created before Clerk
+// was removed keep their old Clerk owner_id; new rows use "local".
+export const LOCAL_OWNER = "local";
 
+export async function GET() {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("projects")
     .select("id, name, owner_id, audio_file, fixtures, parent_show_id, house_custom_svg, created_at, updated_at")
-    .eq("owner_id", userId)
     .order("updated_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -19,9 +18,6 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const body = await request.json();
   const { name } = body;
 
@@ -34,7 +30,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from("projects")
     .insert({
-      owner_id: userId,
+      owner_id: LOCAL_OWNER,
       name,
       fixtures,
       sequence: { tracks, blocks: [], bpm: 120, beatGridOffset: 0 },

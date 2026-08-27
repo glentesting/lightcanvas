@@ -1,4 +1,3 @@
-import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -24,9 +23,6 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const { id } = await params;
   const body = await request.json();
   const parsed = autosaveSchema.safeParse(body);
@@ -52,8 +48,7 @@ export async function POST(
   const { error } = await supabase
     .from("projects")
     .update(update)
-    .eq("id", id)
-    .eq("owner_id", userId);
+    .eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

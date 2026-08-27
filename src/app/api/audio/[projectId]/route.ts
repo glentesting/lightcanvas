@@ -1,4 +1,3 @@
-import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
@@ -6,9 +5,6 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const { projectId } = await params;
   const supabase = createServiceClient();
 
@@ -16,7 +12,6 @@ export async function GET(
     .from("projects")
     .select("audio_url")
     .eq("id", projectId)
-    .eq("owner_id", userId)
     .single();
 
   if (!project || !project.audio_url) {

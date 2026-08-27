@@ -1,11 +1,7 @@
-import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
   const projectId = formData.get("projectId") as string | null;
@@ -21,7 +17,6 @@ export async function POST(request: Request) {
     .from("projects")
     .select("id")
     .eq("id", projectId)
-    .eq("owner_id", userId)
     .single();
 
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
@@ -29,7 +24,7 @@ export async function POST(request: Request) {
   // Upload to Supabase Storage
   const bucket = "songs"; // Use existing bucket; switch to "lightcanvas-audio" once created
   const fileExt = file.name.split(".").pop();
-  const filePath = `${userId}/${projectId}/${Date.now()}.${fileExt}`;
+  const filePath = `local/${projectId}/${Date.now()}.${fileExt}`;
 
   const { error: uploadError } = await supabase.storage
     .from(bucket)

@@ -1,20 +1,15 @@
-import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: RouteContext) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const { id } = await params;
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("projects")
     .select("*")
     .eq("id", id)
-    .eq("owner_id", userId)
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 404 });
@@ -22,9 +17,6 @@ export async function GET(_request: Request, { params }: RouteContext) {
 }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const { id } = await params;
   const body = await request.json();
   const { name } = body;
@@ -38,7 +30,6 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     .from("projects")
     .update({ name: name.trim() })
     .eq("id", id)
-    .eq("owner_id", userId)
     .select()
     .single();
 
@@ -47,9 +38,6 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 }
 
 export async function DELETE(_request: Request, { params }: RouteContext) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const { id } = await params;
   const supabase = createServiceClient();
 
@@ -58,7 +46,6 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
     .from("projects")
     .select("audio_url")
     .eq("id", id)
-    .eq("owner_id", userId)
     .single();
 
   if (!project) {
@@ -83,17 +70,13 @@ export async function DELETE(_request: Request, { params }: RouteContext) {
   const { error } = await supabase
     .from("projects")
     .delete()
-    .eq("id", id)
-    .eq("owner_id", userId);
+    .eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }
 
 export async function POST(request: Request, { params }: RouteContext) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const { id } = await params;
   const body = await request.json();
 
@@ -108,7 +91,6 @@ export async function POST(request: Request, { params }: RouteContext) {
     .from("projects")
     .select("*")
     .eq("id", id)
-    .eq("owner_id", userId)
     .single();
 
   if (fetchErr || !original) {
@@ -119,7 +101,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   const { data: copy, error: insertErr } = await supabase
     .from("projects")
     .insert({
-      owner_id: userId,
+      owner_id: "local",
       name: `${original.name} (Copy)`,
       fixtures: original.fixtures,
       groups: original.groups,

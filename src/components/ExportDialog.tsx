@@ -9,7 +9,6 @@ import type { ValidationIssue } from "@/lib/exports/validation";
 import { exportLoredit, parseTemplate, seedDefaultMapping, serializeXml } from "@/lib/exports/loredit";
 import type { LoreditTemplate, LoreditPropMap, LoreditExportReport } from "@/lib/exports/loredit";
 import type { Project } from "@/types/domain";
-import { trackEvent } from "@/lib/analytics";
 
 type ExportFormat = "loredit" | "lightcanvas-json" | "video";
 
@@ -62,8 +61,9 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
   useEffect(() => {
     if (open) {
+      // The owner's pixel hardware is fixed: LOR Pixie16 (hardware reference §2)
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setValidationIssues(validateFixtures(fixtures, null));
+      setValidationIssues(validateFixtures(fixtures, "lor-pixie16"));
     }
   }, [open, fixtures]);
 
@@ -189,7 +189,6 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
       }
 
       setShowGuidance(true);
-      trackEvent("first_export", { format });
     } catch (err) {
       console.error("Export failed:", err);
       setExportError(err instanceof Error ? err.message : "Unknown error");

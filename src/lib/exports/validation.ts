@@ -7,10 +7,16 @@ export interface ValidationIssue {
   details?: string;
 }
 
+// Keys are kebab-case to match the values callers actually pass — the old
+// snake_case keys (falcon_f16v3) never matched anything, so the port-limit
+// check could never fire.
 const CONTROLLER_LIMITS: Record<string, { name: string; maxPixels: number }> = {
-  falcon_f16v3: { name: "Falcon F16v3", maxPixels: 1700 },
-  alphapix: { name: "AlphaPix 16", maxPixels: 680 },
-  pixcon16: { name: "LOR PixCon16", maxPixels: 170 },
+  "falcon-f16v3": { name: "Falcon F16v3", maxPixels: 1700 },
+  "alphapix": { name: "AlphaPix 16", maxPixels: 680 },
+  "pixcon16": { name: "LOR PixCon16", maxPixels: 170 },
+  // The owner's controllers: each Pixie16 port drives at most 100 pixels in
+  // the RGBPlus layout (mini tree base+star = 300 channels; hardware ref §5)
+  "lor-pixie16": { name: "LOR Pixie16", maxPixels: 100 },
 };
 
 export function validateFixtures(

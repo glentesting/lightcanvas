@@ -1,11 +1,7 @@
-import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
   const projectId = formData.get("projectId") as string | null;
@@ -26,14 +22,13 @@ export async function POST(request: Request) {
     .from("projects")
     .select("id")
     .eq("id", projectId)
-    .eq("owner_id", userId)
     .single();
 
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   // Upload to Supabase Storage — use "lightcanvas-images" bucket for now (it exists)
   const fileExt = file.name.split(".").pop();
-  const filePath = `${userId}/${projectId}/house.${fileExt}`;
+  const filePath = `local/${projectId}/house.${fileExt}`;
 
   const { error: uploadError } = await supabase.storage
     .from("lightcanvas-images")
@@ -47,7 +42,7 @@ export async function POST(request: Request) {
   // stage will re-estimate and re-persist it on next open.
   await supabase.storage
     .from("lightcanvas-images")
-    .remove([`${userId}/${projectId}/depth.png`]);
+    .remove([`local/${projectId}/depth.png`]);
 
   // Get public URL
   const { data: urlData } = supabase.storage.from("lightcanvas-images").getPublicUrl(filePath);

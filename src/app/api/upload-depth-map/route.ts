@@ -1,16 +1,14 @@
-import { auth } from "@clerk/nextjs/server";
 import { createServiceClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
 /**
- * Persists the client-computed depth map PNG next to the house photo
- * (`{userId}/{projectId}/depth.png` in lightcanvas-images). The night-stage
- * derives this URL from the photo URL by convention — no DB column involved.
+ * Persists the client-computed depth map PNG next to the house photo in
+ * lightcanvas-images. The night-stage derives the depth URL from the photo
+ * URL by convention (last path segment → depth.png; no DB column), so the
+ * upload path is derived the same way from the project's stored photo URL —
+ * this keeps photos uploaded under the old Clerk-userId prefix working.
  */
 export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
   const projectId = formData.get("projectId") as string | null;
@@ -26,14 +24,21 @@ export async function POST(request: Request) {
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id")
+    .select("id, house_custom_svg")
     .eq("id", projectId)
-    .eq("owner_id", userId)
     .single();
 
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-  const filePath = `${userId}/${projectId}/depth.png`;
+  let filePath = `local/${projectId}/depth.png`;
+  const photoUrl: string | null = project.house_custom_svg;
+  const marker = "/lightcanvas-images/";
+  if (photoUrl && photoUrl.includes(marker)) {
+    const segments = photoUrl.split(marker)[1].split("/");
+    segments[segments.length - 1] = "depth.png";
+    filePath = segments.join("/");
+  }
+
   const { error: uploadError } = await supabase.storage
     .from("lightcanvas-images")
     .upload(filePath, file, { contentType: "image/png", upsert: true });

@@ -1,162 +1,123 @@
 # LightCanvas — Claude Code Briefing
 
-## ⚠️ Read this first
+## What this is
 
-**Open `PROJECT-STATUS.md` at the repo root.** It is the single source of truth for the
-project — current state, vision, architecture, known issues, what's next, what to avoid.
-This file is the technical briefing; that file is the brain.
+**A personal tool for one user (Glen) to design, preview, and export a
+synchronized Christmas light show for his own house.** Not a product. No
+auth, no billing, no marketing, no second user. Upload an MP3, detect beats,
+sequence effects (by hand on the timeline or with the AI sequencer), preview
+on a photo of the house, export a `.loredit` file that LOR S6 opens and the
+G4-MP3 Director plays.
 
-**`docs/CONSTITUTION.md` is the durable operating law** — the product's enduring principles.
-On any conflict of principle, it takes precedence over this file and PROJECT-STATUS.md until a human changes it.
+**`docs/CONSTITUTION.md` is the durable operating law** — on any conflict of
+principle it wins until a human changes it.
 
-## ⚠️ Update protocol — non-negotiable
+## Authoritative docs (read the relevant one before working)
 
-At the **end of every Claude Code session that makes real changes**, before you push:
+- `LIGHTCANVAS-HARDWARE-REFERENCE.md` — the physical show: controllers, unit
+  IDs, port→prop map, the `.loredit` format, file locations. If it isn't in
+  there, it isn't settled.
+- `AUDIT-2026-08.md` — the honest audit that set the current direction.
+- `LOREDIT-EXPORT-STATUS.md` — exporter: what works, what's unverified.
+- `AI-PIPELINE-STATUS.md` — AI sequencer: architecture, measured density.
+- `CLEANUP-STATUS.md` — what was deleted and what routes remain.
 
-1. Open `PROJECT-STATUS.md`
-2. Update the affected section(s) in place (don't add caveats — edit the truth)
-3. Update the "Last updated" line at the top
-4. Add a one-line entry to the Update Log at the bottom
-5. Commit the doc edit along with the code changes (same commit, not a separate one)
-
-If the change touches features, that's Section 1 or 8. If it touches architecture, Section 4.
-If it introduces a new constraint or gotcha, Section 7. If a previously-listed issue is fixed,
-remove it from Section 1's "What's actually broken" subsection — don't strike-through or comment
-it out, just delete it.
-
-Treat this exactly like the build passing or tests passing — done is not done without the doc update.
-
----
-
-## What This Is
-
-A web app for designing synchronized lighting shows. Upload an MP3, detect beats,
-drag effect blocks onto fixture tracks in a timeline editor, preview animations on the
-house, and export sequence files for xLights and Light-O-Rama hardware controllers.
-
-Positioning: "Canva for Christmas lights" expanding toward a serious lighting platform
-(churches, parades, commercial installs) per the v3 design direction. See Section 2 of
-PROJECT-STATUS.md for the full vision.
+Keep these truthful: when a session changes what works, update the matching
+status doc in the same commit.
 
 ## Stack
 
-- **Next.js 16** (App Router) + **React 19** + **TypeScript**
-- **Clerk** — auth (login, signup, protected routes, middleware)
-- **Supabase** — Postgres (projects + shows tables, JSONB) + Storage (audio)
-- **Zustand** + **immer** + **zundo** — editor state with undo/redo
-- **WaveSurfer.js v7** — audio playback + waveform rendering
-- **Hand-rolled beat detection** (`src/lib/audio/beat-detector.ts`) — client-side BPM, onsets, sections, spectral features (the meyda dep was never used and was removed 2026-08-27)
-- **@dnd-kit/core** — drag-and-drop on timeline + layout
-- **three** — photo night-stage preview (depth-displaced 2.5D scene, bloom, light points)
-- **@huggingface/transformers** — client-side depth estimation (Depth Anything V2 Small); never runs server-side, `onnxruntime-node` is aliased out in next.config.ts
-- **Tailwind CSS 4** — light mode only, LightCanvas design tokens
-- **zod** — API + export validation
-- **Vercel** — hosting (auto-deploys from GitHub on push to main)
+Next.js 16 (App Router) · React 19 · TypeScript · Supabase (Postgres +
+Storage, service-role key, no RLS reliance) · Zustand + immer + zundo ·
+WaveSurfer.js v7 · dnd-kit · three (photo night-stage) ·
+@huggingface/transformers (client-side depth estimation) · zod ·
+Tailwind CSS 4 (light mode only).
 
-Note: no `@anthropic-ai/sdk` dep (direct `fetch` to Anthropic API).
-No `jszip` dep (hand-rolled ZIP writer in `src/lib/exports/zip.ts`).
+No auth (Clerk removed 2026-08-27 — single user). No `@anthropic-ai/sdk`
+(direct fetch). No `jszip` (hand-rolled ZIP in `src/lib/exports/zip.ts`).
+Beat detection is hand-rolled (`src/lib/audio/beat-detector.ts`).
 
-## Architecture (short version — full version in PROJECT-STATUS.md §4)
-
-### Data Model
-
-`projects` table: JSONB row per project (fixtures, sequence, audio analysis, layout, export mappings).
-`shows` table: groups projects into multi-song shows with ordered playlists.
-`fixture_templates`: seeded fixture types.
-
-### Key Routes (current — v3 adds several more)
+## Routes (all real — nothing fake is allowed to exist)
 
 | Route | What |
-|-------|------|
-| `/` | Marketing landing page |
-| `/sign-in`, `/sign-up` | Clerk auth |
-| `/onboarding` | 4-step wizard |
-| `/dashboard` | Shows + projects list |
-| `/project/[id]` | Split-view editor (preview + timeline) |
-| `/project/[id]/layout` | Layout editor (separate page) |
-| `/settings` | Account, Hardware, Billing tabs |
-| `/legal/*` | Terms, Privacy, Copyright, Cookies (PLACEHOLDER) |
-| `/p/[token]` | Public read-only share link |
+|---|---|
+| `/` → `/projects` | Project list: open, create, delete |
+| `/project/[id]` | The editor: photo night-stage preview, props, AI panel, Export button |
+| `/project/[id]/layout` | Layout editor: photo upload, prop placement |
+| `/timeline?project=` | Timeline editor: effect blocks, beat snap, undo/redo |
+| `/designer` | Redirects into the loaded project |
+| `/dev/stage`, `/dev/visualizer-v2` | Dev harnesses (404 in prod) |
 
-### Export Formats
+API: `projects` (list/create/get/patch/delete/duplicate), `autosave`,
+`audio/[projectId]`, `import`, `upload-audio`, `upload-house-photo`,
+`upload-depth-map`, `ai/generate` (SSE). All Clerk-free; new rows use
+`owner_id: "local"`, new uploads use a `local/{projectId}/` storage prefix.
 
-- **xLights (.xsq)** — ZIP with .xsq + audio + xlights_rgbeffects.xml + README
-- **LOR (.lms)** — ZIP with .lms + audio + README
-- **LightCanvas JSON** — full project file, re-importable
-- **Video (WebM)** — rendered preview with audio
+## The two pipelines that matter
 
-### Import Formats
+**Export (`src/lib/exports/loredit/`):** template-fill. User supplies a
+`.loredit` (paid content — globally gitignored, never committed, never
+hardcoded); PreviewClass/TimingGrids kept verbatim, effects replaced via a
+fixture→prop mapping persisted on `sequence.loreditPropMap`. The
+channel/track grammar rule is absolute (see the hardware doc §6). Verify
+with `npx tsx scripts/loredit/verify-roundtrip.mts` and `verify-export.mts`.
 
-- **xLights (.xsq)** — parse models + effects, create project
-- **LOR (.lms)** — parse channels + effects, group RGB channels
+**AI sequencer (`src/lib/ai/sequencer/`):** two layers. Layer 1
+(`claude-opus-5`, one call per ≤4 sections) returns compact musical plans;
+Layer 2 deterministically expands them into beat-snapped blocks. No key →
+loud 503 (never a silent mock; `AI_USE_MOCK=1` is the explicit, UI-labeled
+dev mock). Verify with `npx tsx scripts/ai/verify-pipeline.mts`.
 
-## Known Issues / Quirks (the real list)
+## Working rules
 
-**See PROJECT-STATUS.md §1 for the canonical issue list.** Highlights:
-
-### Still open
-1. **Legal pages are placeholder.** Need real counsel-written copy before launch.
-2. **ANTHROPIC_API_KEY not set anywhere yet.** Required for AI generation; without it the app now
-   fails loudly (503 + clear message — the silent mock fallback was removed 2026-08-27). Set it in
-   `.env.local` and Vercel prod, then run one live generation (never yet done). `AI_USE_MOCK=1`
-   enables an explicit, UI-labeled deterministic mock for development.
-3. **Telemetry SDKs not installed.** `src/lib/analytics.ts` is a `console.log` stub. Install Sentry
-   and PostHog when ready and wire them through `analytics.ts`.
-4. **Manual browser smoke test not done.** Code-level test passed all 35 paths; the human-level
-   smoke test (Clerk signup, audio playback, ZIP open in xLights/LOR, mobile gate, share link) is outstanding.
-5. **Stripe / billing not wired.** Placeholder route + UI exist; real subscription handling is not built.
-
-### Quirks (by design — not bugs)
-6. **BPM correction.** If detected BPM >160, halved; if <60, doubled. Working as designed.
-7. **WaveSurfer destroy race.** Cleanup defers destroy until `ready` or `error` fires.
-8. **Storage RLS.** References `auth.jwt() ->> 'sub'` for Clerk JWT.
-9. **Windows paths.** Always `cd` to project folder first before any bash command.
-
-## Working Rules
-
-- **Light mode only** — everywhere, no exceptions.
-- **Show plan before touching DB** — any migration needs review first.
-- **TypeScript clean** (`npx tsc --noEmit`) before marking done.
-- **Build passes** (`npx next build`) before marking done.
-- **Update PROJECT-STATUS.md** before pushing — see protocol at top of this file.
-- **Don't claim "complete" optimistically** — see PROJECT-STATUS.md §7.
-- **Real photo backgrounds win over SVG illustrations** — per v3 design direction.
+- **Light mode only.**
+- **TypeScript clean** (`npx tsc --noEmit`) and **build passes**
+  (`npx next build`) before marking anything done.
+- **Verify by running code, not by reasoning about it.** The verify scripts
+  above exist for exactly this.
+- **Never commit** `.loredit` files, MP3s, or template content (gitignored).
+- **No dead buttons, no fake data.** If a control can't work yet, it doesn't
+  render. This confusion is why the project stalled once.
+- **Show a plan before touching the DB.**
+- The acceptance test for anything export-related is: LOR S6 v6.6.12 opens
+  the file.
 
 ## Commands
 
 ```bash
-cd "C:/Users/glenh/Documents/Lightshow/AppRepo"
-npm run dev      # Dev server
+cd "C:/Users/glenh/Documents/LightCanvas/AppRepo"
+npm run dev      # Dev server (or .claude/launch.json "dev")
 npm run build    # Production build
-npm run lint     # ESLint
 npx tsc --noEmit # Type check
+npm run lint     # ESLint (baseline: 3 warnings in scripts/loredit-spike)
 ```
 
 ## Git
 
-- Remote: https://github.com/glentesting/lightshow
+- Remote: https://github.com/glentesting/lightcanvas (old `lightshow` URL redirects)
 - Branch: main
 
-## Environment Variables
+## Environment (.env.local)
 
 ```
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-CLERK_SECRET_KEY
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
-ANTHROPIC_API_KEY (required for AI generation; fails loudly without it)
-AI_USE_MOCK=1 (optional dev flag: explicit deterministic mock planner, labeled in the UI)
+ANTHROPIC_API_KEY   (AI generation fails loudly without it)
+AI_USE_MOCK=1       (optional: explicit deterministic mock planner)
 ```
 
-## Doc Structure
+Beware invisible characters when pasting keys — a U+200B in a pasted value
+once broke env parsing here.
 
-- **PROJECT-STATUS.md** (repo root) — **the brain. Read first. Update last.**
-- **CLAUDE.md** (this file) — technical briefing for Claude Code
-- **docs/** — reference docs (file formats, technical blueprint, competitive landscape)
-- **Parent folder** — `LightCanvas Roadmap v3.xlsx` (phased roadmap),
-  `LightCanvas Financial Model.xlsx`, archived handoff packages
+## Known gaps (honest list)
+
+- `.loredit` output not yet opened in S6 (the manual acceptance test) —
+  exact files to open are named in LOREDIT-EXPORT-STATUS.md and
+  AI-PIPELINE-STATUS.md.
+- Prop shapes are single-anchor with default sizes; no roofline-tracing UI
+  yet, so real rooflines render as straight lines in the preview.
+- Pixel props export as colorwash only; curtain/bars settings grammar
+  unverified.
+- No lip-sync for the singing faces (deliberate — separate job).
+- ANTHROPIC_API_KEY + `maxDuration` not yet set in Vercel prod.

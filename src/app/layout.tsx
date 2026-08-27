@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Inter_Tight, JetBrains_Mono, Fraunces } from "next/font/google";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import CookieBanner from "@/components/CookieBanner";
 import "./globals.css";
 
 const interTight = Inter_Tight({
@@ -26,7 +24,7 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: "LightCanvas",
-  description: "Create stunning light shows with AI-assisted sequencing",
+  description: "Design and export synchronized light shows",
 };
 
 export default function RootLayout({
@@ -35,20 +33,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html
-        lang="en"
-        className={`${interTight.variable} ${jetbrainsMono.variable} ${fraunces.variable} h-full antialiased`}
-      >
-        <head />
-        <body className="min-h-full flex flex-col" style={{ background: "var(--bg)", color: "var(--ink)" }}>
-          <a href="#main-content" className="skip-to-content">Skip to content</a>
-          <ErrorBoundary>
-            {children}
-            <CookieBanner />
-          </ErrorBoundary>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html
+      lang="en"
+      className={`${interTight.variable} ${jetbrainsMono.variable} ${fraunces.variable} h-full antialiased`}
+    >
+      <head />
+      <body className="min-h-full flex flex-col" style={{ background: "var(--bg)", color: "var(--ink)" }}>
+        <a href="#main-content" className="skip-to-content">Skip to content</a>
+        <ErrorBoundary>{children}</ErrorBoundary>
+      </body>
+    </html>
   );
 }

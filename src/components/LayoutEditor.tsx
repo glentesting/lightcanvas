@@ -398,30 +398,6 @@ export default function LayoutEditor({
           </div>
         </div>
 
-        {/* Floating canvas toolbar */}
-        <div
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-px rounded-xl px-1 py-1"
-          style={{
-            background: "rgba(255,255,255,0.88)",
-            backdropFilter: "blur(12px)",
-            border: "1px solid rgba(0,0,0,0.08)",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.10)",
-          }}
-        >
-          <CanvasToolBtn icon="select" label="Select" active />
-          <CanvasToolBtn icon="draw" label="Draw" />
-          <CanvasToolBtn icon="move" label="Move" />
-          <CanvasToolBtn icon="resize" label="Resize" />
-          <ToolbarDivider />
-          <CanvasToolBtn icon="snap" label="Snap" />
-          <CanvasToolBtn icon="fit" label="Fit" />
-          <ToolbarDivider />
-          <CanvasToolBtn icon="zoomOut" label="Zoom Out" />
-          <span className="px-2 text-xs font-medium" style={{ color: "var(--ink-2)", fontVariantNumeric: "tabular-nums", minWidth: 36, textAlign: "center" }}>100%</span>
-          <CanvasToolBtn icon="zoomIn" label="Zoom In" />
-          <ToolbarDivider />
-          <CanvasToolBtn icon="fullscreen" label="Fullscreen" />
-        </div>
       </div>
 
       {/* Right panel — Inspector */}
@@ -1208,38 +1184,4 @@ function PropTypeIcon({ kind, selected }: { kind: string; selected: boolean }) {
       </svg>
     </div>
   );
-}
-
-/* --- Canvas toolbar button --- */
-const TOOLBAR_ICONS: Record<string, React.ReactNode> = {
-  select: <><path d="M4 4l7 17 2.5-6.5L20 12z" /><line x1="15" y1="15" x2="20" y2="20" /></>,
-  draw: <><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z" /></>,
-  move: <><polyline points="5 9 2 12 5 15" /><polyline points="9 5 12 2 15 5" /><polyline points="15 19 12 22 9 19" /><polyline points="19 9 22 12 19 15" /><line x1="2" y1="12" x2="22" y2="12" /><line x1="12" y1="2" x2="12" y2="22" /></>,
-  resize: <><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></>,
-  snap: <><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></>,
-  fit: <><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></>,
-  zoomIn: <><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="11" y1="8" x2="11" y2="14" /><line x1="8" y1="11" x2="14" y2="11" /></>,
-  zoomOut: <><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="8" y1="11" x2="14" y2="11" /></>,
-  fullscreen: <><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><polyline points="21 3 14 10" /><polyline points="3 21 10 14" /></>,
-};
-
-function CanvasToolBtn({ icon, label, active }: { icon: string; label: string; active?: boolean }) {
-  return (
-    <button
-      title={label}
-      className="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
-      style={{
-        background: active ? "#1e3a5f" : "transparent",
-        color: active ? "#FFFFFF" : "var(--ink-3)",
-      }}
-    >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        {TOOLBAR_ICONS[icon]}
-      </svg>
-    </button>
-  );
-}
-
-function ToolbarDivider() {
-  return <div className="w-px h-5 mx-0.5" style={{ background: "rgba(0,0,0,0.08)" }} />;
 }

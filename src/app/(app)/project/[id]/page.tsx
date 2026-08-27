@@ -12,7 +12,6 @@ import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
 import { createDefaultFixtures } from "@/lib/fixtures/defaults";
 import type { AudioAnalysis } from "@/lib/audio/types";
-import MobileGate from "@/components/MobileGate";
 import type { Fixture } from "@/lib/fixtures/types";
 
 /* ─── Fixture Kind Colors ──────────────────────────────────── */
@@ -143,8 +142,8 @@ export default function DesignerPage() {
           </svg>
         </div>
         <p className="text-sm font-medium">{loadError}</p>
-        <Link href="/dashboard" className="text-sm px-4 py-2 rounded-md" style={{ background: "var(--accent)", color: "#fff" }}>
-          Back to Dashboard
+        <Link href="/projects" className="text-sm px-4 py-2 rounded-md" style={{ background: "var(--accent)", color: "#fff" }}>
+          Back to Projects
         </Link>
       </div>
     );
@@ -163,8 +162,6 @@ export default function DesignerPage() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden" style={{ background: "var(--bg)" }}>
-      <MobileGate />
-
       {/* Page header */}
       <header
         className="flex items-center justify-between px-6 shrink-0"

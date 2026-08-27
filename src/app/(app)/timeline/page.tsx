@@ -11,7 +11,6 @@ import { projectFromRow } from "@/types/domain";
 import { createDefaultFixtures } from "@/lib/fixtures/defaults";
 import { EFFECT_COLORS, EFFECT_NAMES } from "@/lib/timeline/constants";
 import type { EffectId } from "@/lib/timeline/types";
-import MobileGate from "@/components/MobileGate";
 
 function TimelineContent() {
   const searchParams = useSearchParams();
@@ -77,8 +76,8 @@ function TimelineContent() {
         </div>
         <p className="text-sm font-medium" style={{ color: "var(--ink-2)" }}>No project selected</p>
         <p className="text-xs" style={{ color: "var(--ink-4)" }}>Open a project from the Designer to edit its timeline.</p>
-        <Link href="/dashboard" className="text-sm px-4 py-2 rounded-md" style={{ background: "var(--accent)", color: "#fff" }}>
-          Go to Dashboard
+        <Link href="/projects" className="text-sm px-4 py-2 rounded-md" style={{ background: "var(--accent)", color: "#fff" }}>
+          Go to Projects
         </Link>
       </div>
     );
@@ -95,8 +94,8 @@ function TimelineContent() {
           </svg>
         </div>
         <p className="text-sm font-medium">{loadError}</p>
-        <Link href="/dashboard" className="text-sm px-4 py-2 rounded-md" style={{ background: "var(--accent)", color: "#fff" }}>
-          Back to Dashboard
+        <Link href="/projects" className="text-sm px-4 py-2 rounded-md" style={{ background: "var(--accent)", color: "#fff" }}>
+          Back to Projects
         </Link>
       </div>
     );
@@ -115,8 +114,6 @@ function TimelineContent() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden" style={{ background: "var(--bg)" }}>
-      <MobileGate />
-
       {/* Page header */}
       <header
         className="flex items-center justify-between px-6 shrink-0"
