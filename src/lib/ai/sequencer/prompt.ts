@@ -87,7 +87,7 @@ TASK: Return a plan for sections ${batchIdxs} ONLY, as a JSON array with one obj
 }
 
 Musical judgment to apply:
-- Layer: quiet sections get 1–2 sustained groups; loud choruses layer 3+ groups mixing sustained beds with every-beat accents.
+- Layer: quiet sections get 1–2 sustained groups; loud choruses layer 3–5 groups — one or two sustained beds plus at least two accent layers (every-beat or downbeats). In peak moments, multi-fixture groups (mini-trees, arches, stakes) hit hardest with alternate or unison accents.
 - Contrast: verses and choruses must look different (different groups active, different rhythm density). A chorus repeat can rhyme with the first chorus.
 - Rhythm follows the music: high onset density and bass → every-beat or downbeats accents; smooth quiet passages → sustained.
 - Movement: chases (left-to-right, center-out, stagger) belong on multi-fixture groups (mini-trees, arches, stakes). unison suits the roofline and single props.

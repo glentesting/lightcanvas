@@ -75,17 +75,34 @@ made additive refinement wrong); Undo still removes the whole generation.
 
 Run: `npx tsx scripts/ai/verify-pipeline.mts` — end-to-end against a REAL
 song ("Christmas Lights And Zero Regrets.mp3", 326 s, decoded with a pure-JS
-decoder, analyzed by the real `analyzeChannelData`):
+decoder, analyzed by the real `analyzeChannelData`). The script auto-detects
+`ANTHROPIC_API_KEY` in `.env.local` and uses the **real `claude-opus-5`
+planner** when present (2026-08-27: verified live).
+
+Live-model run (4 API calls, 12–18 s each, all `end_turn`, zero salvage):
 
 - Detected: 83 BPM, 451 beats, 1,879 onsets → 15 sections after normalization
-- **2,925 blocks generated** across 20 fixtures (target ≥ 1,500)
+- **1,907 blocks generated** across 20 fixtures (target ≥ 1,500)
 - **100% of block starts land exactly on detected beats**
-- All 20 fixtures participate (124–204 blocks each; per-fixture table in the
-  script output)
+- All 20 fixtures participate (33–299 blocks each — and unevenly on purpose:
+  the model leans on the roofline for every-beat chases and uses the
+  mega-tree as a sustained bed)
+- Plan quality is genuinely musical: intro at energy 0.25 (mega-tree fade +
+  window twinkle only), verses 0.42→0.55 layering 3–4 groups, choruses 0.78–0.82
+  layering 5 (wash bed + every-beat mini-tree chase + arch waves + downbeat
+  roofline strobes + window pulses), flash/sweep transitions at boundaries
 - Exported to `.loredit` through the real exporter: 20 props filled, 451 beat
   marks, **zero grammar violations**
 
-Old pipeline on the same input: ~60–100 blocks. Gap closed: ~30–50×.
+Mock planner on the same input: 2,925 blocks (denser but mechanically
+rotated; the model trades raw count for contrast and restraint).
+Old pipeline on the same input: ~60–100 blocks. Gap closed: ~20–30×.
+
+The first live run landed at 1,338 blocks — under target — because the
+expander swept traveling chases one fixture per beat (5.8 s to cross 8 props
+at 83 BPM). Chases now move a ⌈n/4⌉-wide front so a sweep completes about
+once per bar; that plus stronger chorus-layering prompt guidance brought the
+live result to 1,907.
 
 ## The file to open in S6
 
@@ -93,15 +110,12 @@ Old pipeline on the same input: ~60–100 blocks. Gap closed: ~30–50×.
 C:\Users\glenh\Documents\LightCanvas\AppRepo\scripts\loredit-spike\test-fixtures\output\ai-pipeline-export.loredit
 ```
 
-A full AI-generated (mock-planned) show on the RGBPlus layout: mini trees,
-arches, roofline AC, mega tree, with the real song's beats as the
-"LightCanvas Beats" timing grid.
+A full **live-Opus-5-planned** show on the RGBPlus layout: mini trees, arches,
+roofline AC, mega tree, with the real song's beats as the "LightCanvas Beats"
+timing grid.
 
 ## What's stubbed / simplified
 
-- **Layer 1 in the verification run is the deterministic mock planner** — this
-  machine has no `ANTHROPIC_API_KEY` (see Unverified below). The mock produces
-  schema-valid plans through the identical downstream path.
 - Rhythm vocabulary is beat-grid-based ("offbeats" = the backbeat, index %4==2,
   not true syncopation); the beat grid itself is still the detector's rigid
   metronome fit.
@@ -110,22 +124,27 @@ arches, roofline AC, mega tree, with the real song's beats as the
 - Refinement regenerates the whole show with the refinement text in the
   prompt; it does not do targeted edits of existing blocks.
 
-## What's unverified
+## What's verified live (2026-08-27)
 
-1. **A live `claude-opus-5` call end to end.** No API key on this machine —
-   the exact machine where the old silent mock was masquerading as real AI.
-   The request shape follows current API docs (adaptive thinking default,
-   fallbacks beta), and every failure path (truncation, refusal, bad JSON) is
-   exercised with synthetic responses, but the real round trip needs a key:
-   set `ANTHROPIC_API_KEY` in `.env.local` and in Vercel, then generate from
-   the AI panel — or re-run the verify script after exporting the key.
-2. **Real-model plan quality** — whether Opus 5's musical judgment beats the
-   mock's rotation heuristics (it should; the prompt gives it everything).
-3. **Vercel function duration** — sequential batch planning (2–6 model calls)
-   inside one streaming route may need a `maxDuration` bump in production.
-4. **Timeline UI feel at 3,000 blocks** — bulk insert is one store update, but
-   rendering thousands of blocks in the timeline hasn't been profiled.
-5. **S6 opening `ai-pipeline-export.loredit`** — same manual step as the
+- **Real `claude-opus-5` planning end to end** — key set in `.env.local`
+  (note: the pasted key carried invisible U+200B zero-width characters that
+  broke env parsing; they've been stripped from the file). 4 sequential calls,
+  all `end_turn`, valid JSON every time, zero salvage needed, ~60 s total
+  planning time.
+- Full chain: real MP3 → real analysis → live plans → deterministic expansion
+  → 1,907 beat-snapped blocks → `.loredit` export with zero grammar
+  violations.
+
+## What's still unverified
+
+1. **The key in Vercel prod** — set it there too, and expect the streaming
+   route to need a `maxDuration` bump (planning alone is ~60 s for 4 batches;
+   sequential calls inside one serverless invocation).
+2. **Generation through the actual AI panel UI** (the verify script drives the
+   same orchestrator, but the browser SSE round trip hasn't been watched).
+3. **Timeline UI feel at ~2,000 blocks** — bulk insert is one store update,
+   but rendering thousands of blocks in the timeline hasn't been profiled.
+4. **S6 opening `ai-pipeline-export.loredit`** — same manual step as the
    exporter's own pending test.
 
 ## Where things live

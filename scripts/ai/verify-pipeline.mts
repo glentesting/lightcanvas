@@ -26,6 +26,7 @@ import { analyzeChannelData } from "../../src/lib/audio/beat-detector";
 import { runSequencer } from "../../src/lib/ai/sequencer/orchestrator";
 import type { ModelCaller } from "../../src/lib/ai/sequencer/orchestrator";
 import { mockPlanBatch } from "../../src/lib/ai/mock-provider";
+import { makeAnthropicCaller } from "../../src/lib/ai/anthropic-provider";
 import { buildPlanPrompt } from "../../src/lib/ai/sequencer/prompt";
 import { prepareSections, loudnessShape } from "../../src/lib/ai/sequencer/sections";
 import { deriveFixtureGroups } from "../../src/lib/ai/sequencer/groups";
@@ -47,6 +48,51 @@ function check(label: string, ok: boolean, detail = "") {
   console.log(`${ok ? "PASS" : "FAIL"}  ${label}${detail ? " — " + detail : ""}`);
   if (!ok) failures++;
 }
+
+// ── Layer-1 planner: real Opus 5 when a key is available, else the mock ──
+// The key is read from .env.local (Node doesn't auto-load it) and never printed.
+function loadApiKey(): string | undefined {
+  if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY;
+  try {
+    const env = fs.readFileSync(path.join(here, "..", "..", ".env.local"), "utf8");
+    for (const line of env.split(/\r?\n/)) {
+      // strip BOM and zero-width characters (pasted keys often carry U+200B)
+      const trimmed = line.replace(/[​‌‍﻿]/g, "").trim();
+      if (trimmed.startsWith("ANTHROPIC_API_KEY=")) {
+        return trimmed.slice("ANTHROPIC_API_KEY=".length).trim().replace(/^["']|["']$/g, "");
+      }
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const apiKey = loadApiKey();
+/** raw model responses, captured so the report can show the model's actual plans */
+const capturedPlans: Array<{ sections: string; text: string; stopReason: string | null; ms: number }> = [];
+
+let planner: ModelCaller;
+let plannerName: string;
+if (apiKey) {
+  const real = makeAnthropicCaller(apiKey);
+  planner = async (prompt, meta) => {
+    const t = Date.now();
+    const result = await real(prompt, meta);
+    capturedPlans.push({
+      sections: meta.batch.map((s) => `#${s.index} ${s.label}`).join(", "),
+      text: result.text,
+      stopReason: result.stopReason,
+      ms: Date.now() - t,
+    });
+    return result;
+  };
+  plannerName = "REAL claude-opus-5";
+} else {
+  planner = mockPlanBatch;
+  plannerName = "deterministic mock (no ANTHROPIC_API_KEY found)";
+}
+console.log(`Layer-1 planner: ${plannerName}`);
 
 // ── 1. real audio, real analysis ──
 console.log(`Decoding: ${MP3}`);
@@ -97,8 +143,8 @@ async function collect(events: AsyncIterable<AIEvent>) {
 }
 
 const t2 = Date.now();
-const { blocks, all } = await collect(runSequencer(input, { style: "tso" }, mockPlanBatch));
-console.log(`\nPipeline ran in ${Date.now() - t2} ms, ${all.length} events`);
+const { blocks, all } = await collect(runSequencer(input, { style: "tso" }, planner));
+console.log(`\nPipeline (${plannerName}) ran in ${Date.now() - t2} ms, ${all.length} events`);
 const errors = all.filter((e) => e.type === "error");
 check("pipeline completed without errors", errors.length === 0, errors.map((e) => "message" in e ? e.message : "").join("; "));
 const done = all.find((e) => e.type === "done");
@@ -122,10 +168,29 @@ for (const f of fixtures) {
   console.log(`  ${f.name.padEnd(16)} ${String(count).padStart(5)}  ${"#".repeat(Math.min(60, Math.round(count / 10)))}`);
 }
 
+// mock comparison run (same analysis, same fixtures)
+if (apiKey) {
+  const mockRun = await collect(runSequencer(input, { style: "tso" }, mockPlanBatch));
+  console.log(`Mock planner on the same input: ${mockRun.blocks.length} blocks (real model: ${blocks.length})`);
+}
+
 check("density target met (>= 1500 blocks)", blocks.length >= 1500, `${blocks.length} blocks`);
 check("every block starts on a detected beat or section boundary", onBeat / blocks.length > 0.9, `${((onBeat / blocks.length) * 100).toFixed(1)}% exactly on beats`);
 check("blocks within song bounds", blocks.every((b) => b.start >= 0 && b.start + b.duration <= analysis.duration + 0.5));
 check("most fixtures participate", fixturesWithBlocks >= fixtures.length * 0.75, `${fixturesWithBlocks}/${fixtures.length}`);
+
+// ── what the model actually returned ──
+if (capturedPlans.length > 0) {
+  console.log(`\n=== MODEL RESPONSES (${capturedPlans.length} calls) ===`);
+  for (const c of capturedPlans) {
+    console.log(`\n--- call for sections ${c.sections} (stop: ${c.stopReason}, ${(c.ms / 1000).toFixed(1)}s) ---`);
+    try {
+      console.log(JSON.stringify(JSON.parse(c.text.replace(/```(?:json)?|```/g, "").trim()), null, 1));
+    } catch {
+      console.log(c.text.slice(0, 3000));
+    }
+  }
+}
 
 // ── 4. Layer-1 failure paths with synthetic model responses ──
 console.log(`\n=== LAYER-1 FAILURE HANDLING ===`);

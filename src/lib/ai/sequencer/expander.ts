@@ -227,11 +227,17 @@ function expandGroupPlan(
       break;
     case "left-to-right":
     case "right-to-left": {
+      // a wave-front wide enough that the sweep crosses the group about once
+      // per bar (4 pulses) — one-fixture-per-beat reads sluggish on 8-prop runs
+      const front = Math.max(1, Math.ceil(n / 4));
       for (let k = 0; k < pulses.length; k++) {
-        const idx = movement === "left-to-right" ? k % n : n - 1 - (k % n);
         // let the accent ring for two pulse gaps so the chase overlaps a little
         const dur = Math.min(gapAfter(k) * 2, ACCENT_DURATION_CAP);
-        push(ctx.accents, fixtures[idx].id, pulses[k], dur);
+        for (let w = 0; w < front; w++) {
+          const pos = (k * front + w) % n;
+          const idx = movement === "left-to-right" ? pos : n - 1 - pos;
+          push(ctx.accents, fixtures[idx].id, pulses[k], dur);
+        }
       }
       break;
     }
