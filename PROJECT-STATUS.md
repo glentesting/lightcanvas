@@ -5,8 +5,8 @@
 **`docs/CONSTITUTION.md` is the durable operating law** — the product's enduring principles. On any
 conflict of principle, it takes precedence over this file until a human changes it.
 
-Last updated: 2026-06-11
-Updated by: Claude (Visualizer Mission 1A Phase 1 — photo night-stage preview replaces SVG preview)
+Last updated: 2026-06-12
+Updated by: Codex (isolated photographic visualizer v2 prototype)
 
 ---
 
@@ -529,6 +529,8 @@ All sidebar destinations now render real v4-polish pages. ComingSoon.tsx has bee
 
 ✅ **Mission 1A Phase 1 (2026-06-11): photo night-stage** — replaces the SVG preview whenever a house photo exists. Client-side depth (Transformers.js), three.js 2.5D parallax stage, night grade, per-pixel additive lights + bloom, SceneProvider seam for future SplatScene, hero composition on `/project/[id]` (placeholder Select/Move/Scale toolbar removed, side panels collapsible). Dev harness `/dev/stage` (supports `?photo=` URL param) + `scripts/stage-screenshot.mjs` for look iteration. Night grade is **adaptive**: photo mean luminance drives exposure, with a hard highlight shoulder + photometric sky replacement (blue-dominant/blown pixels), so bright midday uploads read as believable night — verified on a real midday photo AND the dusk sample. **Awaiting human look-approval before Phase 2.**
 
+🧪 **Photographic Visualizer V2 prototype (2026-06-12): isolated comparison path** — adds a Canvas2D compositor that keeps the source photo outside the glow pipeline and renders night grading, receiver-masked surface spill, fixture halos, and crisp bulb cores as separate layers. It is available only through `/dev/visualizer-v2`, includes live image-formation controls and a screenshot helper, and does not replace or import the production `PhotoDepthScene`/`NightStage` path.
+
 ⏳ **Phase 2 (1B): smart-template prop authoring on the night stage** — template registry (Mega Tree, Mini Tree, Arches, Stakes, Snowflake, Star, Spinner, Candy Cane, Wreath, Matrix, Singing Face), the Run tool (trace rooflines/eaves on the photo), drag-and-drop placement feel, group arrays ("8 arches across the front") with group effects, per-template effect vocabulary, depth-based scaling. Gated on Phase 1 approval.
 
 NOT this mission: Gaussian splatting (seam only), phone/QR capture, FSEQ compile, AI sequence engine, new export formats.
@@ -546,6 +548,7 @@ NOT this mission: Gaussian splatting (seam only), phone/QR capture, FSEQ compile
 
 When you make significant changes, add a one-line entry here. Newest at the top.
 
+- 2026-06-12 — Added an isolated photographic visualizer v2 prototype at `/dev/visualizer-v2`: stable 2D source plate, adaptive night grade, receiver-masked spill, independent halos and crisp cores, adjustable look controls, documentation, and screenshot automation. Existing visualizer remains unchanged. Targeted ESLint clean, TypeScript clean, production build passes.
 - 2026-06-11 — Demo-layout proof on a real photo: /dev/stage demo fixtures re-traced to the owner's daytime house photo (gitignored), verified via 2D grid/overlay calibration + a daylight-debug render (?day=1) proving lights sit on the real roof/windows; night grade lifted for house readability (target 0.40, softer shoulder, higher ambient + far floor); NightStage gains disableDepth/debugDaylight debug props (?flat=1/?day=1). Lint 0/0, TypeScript clean, build passes.
 - 2026-06-11 — Night grade made daytime-proof: adaptive exposure from photo mean luminance, highlight-shoulder tone compression, photometric + geometric sky replacement, moonlight desat/cool. Verified against a real midday photo (frontyard test, gitignored under public/dev/test-photos/) and the dusk sample. /dev/stage now accepts ?photo=. Lint 0/0, TypeScript clean, build passes.
 - 2026-06-11 — Visualizer Mission 1A Phase 1: photo night-stage preview. New scene layer (`src/lib/scene/`: SceneProvider interface, PhotoDepthScene three.js provider, pixel-geometry, client-side depth via Transformers.js/Depth Anything V2 Small with depth.png persistence + upload-depth-map route), NightStage component, PreviewPanel uses it when a photo exists (SVG = fallback), project page hero composition (toolbar removed, collapsible panels), `/dev/stage` harness + screenshot script, PROP_SIZES extracted to shared module, /dev/* public in middleware (404s in prod). Deps added: three, @huggingface/transformers, puppeteer-core (dev). Lint 0/0, TypeScript clean, build passes. Phase 2 (smart templates) gated on look approval.
