@@ -9,9 +9,6 @@ sequence effects (by hand on the timeline or with the AI sequencer), preview
 on a photo of the house, export a `.loredit` file that LOR S6 opens and the
 G4-MP3 Director plays.
 
-**`docs/CONSTITUTION.md` is the durable operating law** — on any conflict of
-principle it wins until a human changes it.
-
 ## Authoritative docs (read the relevant one before working)
 
 - `LIGHTCANVAS-HARDWARE-REFERENCE.md` — the physical show: controllers, unit
@@ -21,6 +18,7 @@ principle it wins until a human changes it.
 - `LOREDIT-EXPORT-STATUS.md` — exporter: what works, what's unverified.
 - `AI-PIPELINE-STATUS.md` — AI sequencer: architecture, measured density.
 - `CLEANUP-STATUS.md` — what was deleted and what routes remain.
+- `LAYOUT-IMPORT-STATUS.md` — importing the owner's display from a .loredit.
 
 Keep these truthful: when a session changes what works, update the matching
 status doc in the same commit.
@@ -53,7 +51,16 @@ API: `projects` (list/create/get/patch/delete/duplicate), `autosave`,
 `upload-depth-map`, `ai/generate` (SSE). All Clerk-free; new rows use
 `owner_id: "local"`, new uploads use a `local/{projectId}/` storage prefix.
 
-## The two pipelines that matter
+## The three pipelines that matter
+
+**Layout import (`src/lib/imports/loredit-layout.ts`):** "Import from
+Light-O-Rama" in the Layout editor parses a template's PreviewClass into a
+grouped picker (the owner's 84 props pre-selected), creates fixtures with
+real pixel counts, unit/circuit addressing (`Fixture.lor`), and traced
+shapes, and auto-populates `sequence.loreditPropMap` — export mapping is a
+review step, not data entry. Verify with
+`npx tsx scripts/loredit/verify-layout-import.mts`.
+
 
 **Export (`src/lib/exports/loredit/`):** template-fill. User supplies a
 `.loredit` (paid content — globally gitignored, never committed, never
@@ -113,10 +120,11 @@ once broke env parsing here.
 ## Known gaps (honest list)
 
 - `.loredit` output not yet opened in S6 (the manual acceptance test) —
-  exact files to open are named in LOREDIT-EXPORT-STATUS.md and
-  AI-PIPELINE-STATUS.md.
-- Prop shapes are single-anchor with default sizes; no roofline-tracing UI
-  yet, so real rooflines render as straight lines in the preview.
+  exact files to open are named in LOREDIT-EXPORT-STATUS.md,
+  AI-PIPELINE-STATUS.md, and LAYOUT-IMPORT-STATUS.md.
+- Imported props carry real traced shapes (preview renders them), but there
+  is still no UI to hand-trace a NEW shape on the photo, and imported shapes
+  reposition by drag only — no scale/rotate.
 - Pixel props export as colorwash only; curtain/bars settings grammar
   unverified.
 - No lip-sync for the singing faces (deliberate — separate job).

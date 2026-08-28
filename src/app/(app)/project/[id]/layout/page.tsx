@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import LayoutEditor from "@/components/LayoutEditor";
+import LoreditImportDialog from "@/components/LoreditImportDialog";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
@@ -24,6 +25,8 @@ export default function LayoutPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [nightPreview, setNightPreview] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
 
   const validationInfo = useMemo(() => {
     const needsPlacement = fixtures.filter((f) => !f.layout?.points.length).length;
@@ -203,6 +206,20 @@ export default function LayoutPage() {
           </div>
 
           <div className="flex items-center gap-2 relative">
+            {/* Import the display from a .loredit template */}
+            <button
+              onClick={() => setShowImportDialog(true)}
+              className="h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors hover:border-[var(--ink-3)]"
+              style={{ background: "#FFFFFF", border: "1px solid var(--line)", color: "var(--ink)", cursor: "pointer" }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              Import from Light-O-Rama
+            </button>
+
             {/* + Add Prop */}
             <button
               onClick={() => setShowAddDialog(true)}
@@ -246,10 +263,37 @@ export default function LayoutPage() {
         </div>
       )}
 
+      {/* Import success notice */}
+      {importNotice && (
+        <div
+          className="flex items-center justify-between px-8 py-2 shrink-0"
+          style={{ background: "#f0fdf4", borderBottom: "1px solid var(--line)" }}
+        >
+          <span className="text-xs font-medium" style={{ color: "#15803d" }}>{importNotice}</span>
+          <button
+            onClick={() => setImportNotice(null)}
+            className="text-xs"
+            style={{ background: "none", border: "none", color: "#15803d", cursor: "pointer" }}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Editor fills remaining space */}
       <div className="flex-1 min-h-0 flex flex-col">
         <LayoutEditor nightPreview={nightPreview} showAddDialogExternal={showAddDialog} onCloseAddDialog={() => setShowAddDialog(false)} />
       </div>
+
+      <LoreditImportDialog
+        open={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImported={(count) =>
+          setImportNotice(
+            `Imported ${count} props from your Light-O-Rama display — drag them into place on your photo. Export mapping is set automatically.`
+          )
+        }
+      />
     </div>
   );
 }

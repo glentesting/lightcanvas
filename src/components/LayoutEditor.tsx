@@ -47,7 +47,14 @@ export default function LayoutEditor({
   const houseCustomSvg = useEditorStore((s) => s.houseCustomSvg);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [dragging, setDragging] = useState<{ id: string; startMX: number; startMY: number; origX: number; origY: number } | null>(null);
+  const [dragging, setDragging] = useState<{
+    id: string;
+    startMX: number;
+    startMY: number;
+    // full original point list so imported multi-point shapes translate intact
+    origPoints: Array<{ x: number; y: number }>;
+    closed: boolean;
+  } | null>(null);
   const [showAddDialogInternal, setShowAddDialogInternal] = useState(false);
   const showAddDialog = showAddDialogInternal || showAddDialogExternal;
   const [searchQuery, setSearchQuery] = useState("");
@@ -96,8 +103,8 @@ export default function LayoutEditor({
       id: fixtureId,
       startMX: pt.x,
       startMY: pt.y,
-      origX: fixture.layout.points[0].x,
-      origY: fixture.layout.points[0].y,
+      origPoints: fixture.layout.points.map((p) => ({ ...p })),
+      closed: fixture.layout.closed ?? false,
     });
   }, [fixtures, toSvg]);
 
@@ -108,7 +115,10 @@ export default function LayoutEditor({
     const dx = pt.x - dragging.startMX;
     const dy = pt.y - dragging.startMY;
     updateFixture(dragging.id, {
-      layout: { points: [{ x: dragging.origX + dx, y: dragging.origY + dy }], closed: false },
+      layout: {
+        points: dragging.origPoints.map((p) => ({ x: p.x + dx, y: p.y + dy })),
+        closed: dragging.closed,
+      },
     });
   }, [dragging, toSvg, updateFixture]);
 
@@ -830,10 +840,24 @@ function PropShape({
   onMouseDown: (e: React.MouseEvent) => void;
 }) {
   const defaults = PROP_DEFAULTS[fixture.kind] || { w: 40, h: 40, cx: 360, cy: 210 };
-  const cx = fixture.layout?.points[0]?.x ?? defaults.cx;
-  const cy = fixture.layout?.points[0]?.y ?? defaults.cy;
-  const w = defaults.w;
-  const h = defaults.h;
+  const pts = fixture.layout?.points ?? [];
+  // Imported/traced shapes carry their own geometry; kind shapes are the fallback
+  const traced = pts.length >= 2 ? pts : null;
+  const bounds = traced
+    ? traced.reduce(
+        (b, p) => ({
+          minX: Math.min(b.minX, p.x),
+          maxX: Math.max(b.maxX, p.x),
+          minY: Math.min(b.minY, p.y),
+          maxY: Math.max(b.maxY, p.y),
+        }),
+        { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
+      )
+    : null;
+  const cx = bounds ? (bounds.minX + bounds.maxX) / 2 : pts[0]?.x ?? defaults.cx;
+  const cy = bounds ? (bounds.minY + bounds.maxY) / 2 : pts[0]?.y ?? defaults.cy;
+  const w = bounds ? Math.max(12, bounds.maxX - bounds.minX) : defaults.w;
+  const h = bounds ? Math.max(12, bounds.maxY - bounds.minY) : defaults.h;
 
   // Night mode: warm white / colored glow; Day mode: blue outlines
   const nightColors: Record<string, string> = {
@@ -872,8 +896,29 @@ function PropShape({
       {/* Hit area */}
       <rect x={cx - w / 2 - 6} y={cy - h / 2 - 6} width={w + 12} height={h + 12} fill="transparent" />
 
+      {/* Traced shape (imported from LOR or drawn) — real geometry wins */}
+      {traced && (
+        <>
+          <polyline
+            points={(fixture.layout?.closed ? [...traced, traced[0]] : traced)
+              .map((p) => `${p.x},${p.y}`)
+              .join(" ")}
+            fill={fixture.layout?.closed ? fill : "none"}
+            fillOpacity={fixture.layout?.closed ? fillOpacity : 0}
+            stroke={stroke}
+            strokeWidth={strokeW}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+          {traced.length <= 12 &&
+            traced.map((p, i) => (
+              <circle key={i} cx={p.x} cy={p.y} r={isSelected ? 2.5 : 1.5} fill={fill} opacity={0.7} />
+            ))}
+        </>
+      )}
+
       {/* Shape */}
-      {fixture.kind === "roofline" && (
+      {!traced && fixture.kind === "roofline" && (
         <>
           <line x1={cx - w / 2} y1={cy} x2={cx + w / 2} y2={cy}
             stroke={stroke} strokeWidth={strokeW + 1} strokeLinecap="round" />
@@ -882,33 +927,38 @@ function PropShape({
           ))}
         </>
       )}
-      {fixture.kind === "window-outline" && (
+      {!traced && fixture.kind === "window-outline" && (
         <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={3}
           fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={strokeW} />
       )}
-      {fixture.kind === "mega-tree" && (
+      {!traced && fixture.kind === "mega-tree" && (
         <>
           <polygon points={`${cx},${cy - h / 2} ${cx - w / 2},${cy + h * 0.35} ${cx + w / 2},${cy + h * 0.35}`}
             fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={strokeW} strokeLinejoin="round" />
           <rect x={cx - 5} y={cy + h * 0.35} width={10} height={h * 0.15} fill={fill} fillOpacity={0.15} stroke={stroke} strokeWidth={1} />
         </>
       )}
-      {fixture.kind === "mini-tree" && (
+      {!traced && fixture.kind === "mini-tree" && (
         <>
           <polygon points={`${cx},${cy - h / 2} ${cx - w / 2},${cy + h * 0.35} ${cx + w / 2},${cy + h * 0.35}`}
             fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={strokeW} strokeLinejoin="round" />
           <rect x={cx - 4} y={cy + h * 0.35} width={8} height={h * 0.15} fill={fill} fillOpacity={0.15} stroke={stroke} strokeWidth={1} />
         </>
       )}
-      {fixture.kind === "arch" && (
+      {!traced && fixture.kind === "arch" && (
         <path d={`M ${cx - w / 2} ${cy + h / 2} Q ${cx} ${cy - h / 2} ${cx + w / 2} ${cy + h / 2}`}
           fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={strokeW} />
       )}
-      {fixture.kind === "bush" && (
+      {!traced && fixture.kind === "bush" && (
         <ellipse cx={cx} cy={cy} rx={w / 2} ry={h / 2}
           fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={strokeW} />
       )}
-      {fixture.kind === "matrix" && (
+      {/* Fallback for kinds without a dedicated glyph (custom props, imported stars) */}
+      {!traced && (fixture.kind === "custom" || !["roofline", "window-outline", "mega-tree", "mini-tree", "arch", "bush", "matrix"].includes(fixture.kind)) && (
+        <circle cx={cx} cy={cy} r={Math.min(w, h) / 2}
+          fill={fill} fillOpacity={fillOpacity + 0.1} stroke={stroke} strokeWidth={strokeW} />
+      )}
+      {!traced && fixture.kind === "matrix" && (
         <>
           <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={2}
             fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={strokeW} />

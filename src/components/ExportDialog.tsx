@@ -301,6 +301,11 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
               {template && (
                 <p className="text-xs mt-1.5" style={{ color: "var(--ink-4)" }}>
                   {template.props.length} props found &bull; {template.timingMarkCount} timing marks
+                  &bull;{" "}
+                  <span style={{ color: "#15803d" }}>
+                    {fixtures.filter((f) => propMap[f.id]).length} of {fixtures.length} fixtures matched
+                    automatically — review below
+                  </span>
                 </p>
               )}
             </div>

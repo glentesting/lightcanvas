@@ -42,6 +42,9 @@ export interface EditorState {
   duplicateBlocks: (ids: string[]) => void;
 
   addFixture: (fixture: Fixture) => void;
+  /** Layout import: add fixtures (with tracks + automatic export mapping), or
+   *  replace the whole layout — which also removes the old fixtures' blocks. */
+  importFixtures: (fixtures: Fixture[], mode: "replace" | "add") => void;
   updateFixture: (id: string, patch: Partial<Fixture>) => void;
   deleteFixture: (id: string) => void;
   reorderTracks: (fromIndex: number, toIndex: number) => void;
@@ -173,6 +176,28 @@ export const useEditorStore = create<EditorState>()(
           set((state) => {
             state.fixtures.push(fixture);
             state.sequence.tracks.push({ id: fixture.id, kind: "fixture" });
+          }),
+
+        importFixtures: (fixtures: Fixture[], mode: "replace" | "add") =>
+          set((state) => {
+            if (mode === "replace") {
+              const oldIds = new Set(state.fixtures.map((f) => f.id));
+              for (const g of state.groups) oldIds.add(g.id);
+              state.fixtures = [];
+              state.groups = [];
+              state.sequence.tracks = state.sequence.tracks.filter((t) => !oldIds.has(t.id));
+              state.sequence.blocks = state.sequence.blocks.filter((b) => !oldIds.has(b.trackId));
+              state.sequence.loreditPropMap = {};
+            }
+            for (const f of fixtures) {
+              state.fixtures.push(f);
+              state.sequence.tracks.push({ id: f.id, kind: "fixture" });
+              // fixtures born from a LOR prop map themselves for export
+              if (f.lor) {
+                if (!state.sequence.loreditPropMap) state.sequence.loreditPropMap = {};
+                state.sequence.loreditPropMap[f.id] = f.lor.propName;
+              }
+            }
           }),
 
         updateFixture: (id: string, patch: Partial<Fixture>) =>
