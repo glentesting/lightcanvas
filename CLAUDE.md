@@ -19,6 +19,7 @@ G4-MP3 Director plays.
 - `AI-PIPELINE-STATUS.md` — AI sequencer: architecture, measured density.
 - `CLEANUP-STATUS.md` — what was deleted and what routes remain.
 - `LAYOUT-IMPORT-STATUS.md` — importing the owner's display from a .loredit.
+- `LAYOUT-GEOMETRY-STATUS.md` — exact coro prop shapes, tracing, bulk placement.
 
 Keep these truthful: when a session changes what works, update the matching
 status doc in the same commit.
@@ -41,7 +42,7 @@ Beat detection is hand-rolled (`src/lib/audio/beat-detector.ts`).
 |---|---|
 | `/` → `/projects` | Project list: open, create, delete |
 | `/project/[id]` | The editor: photo night-stage preview, props, AI panel, Export button, working play bar (audio-driven transport) |
-| `/project/[id]/layout` | Layout editor: photo upload, prop placement |
+| `/project/[id]/layout` | Layout editor: photo upload, exact coro prop shapes, click-to-trace roof strings, "Place a Row" bulk placement |
 | `/timeline?project=` | Timeline editor: effect blocks, beat snap, undo/redo |
 | `/designer` | Redirects into the loaded project |
 | `/dev/stage`, `/dev/visualizer-v2` | Dev harnesses (404 in prod) |
@@ -130,9 +131,10 @@ once broke env parsing here.
 - `.loredit` output not yet opened in S6 (the manual acceptance test) —
   exact files to open are named in LOREDIT-EXPORT-STATUS.md,
   AI-PIPELINE-STATUS.md, and LAYOUT-IMPORT-STATUS.md.
-- Imported props carry real traced shapes (preview renders them), but there
-  is still no UI to hand-trace a NEW shape on the photo, and imported shapes
-  reposition by drag only — no scale/rotate.
+- Prop shapes are exact coro geometry (`src/lib/fixtures/coro-shapes.ts` —
+  chase direction verified against the render engine); roof strings are
+  click-traceable on the photo. Still missing: scale/rotate on shapes, and
+  the tree silhouette is stylized rather than photo-matched.
 - Pixel props export as colorwash only; curtain/bars settings grammar
   unverified.
 - No lip-sync for the singing faces (deliberate — separate job).

@@ -105,8 +105,10 @@ check(
   stakePixels.map((p) => `${p.x.toFixed(0)},${p.y.toFixed(0)}`).join(" ")
 );
 
-const windowFx = fixtures.find((f) => f.name === "01.01 AC Top Window 01-Group A")!;
-check("AC window has a traced closed outline", (windowFx.layout?.points.length ?? 0) >= 3);
+// AC fixtures import with friendly display names; the template name lives on lor.propName
+const windowFx = fixtures.find((f) => f.lor?.propName === "01.01 AC Top Window 01-Group A")!;
+check("AC fixture displays a friendly roof name", windowFx.name === "Roof Light String 01", windowFx.name);
+check("AC fixture has a traced outline from the template", (windowFx.layout?.points.length ?? 0) >= 3);
 
 // ── generate + export with the AUTOMATIC mapping ──
 const DURATION = 60;

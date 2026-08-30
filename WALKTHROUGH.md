@@ -43,16 +43,31 @@ Now you are looking at the main screen. Three parts:
    yourself, or plug in your phone).
 2. In LightCanvas, click **Edit Layout** (bottom-right of the picture).
 3. Click **Upload Photo** at the top and pick your photo.
-4. Your house appears. Now drag each light piece to where it really is:
-   grab a mini tree with your mouse and pull it to where that tree sits in
-   your yard. The trees, arches, and stakes keep their shape while you drag.
-   Everything you move stays where you put it — even after you close the
-   app.
+4. Your house appears. Now put the lights where they really are. Three ways:
+
+   - **Drag one piece.** Grab a tree, arch, or stake with your mouse and
+     pull it where it sits in your yard. It keeps its shape while you drag.
+
+   - **Place a whole row at once.** Click **Place a Row** (top-left of the
+     picture), pick a set — like all 40 Yard Stakes — then click where the
+     row starts and where it ends. Click **Done** and the whole set spreads
+     out evenly along that line, in order. Much faster than dragging forty
+     stakes.
+
+   - **Trace your roof lights.** Your sixteen plug-in strings are named
+     "Roof Light String 01" through 16. Click one in the left list, then
+     click **Trace where it runs on the photo**. Now click along your
+     roofline, ridge, or peak — each click adds a dot, and the string will
+     follow that exact path. Click **Done** when it looks right. You can
+     also rename each one at the top of the panel — "Roofline Left",
+     "Ridge", "Peak" — whatever matches your house.
+
 5. Click **Back to Designer** (top-left) to return to the main screen. The
    picture is now your house.
 
-Don't worry about getting placement perfect. You can come back and nudge
-things any time.
+Everything you place, trace, or rename is saved automatically and stays put.
+Don't worry about getting it perfect — you can come back and nudge things
+any time.
 
 ## Using your own song
 

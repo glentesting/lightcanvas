@@ -5,6 +5,7 @@ import { useEditorStore } from "@/lib/store/editor-store";
 import type { Fixture, FixtureKind } from "@/lib/fixtures/types";
 import { FIXTURE_TEMPLATES, nextStartChannel, autoName } from "@/lib/fixtures/library";
 import { PROP_SIZES } from "@/lib/fixtures/prop-sizes";
+import { coroShapeFor, coroFrame, coroOutlinePath, coroPixelPoints, distributeAlongPath } from "@/lib/fixtures/coro-shapes";
 import House from "@/components/editor/house";
 
 // Each prop kind has a default size (in SVG viewBox units out of 720x420)
@@ -60,7 +61,12 @@ export default function LayoutEditor({
   const [searchQuery, setSearchQuery] = useState("");
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
   const [leftTab, setLeftTab] = useState<"props" | "layers">("props");
-  const [inspectorTab, setInspectorTab] = useState<"properties" | "mapping" | "channels" | "preview">("properties");
+  const [inspectorTab, setInspectorTab] = useState<"properties" | "wiring">("properties");
+  // click-to-trace a light string's real path on the photo
+  const [tracing, setTracing] = useState<{ fixtureId: string; points: Array<{ x: number; y: number }> } | null>(null);
+  // bulk placement: distribute a whole category along a drawn line
+  const [placing, setPlacing] = useState<{ label: string; fixtureIds: string[]; points: Array<{ x: number; y: number }> } | null>(null);
+  const [placeChooserOpen, setPlaceChooserOpen] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
 
   const toggleVisibility = useCallback((id: string) => {
@@ -92,6 +98,7 @@ export default function LayoutEditor({
   }, []);
 
   const handlePropMouseDown = useCallback((e: React.MouseEvent, fixtureId: string) => {
+    if (tracing || placing) return; // clicks fall through to the trace/place handler
     e.stopPropagation();
     e.preventDefault();
     setSelectedId(fixtureId);
@@ -106,7 +113,7 @@ export default function LayoutEditor({
       origPoints: fixture.layout.points.map((p) => ({ ...p })),
       closed: fixture.layout.closed ?? false,
     });
-  }, [fixtures, toSvg]);
+  }, [fixtures, toSvg, tracing, placing]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (!dragging) return;
@@ -125,11 +132,67 @@ export default function LayoutEditor({
   const handleMouseUp = useCallback(() => setDragging(null), []);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    const pt = toSvg(e);
+    if (tracing && pt) {
+      setTracing((prev) => (prev ? { ...prev, points: [...prev.points, pt] } : prev));
+      return;
+    }
+    if (placing && pt) {
+      setPlacing((prev) => (prev ? { ...prev, points: [...prev.points, pt] } : prev));
+      return;
+    }
     const target = e.target as SVGElement;
     if (!target.closest("[data-prop]")) {
       setSelectedId(null);
     }
-  }, []);
+  }, [toSvg, tracing, placing]);
+
+  const finishTracing = useCallback(() => {
+    if (!tracing || tracing.points.length < 2) return;
+    updateFixture(tracing.fixtureId, { layout: { points: tracing.points, closed: false } });
+    setTracing(null);
+  }, [tracing, updateFixture]);
+
+  const finishPlacing = useCallback(() => {
+    if (!placing || placing.points.length < 2) return;
+    const targets = distributeAlongPath(placing.points, placing.fixtureIds.length);
+    placing.fixtureIds.forEach((id, i) => {
+      const f = fixtures.find((x) => x.id === id);
+      if (!f) return;
+      const pts = f.layout?.points ?? [];
+      if (pts.length === 0) {
+        updateFixture(id, { layout: { points: [targets[i]], closed: false } });
+        return;
+      }
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const q of pts) {
+        minX = Math.min(minX, q.x); maxX = Math.max(maxX, q.x);
+        minY = Math.min(minY, q.y); maxY = Math.max(maxY, q.y);
+      }
+      const dx = targets[i].x - (minX + maxX) / 2;
+      const dy = targets[i].y - (minY + maxY) / 2;
+      updateFixture(id, {
+        layout: { points: pts.map((q) => ({ x: q.x + dx, y: q.y + dy })), closed: f.layout?.closed },
+      });
+    });
+    setPlacing(null);
+  }, [placing, fixtures, updateFixture]);
+
+  // categories offered for bulk placement, in chase order (sorted by name)
+  const placeableGroups = useMemo(() => {
+    const defs: Array<{ label: string; match: (f: Fixture) => boolean }> = [
+      { label: "Yard Stakes", match: (f) => coroShapeFor(f) === "stake" },
+      { label: "Arches", match: (f) => coroShapeFor(f) === "arch" },
+      { label: "Mini Trees", match: (f) => coroShapeFor(f) === "tiered-tree" },
+      { label: "Tree Stars", match: (f) => coroShapeFor(f) === "star5" },
+    ];
+    return defs
+      .map((d) => ({
+        label: d.label,
+        ids: fixtures.filter(d.match).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })).map((f) => f.id),
+      }))
+      .filter((g) => g.ids.length >= 2);
+  }, [fixtures]);
 
   // Layout summary calculations
   const totalChannels = useMemo(() => {
@@ -142,16 +205,43 @@ export default function LayoutEditor({
     if (fixturesWithoutLayout.length > 0) {
       issues.push(`${fixturesWithoutLayout.length} prop${fixturesWithoutLayout.length > 1 ? "s" : ""} need${fixturesWithoutLayout.length === 1 ? "s" : ""} placement`);
     }
-    // Check for channel overlaps
-    for (let i = 0; i < fixtures.length; i++) {
-      for (let j = i + 1; j < fixtures.length; j++) {
-        const a = fixtures[i];
-        const b = fixtures[j];
+    // Wiring conflicts. Two different systems:
+    //  - Fixtures imported from Light-O-Rama: addressing is per controller
+    //    unit (network + unit + circuit range). Comparing their raw start
+    //    channels across units is meaningless and used to flood the editor
+    //    with 1,500+ false "overlaps".
+    //  - Hand-made fixtures: legacy universe/channel comparison, among
+    //    themselves only.
+    const lorFx = fixtures.filter((f) => f.lor);
+    const byUnit = new Map<string, typeof lorFx>();
+    for (const f of lorFx) {
+      const key = `${f.lor!.network}|${f.lor!.unit}`;
+      const arr = byUnit.get(key) ?? [];
+      arr.push(f);
+      byUnit.set(key, arr);
+    }
+    for (const group of byUnit.values()) {
+      for (let i = 0; i < group.length; i++) {
+        for (let j = i + 1; j < group.length; j++) {
+          const a = group[i], b = group[j];
+          const aEnd = a.lor!.startCircuit + a.lor!.channelCount - 1;
+          const bEnd = b.lor!.startCircuit + b.lor!.channelCount - 1;
+          if (a.lor!.startCircuit <= bEnd && b.lor!.startCircuit <= aEnd) {
+            issues.push(`Wiring conflict: ${a.name} and ${b.name} share plugs on controller unit ${a.lor!.unit}`);
+          }
+        }
+      }
+    }
+    const plainFx = fixtures.filter((f) => !f.lor);
+    for (let i = 0; i < plainFx.length; i++) {
+      for (let j = i + 1; j < plainFx.length; j++) {
+        const a = plainFx[i];
+        const b = plainFx[j];
         if ((a.universe ?? 1) === (b.universe ?? 1)) {
           const aEnd = a.startChannel + a.pixelCount * 3 - 1;
           const bEnd = b.startChannel + b.pixelCount * 3 - 1;
           if (a.startChannel <= bEnd && b.startChannel <= aEnd) {
-            issues.push(`Channel overlap: ${a.name} / ${b.name}`);
+            issues.push(`Wiring conflict: ${a.name} / ${b.name}`);
           }
         }
       }
@@ -162,7 +252,7 @@ export default function LayoutEditor({
   const layoutReadiness = useMemo(() => {
     if (fixtures.length === 0) return 0;
     const placed = fixtures.filter((f) => f.layout?.points.length).length;
-    const noOverlap = issuesList.filter((i) => i.startsWith("Channel overlap")).length === 0;
+    const noOverlap = issuesList.filter((i) => i.startsWith("Wiring conflict")).length === 0;
     const placedPct = (placed / fixtures.length) * 70;
     const overlapPct = noOverlap ? 30 : 0;
     return Math.round(placedPct + overlapPct);
@@ -377,7 +467,7 @@ export default function LayoutEditor({
               width="720"
               height="420"
               viewBox="0 0 720 420"
-              style={{ position: "absolute", inset: 0, cursor: dragging ? "grabbing" : "default" }}
+              style={{ position: "absolute", inset: 0, cursor: tracing || placing ? "crosshair" : dragging ? "grabbing" : "default" }}
               onClick={handleCanvasClick}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
@@ -395,6 +485,24 @@ export default function LayoutEditor({
                   </filter>
                 </defs>
               )}
+              {(tracing || placing) && (() => {
+                const pts = (tracing ?? placing)!.points;
+                const color = tracing ? "#dc2626" : "#7c3aed";
+                return (
+                  <g pointerEvents="none">
+                    {pts.length >= 2 && (
+                      <polyline
+                        points={pts.map((q) => `${q.x},${q.y}`).join(" ")}
+                        fill="none" stroke={color} strokeWidth={2.5} strokeDasharray="6 4"
+                        strokeLinejoin="round" strokeLinecap="round"
+                      />
+                    )}
+                    {pts.map((q, i) => (
+                      <circle key={i} cx={q.x} cy={q.y} r={4} fill="#fff" stroke={color} strokeWidth={2} />
+                    ))}
+                  </g>
+                );
+              })()}
               {fixtures.filter((f) => !hiddenIds.has(f.id)).map((f) => (
                 <PropShape
                   key={f.id}
@@ -405,6 +513,75 @@ export default function LayoutEditor({
                 />
               ))}
             </svg>
+
+            {/* Mode banner / bulk placement entry */}
+            {tracing || placing ? (
+              <div
+                className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-3 px-4 py-2 rounded-xl z-20"
+                style={{ background: "rgba(255,255,255,0.95)", border: "1px solid var(--line)", boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}
+              >
+                <span className="text-xs font-medium" style={{ color: "var(--ink)" }}>
+                  {tracing
+                    ? `Tracing "${fixtures.find((f) => f.id === tracing.fixtureId)?.name ?? ""}" — click along the photo where this light string runs (${tracing.points.length} point${tracing.points.length !== 1 ? "s" : ""} so far)`
+                    : `Placing ${placing!.fixtureIds.length} ${placing!.label} — click where the row starts, then where it ends (curves welcome: add more clicks)`}
+                </span>
+                <button
+                  onClick={tracing ? finishTracing : finishPlacing}
+                  disabled={(tracing ?? placing)!.points.length < 2}
+                  className="h-7 px-3 rounded-lg text-xs font-semibold"
+                  style={{
+                    background: "#1e3a5f", color: "#fff", cursor: "pointer",
+                    opacity: (tracing ?? placing)!.points.length < 2 ? 0.5 : 1,
+                  }}
+                >
+                  Done
+                </button>
+                <button
+                  onClick={() => { setTracing(null); setPlacing(null); }}
+                  className="h-7 px-3 rounded-lg text-xs font-medium"
+                  style={{ border: "1px solid var(--line)", background: "#fff", color: "var(--ink)", cursor: "pointer" }}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              placeableGroups.length > 0 && (
+                <div className="absolute top-3 left-3 z-20">
+                  <button
+                    onClick={() => setPlaceChooserOpen((v) => !v)}
+                    className="h-8 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                    style={{ background: "rgba(255,255,255,0.95)", border: "1px solid var(--line)", color: "var(--ink)", boxShadow: "0 2px 10px rgba(0,0,0,0.10)", cursor: "pointer" }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="4" cy="18" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="20" cy="6" r="2" />
+                      <line x1="5.5" y1="16.5" x2="10.5" y2="13.5" /><line x1="13.5" y1="10.5" x2="18.5" y2="7.5" />
+                    </svg>
+                    Place a Row
+                  </button>
+                  {placeChooserOpen && (
+                    <div className="mt-1.5 rounded-xl overflow-hidden" style={{ background: "#fff", border: "1px solid var(--line)", boxShadow: "0 6px 20px rgba(0,0,0,0.14)", width: 220 }}>
+                      <div className="px-3 pt-2.5 pb-1.5 text-xs" style={{ color: "var(--ink-3)" }}>
+                        Spread a whole set evenly along a line you draw — in order, so chases travel across the yard correctly.
+                      </div>
+                      {placeableGroups.map((g) => (
+                        <button
+                          key={g.label}
+                          onClick={() => {
+                            setPlaceChooserOpen(false);
+                            setPlacing({ label: g.label, fixtureIds: g.ids, points: [] });
+                            setSelectedId(null);
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs font-medium transition-colors hover:bg-[#f6f6f6]"
+                          style={{ background: "none", border: "none", color: "var(--ink)", cursor: "pointer" }}
+                        >
+                          {g.label} <span style={{ color: "var(--ink-4)" }}>({g.ids.length})</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            )}
           </div>
         </div>
 
@@ -445,7 +622,7 @@ export default function LayoutEditor({
 
             {/* Tab bar */}
             <div className="flex shrink-0" style={{ borderBottom: "1px solid var(--line)" }}>
-              {(["properties", "mapping", "channels", "preview"] as const).map((tab) => (
+              {(["properties", "wiring"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setInspectorTab(tab)}
@@ -456,7 +633,7 @@ export default function LayoutEditor({
                     background: "transparent",
                   }}
                 >
-                  {tab === "properties" ? "Props" : tab === "mapping" ? "Map" : tab === "channels" ? "Ch" : "Preview"}
+                  {tab === "properties" ? "Details" : "Wiring"}
                 </button>
               ))}
             </div>
@@ -465,6 +642,36 @@ export default function LayoutEditor({
             <div className="flex-1 overflow-y-auto">
               {inspectorTab === "properties" && (
                 <div className="p-4 flex flex-col gap-4">
+                  {/* Trace tool — for strings whose real path lives on the photo
+                      (roof lines, ridges, peaks). Shape props place by drag. */}
+                  {!coroShapeFor(selected) && (
+                    <div>
+                      <button
+                        onClick={() => {
+                          setTracing({ fixtureId: selected.id, points: [] });
+                          setPlacing(null);
+                        }}
+                        className="w-full h-8 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5"
+                        style={{ background: "#1e3a5f", color: "#fff", cursor: "pointer" }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z" />
+                        </svg>
+                        Trace where it runs on the photo
+                      </button>
+                      <p className="text-xs mt-1.5" style={{ color: "var(--ink-4)" }}>
+                        Click along your roofline, ridge, or peak — each click adds a point.
+                        The lights will follow that exact path{selected.layout && selected.layout.points.length >= 2 ? " (replaces the current path)" : ""}.
+                      </p>
+                    </div>
+                  )}
+
+                  {selected.lor ? (
+                    <div className="flex flex-col gap-2">
+                      <InspectorRow label="Bulbs" value={String(selected.pixelCount)} />
+                      <InspectorRow label="What kind" value={selected.lor.stringType === "RGB" ? "Color-changing pixels" : selected.lor.stringType === "DumbRGB" ? "One-color-at-a-time RGB" : "Regular plug-in lights"} />
+                    </div>
+                  ) : (
                   <div className="grid grid-cols-2 gap-2.5">
                     <InspectorField label="Pixel Count">
                       <input type="number" value={selected.pixelCount}
@@ -494,18 +701,10 @@ export default function LayoutEditor({
                       </select>
                     </InspectorField>
                   </div>
-
-                  {/* Brightness limit */}
-                  <InspectorField label="Brightness Limit">
-                    <div className="flex items-center gap-2">
-                      <input type="range" min={0} max={100} defaultValue={100}
-                        className="flex-1 h-1 accent-[#3b82f6]" />
-                      <span className="text-xs w-8 text-right" style={{ color: "var(--ink-2)", fontVariantNumeric: "tabular-nums" }}>100%</span>
-                    </div>
-                  </InspectorField>
+                  )}
 
                   {/* Geometry (kind-specific) */}
-                  {selected.kind === "mega-tree" && (
+                  {!selected.lor && selected.kind === "mega-tree" && (
                     <div style={{ borderTop: "1px solid var(--line)", paddingTop: 12 }}>
                       <div className="text-xs font-semibold uppercase tracking-wide mb-2.5" style={{ color: "var(--ink-3)", letterSpacing: "0.06em", fontSize: 11 }}>Tree Geometry</div>
                       <div className="grid grid-cols-2 gap-2.5">
@@ -542,7 +741,7 @@ export default function LayoutEditor({
                       </div>
                     </div>
                   )}
-                  {selected.kind === "arch" && (
+                  {!selected.lor && selected.kind === "arch" && (
                     <div style={{ borderTop: "1px solid var(--line)", paddingTop: 12 }}>
                       <div className="text-xs font-semibold uppercase tracking-wide mb-2.5" style={{ color: "var(--ink-3)", letterSpacing: "0.06em", fontSize: 11 }}>Arch Geometry</div>
                       <div className="grid grid-cols-2 gap-2.5">
@@ -568,7 +767,7 @@ export default function LayoutEditor({
                       </div>
                     </div>
                   )}
-                  {selected.kind === "matrix" && (
+                  {!selected.lor && selected.kind === "matrix" && (
                     <div style={{ borderTop: "1px solid var(--line)", paddingTop: 12 }}>
                       <div className="text-xs font-semibold uppercase tracking-wide mb-2.5" style={{ color: "var(--ink-3)", letterSpacing: "0.06em", fontSize: 11 }}>Matrix Geometry</div>
                       <div className="grid grid-cols-2 gap-2.5">
@@ -619,98 +818,53 @@ export default function LayoutEditor({
                 </div>
               )}
 
-              {inspectorTab === "mapping" && (
+              {inspectorTab === "wiring" && (
                 <div className="p-4 flex flex-col gap-3">
-                  {/* Mapping status */}
-                  <div className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md"
-                    style={{
-                      background: selected.layout?.points.length ? "#f0fdf4" : "#fffbeb",
-                      color: selected.layout?.points.length ? "#15803d" : "#b45309",
-                    }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      {selected.layout?.points.length
-                        ? <polyline points="20 6 9 17 4 12" />
-                        : <><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></>}
-                    </svg>
-                    {selected.layout?.points.length ? "Mapping valid" : "Needs placement"}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <InspectorField label="Controller">
-                      <input type="text" defaultValue="Controller 1" readOnly
-                        className="w-full h-7 px-2 rounded-md text-xs"
-                        style={{ border: "1px solid var(--line)", background: "#fafafa", color: "var(--ink-2)" }} />
-                    </InspectorField>
-                    <InspectorField label="Port / Output">
-                      <input type="text" defaultValue="Port 1"
-                        className="w-full h-7 px-2 rounded-md text-xs"
-                        style={{ border: "1px solid var(--line)", background: "#fafafa" }} />
-                    </InspectorField>
-                    <InspectorField label="Pixel Start">
-                      <input type="number" value={selected.startChannel} readOnly
-                        className="w-full h-7 px-2 rounded-md text-xs"
-                        style={{ border: "1px solid var(--line)", background: "#fafafa", fontVariantNumeric: "tabular-nums", color: "var(--ink-2)" }} />
-                    </InspectorField>
-                    <InspectorField label="Channel Count">
-                      <input type="number" value={selected.pixelCount * 3} readOnly
-                        className="w-full h-7 px-2 rounded-md text-xs"
-                        style={{ border: "1px solid var(--line)", background: "#fafafa", fontVariantNumeric: "tabular-nums", color: "var(--ink-2)" }} />
-                    </InspectorField>
-                  </div>
-                </div>
-              )}
-
-              {inspectorTab === "channels" && (
-                <div className="p-4 flex flex-col gap-3">
-                  <div className="text-xs" style={{ color: "var(--ink-3)" }}>
-                    Channels: {selected.startChannel} – {selected.startChannel + selected.pixelCount * 3 - 1}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs" style={{ color: "var(--ink-3)" }}>{selected.pixelCount * 3} ch</span>
-                    <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "#f0f0f0" }}>
-                      <div className="h-full rounded-full"
-                        style={{ width: `${Math.min(100, ((selected.pixelCount * 3) / 512) * 100)}%`, background: "linear-gradient(90deg, #3b82f6, #6366f1)" }} />
-                    </div>
-                    <span className="text-xs" style={{ color: "var(--ink-4)", fontVariantNumeric: "tabular-nums" }}>/ 512</span>
-                  </div>
-                  {/* Per-channel overlap check */}
-                  {issuesList.filter((i) => i.includes(selected.name)).length > 0 ? (
-                    <div className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md" style={{ background: "#fef2f2", color: "#b91c1c" }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-                      </svg>
-                      Channel overlap detected
-                    </div>
+                  {selected.lor ? (
+                    <>
+                      <div className="flex flex-col gap-2">
+                        <InspectorRow label="Controller box" value={`Unit ${selected.lor.unit} (${selected.lor.network} network)`} />
+                        <InspectorRow label="Plugs" value={selected.lor.channelCount === 1 ? `Plug ${selected.lor.startCircuit}` : `${selected.lor.startCircuit} – ${selected.lor.startCircuit + selected.lor.channelCount - 1}`} />
+                        <InspectorRow label="In Light-O-Rama" value={selected.lor.propName} />
+                      </div>
+                      {issuesList.some((i) => i.startsWith("Wiring conflict") && i.includes(selected.name)) ? (
+                        <div className="text-xs px-2.5 py-2 rounded-md" style={{ background: "#fef2f2", color: "#b91c1c" }}>
+                          This piece is set to the same plugs as another piece on the same
+                          controller box — both would show the same thing. This came from the
+                          imported file; nothing you did. It only matters if the lights
+                          misbehave when plugged in.
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md" style={{ background: "#f0fdf4", color: "#15803d" }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                          Wiring looks right — no plug conflicts
+                        </div>
+                      )}
+                      <p className="text-xs" style={{ color: "var(--ink-4)" }}>
+                        This came straight from your Light-O-Rama display, so exporting a show
+                        sends the right lights to the right plugs automatically.
+                      </p>
+                    </>
                   ) : (
-                    <div className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md" style={{ background: "#f0fdf4", color: "#15803d" }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                      No channel conflicts
-                    </div>
+                    <>
+                      <InspectorRow label="Starts at channel" value={String(selected.startChannel)} />
+                      <InspectorRow label="Channels used" value={String(selected.pixelCount * 3)} />
+                      {issuesList.some((i) => i.startsWith("Wiring conflict") && i.includes(selected.name)) ? (
+                        <div className="text-xs px-2.5 py-2 rounded-md" style={{ background: "#fef2f2", color: "#b91c1c" }}>
+                          Shares channels with another piece — change its start channel in Details.
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md" style={{ background: "#f0fdf4", color: "#15803d" }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                          No channel conflicts
+                        </div>
+                      )}
+                    </>
                   )}
-                </div>
-              )}
-
-              {inspectorTab === "preview" && (
-                <div className="p-4 flex flex-col gap-3">
-                  <InspectorField label="Visual Preview">
-                    <div className="flex h-8 rounded-lg overflow-hidden" style={{ border: "1px solid var(--line)" }}>
-                      {(["Off", "On", "Test"] as const).map((mode) => (
-                        <button key={mode}
-                          className="flex-1 text-xs font-medium transition-colors"
-                          style={{ background: mode === "Off" ? "#1e3a5f" : "#FFFFFF", color: mode === "Off" ? "#FFFFFF" : "var(--ink-3)", borderLeft: mode !== "Off" ? "1px solid var(--line)" : "none" }}>
-                          {mode}
-                        </button>
-                      ))}
-                    </div>
-                  </InspectorField>
-                  <button className="text-xs font-medium text-left flex items-center gap-1.5" style={{ color: "#3b82f6" }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" />
-                    </svg>
-                    Show in Controller View
-                  </button>
                 </div>
               )}
             </div>
@@ -763,7 +917,7 @@ export default function LayoutEditor({
               {/* Issues */}
               {(() => {
                 const needsPlacement = fixtures.filter((f) => !f.layout?.points.length).length;
-                const overlapCount = issuesList.filter((i) => i.startsWith("Channel overlap")).length;
+                const overlapCount = issuesList.filter((i) => i.startsWith("Wiring conflict")).length;
                 return (needsPlacement > 0 || overlapCount > 0) ? (
                   <div className="flex flex-col gap-2">
                     <div className="text-xs font-semibold uppercase tracking-wide"
@@ -785,7 +939,7 @@ export default function LayoutEditor({
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
                         </svg>
-                        {overlapCount} channel overlap{overlapCount > 1 ? "s" : ""}
+                        {overlapCount} wiring conflict{overlapCount > 1 ? "s" : ""} — two light strings are set to the same plugs. Click a prop and check its Wiring tab.
                       </div>
                     )}
                   </div>
@@ -841,8 +995,10 @@ function PropShape({
 }) {
   const defaults = PROP_DEFAULTS[fixture.kind] || { w: 40, h: 40, cx: 360, cy: 210 };
   const pts = fixture.layout?.points ?? [];
-  // Imported/traced shapes carry their own geometry; kind shapes are the fallback
-  const traced = pts.length >= 2 ? pts : null;
+  // Exact coro-prop geometry first, then imported/traced shapes, then kind shapes
+  const coro = coroShapeFor(fixture);
+  const coroF = coro ? coroFrame(coro, fixture) : null;
+  const traced = !coro && pts.length >= 2 ? pts : null;
   const bounds = traced
     ? traced.reduce(
         (b, p) => ({
@@ -854,10 +1010,10 @@ function PropShape({
         { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
       )
     : null;
-  const cx = bounds ? (bounds.minX + bounds.maxX) / 2 : pts[0]?.x ?? defaults.cx;
-  const cy = bounds ? (bounds.minY + bounds.maxY) / 2 : pts[0]?.y ?? defaults.cy;
-  const w = bounds ? Math.max(12, bounds.maxX - bounds.minX) : defaults.w;
-  const h = bounds ? Math.max(12, bounds.maxY - bounds.minY) : defaults.h;
+  const cx = coroF ? coroF.cx : bounds ? (bounds.minX + bounds.maxX) / 2 : pts[0]?.x ?? defaults.cx;
+  const cy = coroF ? coroF.cy : bounds ? (bounds.minY + bounds.maxY) / 2 : pts[0]?.y ?? defaults.cy;
+  const w = coroF ? Math.max(12, coroF.w) : bounds ? Math.max(12, bounds.maxX - bounds.minX) : defaults.w;
+  const h = coroF ? Math.max(12, coroF.h) : bounds ? Math.max(12, bounds.maxY - bounds.minY) : defaults.h;
 
   // Night mode: warm white / colored glow; Day mode: blue outlines
   const nightColors: Record<string, string> = {
@@ -895,6 +1051,23 @@ function PropShape({
       style={{ cursor: "grab", opacity: groupOpacity, filter: nightMode ? "url(#glow)" : "none" }}>
       {/* Hit area */}
       <rect x={cx - w / 2 - 6} y={cy - h / 2 - 6} width={w + 12} height={h + 12} fill="transparent" />
+
+      {/* Exact coro-prop silhouette + its real pixel positions */}
+      {coro && coroF && (
+        <>
+          <path
+            d={coroOutlinePath(coro, coroF)}
+            fill={fill}
+            fillOpacity={fillOpacity + 0.06}
+            stroke={stroke}
+            strokeWidth={strokeW}
+            strokeLinejoin="round"
+          />
+          {coroPixelPoints(coro, Math.min(fixture.pixelCount, 90), coroF).map((p, i) => (
+            <circle key={i} cx={p.x} cy={p.y} r={isSelected ? 1.6 : 1.1} fill={fill} opacity={0.75} />
+          ))}
+        </>
+      )}
 
       {/* Traced shape (imported from LOR or drawn) — real geometry wins */}
       {traced && (
@@ -1171,6 +1344,15 @@ function AddPropDialog({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function InspectorRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-xs shrink-0" style={{ color: "var(--ink-3)" }}>{label}</span>
+      <span className="text-xs text-right" style={{ color: "var(--ink)", fontWeight: 500 }}>{value}</span>
     </div>
   );
 }

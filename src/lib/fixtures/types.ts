@@ -23,6 +23,9 @@ export interface FixtureGeometry {
   // Arch
   curveOrientation?: "leftArch" | "rightArch" | "mirrored";
   startEnd?: "left" | "right";
+  // Flat coroplast cutouts (the owner's real props) — exact shape + wiring
+  // order live in src/lib/fixtures/coro-shapes.ts
+  coroShape?: "tiered-tree" | "star5" | "arch" | "stake";
 }
 
 export interface Fixture {

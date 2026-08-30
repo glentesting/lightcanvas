@@ -220,14 +220,36 @@ export function parseLoreditLayout(templateText: string): PropPickerGroup[] {
   return groups;
 }
 
+/** Exact coro-prop shape for the owner's props (see fixtures/coro-shapes.ts). */
+function coroShapeForName(name: string): "tiered-tree" | "star5" | "arch" | "stake" | undefined {
+  if (/^RGB Mini Tree Base/.test(name)) return "tiered-tree";
+  if (/^RGB Mini Tree Star/.test(name)) return "star5";
+  if (/^RGB Arch/.test(name)) return "arch";
+  if (/^RGB Pixel Stake/.test(name)) return "stake";
+  return undefined;
+}
+
+/** Friendly display name — the template's demo-house names (windows, columns,
+ *  railings) are wrong for the owner's house; his AC strings run along the
+ *  roofline, ridges, and peaks. lor.propName keeps the template name so
+ *  export mapping is untouched; he renames these as he traces them. */
+function friendlyName(p: ImportableProp): string {
+  if (p.stringType === "Traditional" && /^01\./.test(p.name)) {
+    return `Roof Light String ${String(p.startCircuit).padStart(2, "0")}`;
+  }
+  return p.name;
+}
+
 /** Turn a selected prop into a LightCanvas fixture. */
 export function propToFixture(p: ImportableProp): Fixture {
+  const coroShape = coroShapeForName(p.name);
   return {
     id: crypto.randomUUID(),
     kind: p.kind,
-    name: p.name,
+    name: friendlyName(p),
     pixelCount: p.pixelCount,
     startChannel: p.startCircuit,
+    geometry: coroShape ? { coroShape } : undefined,
     layout: {
       points: p.points.length >= 2 ? p.points : [p.anchor],
       closed: p.closed,

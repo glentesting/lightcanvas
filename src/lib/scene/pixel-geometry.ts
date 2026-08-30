@@ -1,5 +1,6 @@
 import type { Fixture } from "@/lib/fixtures/types";
 import { propSize } from "@/lib/fixtures/prop-sizes";
+import { coroShapeFor, coroFrame, coroPixelPoints } from "@/lib/fixtures/coro-shapes";
 import type { LightPoint } from "./types";
 
 /**
@@ -20,6 +21,15 @@ export function expandFixturePixels(fixture: Fixture): LightPoint[] {
   const cx = pts[0]?.x ?? size.cx;
   const cy = pts[0]?.y ?? size.cy;
   const { w, h } = size;
+
+  // Exact coro-prop geometry wins over everything: shape AND wiring order
+  // (chases must climb trees in rows, travel over arches, etc.)
+  const coro = coroShapeFor(fixture);
+  if (coro) {
+    return coroPixelPoints(coro, n, coroFrame(coro, fixture)).map((p, i) =>
+      point(fixture, i, p.x, p.y, coro === "stake" ? 1.8 : 1.9)
+    );
+  }
 
   // Multi-point layouts are drawn runs (rooflines traced on the photo, etc.)
   // — distribute pixels along the polyline regardless of kind.
