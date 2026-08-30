@@ -178,7 +178,7 @@ export default function AIPanel({ open, onClose }: AIPanelProps) {
           >
             <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
           </svg>
-          <span className="text-sm font-semibold">AI Actions</span>
+          <span className="text-sm font-semibold">Make a Show</span>
         </div>
         <button
           onClick={onClose}

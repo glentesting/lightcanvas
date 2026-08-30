@@ -8,6 +8,7 @@ import PreviewPanel from "@/components/PreviewPanel";
 import AIPanel from "@/components/AIPanel";
 import ExportDialog from "@/components/ExportDialog";
 import { useEditorStore } from "@/lib/store/editor-store";
+import { useTransportStore } from "@/lib/store/transport-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
 import { createDefaultFixtures } from "@/lib/fixtures/defaults";
@@ -27,18 +28,18 @@ const FIXTURE_KIND_COLORS: Record<string, string> = {
 };
 
 const KIND_GROUP_MAP: Record<string, string> = {
-  roofline: "Rooflines",
+  roofline: "Roof & Railings",
   "window-outline": "Windows",
   "mega-tree": "Trees",
   "mini-tree": "Trees",
-  bush: "Landscape",
-  arch: "Other",
+  bush: "Yard Stakes",
+  arch: "Arches",
   matrix: "Other",
-  custom: "Other",
+  custom: "Faces & Stars",
 };
 
 function groupFixturesByCategory(fixtures: Fixture[]) {
-  const order = ["Rooflines", "Windows", "Trees", "Landscape", "Other"];
+  const order = ["Trees", "Arches", "Yard Stakes", "Faces & Stars", "Windows", "Roof & Railings", "Other"];
   const groups: Record<string, Fixture[]> = {};
   for (const f of fixtures) {
     const label = KIND_GROUP_MAP[f.kind] ?? "Other";
@@ -172,10 +173,10 @@ export default function DesignerPage() {
             className="text-2xl font-semibold leading-tight"
             style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em" }}
           >
-            Main Sequence Editor
+            Your Light Show
           </h1>
           <p className="text-sm" style={{ color: "var(--ink-4)" }}>
-            Design, map, and perfect your show — one prop at a time.
+            Press ▶ below to watch the show. When you like it, click Export to put it on your light controller.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -219,26 +220,20 @@ export default function DesignerPage() {
             {/* Props header */}
             <div className="px-3.5 pt-3.5 pb-2">
               <p
-                className="text-xs font-semibold mb-2"
+                className="text-xs font-semibold mb-1"
                 style={{ letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-4)" }}
               >
-                Props
+                Your Lights
               </p>
-              <div
-                className="flex items-center gap-2 h-7 px-2.5 rounded-md text-xs"
-                style={{ background: "var(--panel)", border: "1px solid var(--line)", color: "var(--ink-4)" }}
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-                <span>Search props...</span>
-              </div>
+              <p className="text-xs" style={{ color: "var(--ink-4)" }}>
+                Every light piece in your yard. Click one to see its details.
+              </p>
             </div>
 
-            {/* All props count */}
+            {/* All lights count */}
             <div className="px-3.5 pb-1">
               <p className="text-xs font-medium" style={{ color: "var(--ink-3)" }}>
-                ALL PROPS <span className="inline-flex items-center justify-center px-1.5 rounded-full text-xs" style={{ background: "var(--panel)", color: "var(--ink-4)", fontSize: 10, minWidth: 18, height: 16 }}>{fixtures.length}</span>
+                ALL PIECES <span className="inline-flex items-center justify-center px-1.5 rounded-full text-xs" style={{ background: "var(--panel)", color: "var(--ink-4)", fontSize: 10, minWidth: 18, height: 16 }}>{fixtures.length}</span>
               </p>
             </div>
 
@@ -336,18 +331,21 @@ export default function DesignerPage() {
             <div style={{ borderTop: "1px solid var(--line)" }}>
               <div className="px-3.5 py-2.5">
                 <p className="text-xs font-semibold mb-2" style={{ letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-4)" }}>
-                  AI Actions
+                  Make a Show
                 </p>
                 <button
                   onClick={() => setShowAI(true)}
                   className="flex items-center gap-2 w-full h-8 px-2.5 rounded-md text-xs font-medium justify-start transition-colors"
-                  style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)" }}
+                  style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)", cursor: "pointer" }}
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z" />
                   </svg>
-                  Generate sequence
+                  Create my light show
                 </button>
+                <p className="text-xs mt-1.5" style={{ color: "var(--ink-4)" }}>
+                  The computer listens to your song and sets all the lights to the music. You can redo it as many times as you like.
+                </p>
               </div>
             </div>
           </div>
@@ -440,20 +438,20 @@ function LayoutSummary({ fixtureCount, totalChannels }: { fixtureCount: number; 
         className="text-xs font-semibold mb-4"
         style={{ letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-4)" }}
       >
-        Layout Summary
+        Your Display
       </p>
       <div className="space-y-3">
         <div className="flex items-center justify-between text-sm">
-          <span style={{ color: "var(--ink-3)" }}>Total props</span>
+          <span style={{ color: "var(--ink-3)" }}>Light pieces</span>
           <span className="font-medium">{fixtureCount}</span>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span style={{ color: "var(--ink-3)" }}>Channels used</span>
-          <span className="font-medium">{totalChannels.toLocaleString()}</span>
+          <span style={{ color: "var(--ink-3)" }}>Individual bulbs</span>
+          <span className="font-medium">{Math.round(totalChannels / 3).toLocaleString()}</span>
         </div>
         <div className="mt-6 rounded-xl p-4" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
           <p className="text-xs text-center" style={{ color: "var(--ink-4)" }}>
-            Select a prop to edit details
+            Click any light piece in the left list and its details will show up here.
           </p>
         </div>
       </div>
@@ -461,11 +459,18 @@ function LayoutSummary({ fixtureCount, totalChannels }: { fixtureCount: number; 
   );
 }
 
-/* ─── Fixture Inspector (prop selected) ────────────────────── */
-function FixtureInspector({ fixture, totalChannels }: { fixture: Fixture; totalChannels: number }) {
-  const _fixtureChannels = fixture.pixelCount * 3;
-  const maxChannels = 2000;
-  const usagePct = Math.min(100, Math.round((totalChannels / maxChannels) * 100));
+/* ─── Fixture Inspector (light piece selected) ─────────────── */
+function FixtureInspector({ fixture }: { fixture: Fixture; totalChannels: number }) {
+  const kindLabels: Record<string, string> = {
+    roofline: "Roof / railing lights",
+    "window-outline": "Window outline",
+    "mega-tree": "Big tree",
+    "mini-tree": "Mini tree",
+    arch: "Arch",
+    bush: "Yard stake",
+    matrix: "Light panel",
+    custom: "Special piece",
+  };
 
   return (
     <div className="p-4">
@@ -476,58 +481,42 @@ function FixtureInspector({ fixture, totalChannels }: { fixture: Fixture; totalC
           style={{ background: FIXTURE_KIND_COLORS[fixture.kind] ?? "#6b7280" }}
         />
         <span className="text-sm font-semibold flex-1">{fixture.name}</span>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs" style={{ color: "var(--ink-4)" }}>Enabled</span>
-          <div
-            className="w-7 h-4 rounded-full relative"
-            style={{ background: "var(--accent)", cursor: "default" }}
-          >
-            <div
-              className="w-3 h-3 rounded-full absolute top-0.5"
-              style={{ background: "#fff", right: 2 }}
-            />
-          </div>
-        </div>
       </div>
 
-      {/* Properties */}
+      {/* Details */}
       <p
         className="text-xs font-semibold mb-2"
         style={{ letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-4)" }}
       >
-        Properties
+        Details
       </p>
       <div className="space-y-2 mb-4">
-        <InspectorField label="Pixel Count" value={String(fixture.pixelCount)} />
-        <InspectorField label="Universe" value={String(fixture.universe ?? 1)} />
-        <InspectorField label="Start Channel" value={String(fixture.startChannel)} />
-        <InspectorField label="Direction" value={fixture.direction === "rtl" ? "Right to Left" : "Left to Right"} />
+        <InspectorField label="What it is" value={kindLabels[fixture.kind] ?? "Light piece"} />
+        <InspectorField label="Bulbs" value={String(fixture.pixelCount)} />
+        {fixture.lor ? (
+          <>
+            <InspectorField label="Controller box" value={`Unit ${fixture.lor.unit}`} />
+            <InspectorField label="Plug number" value={String(fixture.lor.startCircuit)} />
+            <InspectorField
+              label="Light type"
+              value={fixture.lor.stringType === "RGB" ? "Color-changing pixels" : fixture.lor.stringType === "DumbRGB" ? "One-color-at-a-time RGB" : "Regular plug-in lights"}
+            />
+          </>
+        ) : (
+          <InspectorField label="Starts at channel" value={String(fixture.startChannel)} />
+        )}
       </div>
 
-      {/* Mapping status */}
-      <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
-          <polyline points="20 6 9 17 4 12" />
-        </svg>
-        <span className="text-xs font-medium" style={{ color: "#15803d" }}>Mapping valid</span>
-      </div>
-
-      {/* Channel usage */}
-      <p
-        className="text-xs font-semibold mb-2"
-        style={{ letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-4)" }}
-      >
-        Channel Usage
-      </p>
-      <p className="text-xs mb-1.5" style={{ color: "var(--ink-3)" }}>
-        {totalChannels.toLocaleString()} / {maxChannels.toLocaleString()} channels — {usagePct}%
-      </p>
-      <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "var(--panel)" }}>
-        <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${usagePct}%`, background: "var(--accent)" }}
-        />
-      </div>
+      {fixture.lor && (
+        <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg" style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <span className="text-xs font-medium" style={{ color: "#15803d" }}>
+            Came from your Light-O-Rama display — export knows exactly where it lives
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -563,23 +552,96 @@ function SequenceOverview({
     ? `${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, "0")}`
     : "0:00";
 
+  // ── playback: audio element drives the shared transport clock so the
+  //    preview lights run in sync with the music, right on this screen ──
+  const isPlaying = useTransportStore((s) => s.isPlaying);
+  const currentTime = useTransportStore((s) => s.currentTime);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const rafRef = useRef<number>(0);
+  const hasAudio = duration > 0;
+  // the audio route 307-redirects to the stored file; the <audio> element
+  // follows that natively (same approach as the timeline page)
+  const [audioBroken, setAudioBroken] = useState(false);
+  const audioSrc = hasAudio && !audioBroken ? `/api/audio/${projectId}` : null;
+
+  const stopTicking = useCallback(() => cancelAnimationFrame(rafRef.current), []);
+  const startTicking = useCallback(() => {
+    const tick = () => {
+      const el = audioRef.current;
+      if (el && !el.paused) {
+        useTransportStore.getState().setCurrentTime(el.currentTime);
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    };
+    rafRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  useEffect(() => () => stopTicking(), [stopTicking]);
+
+  const togglePlay = useCallback(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (el.paused) {
+      if (el.ended || el.currentTime >= duration - 0.05) el.currentTime = 0;
+      el.play();
+      useTransportStore.getState().setPlaying(true);
+      startTicking();
+    } else {
+      el.pause();
+      useTransportStore.getState().setPlaying(false);
+      stopTicking();
+    }
+  }, [duration, startTicking, stopTicking]);
+
+  const timeStr = `${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, "0")}`;
+
   return (
     <div
       className="flex items-center gap-4 px-4 shrink-0"
       style={{ height: 72, borderTop: "1px solid var(--line)", background: "#FFFFFF" }}
     >
+      {audioSrc && (
+        <audio
+          ref={audioRef}
+          src={audioSrc}
+          preload="auto"
+          onError={() => setAudioBroken(true)}
+          // coarse fallback clock — keeps time moving even when the page is
+          // hidden and requestAnimationFrame is throttled
+          onTimeUpdate={(e) => useTransportStore.getState().setCurrentTime(e.currentTarget.currentTime)}
+          onEnded={() => {
+            useTransportStore.getState().setPlaying(false);
+            stopTicking();
+          }}
+        />
+      )}
+
       {/* Play button + time */}
       <div className="flex items-center gap-3 shrink-0">
         <button
-          className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-          style={{ background: "var(--panel)", border: "1px solid var(--line)", color: "var(--ink-2)" }}
+          onClick={togglePlay}
+          disabled={!audioSrc}
+          title={audioSrc ? (isPlaying ? "Pause" : "Play the show") : "Add a song first"}
+          className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+          style={{
+            background: audioSrc ? "var(--accent)" : "var(--panel)",
+            border: "1px solid " + (audioSrc ? "var(--accent)" : "var(--line)"),
+            color: audioSrc ? "#fff" : "var(--ink-4)",
+            cursor: audioSrc ? "pointer" : "default",
+          }}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-            <polygon points="5 3 19 12 5 21 5 3" />
-          </svg>
+          {isPlaying ? (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" />
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
+          )}
         </button>
         <div className="text-xs font-mono" style={{ color: "var(--ink-3)" }}>
-          0:00 / {durationStr}
+          {timeStr} / {durationStr}
         </div>
       </div>
 
@@ -616,7 +678,7 @@ function SequenceOverview({
       {/* Effect count + Edit Timeline link */}
       <div className="flex items-center gap-3 shrink-0">
         <span className="text-xs" style={{ color: "var(--ink-4)" }}>
-          {blockCount} effect{blockCount !== 1 ? "s" : ""}
+          {blockCount.toLocaleString()} lighting move{blockCount !== 1 ? "s" : ""}
         </span>
         <Link
           href={`/timeline?project=${projectId}`}

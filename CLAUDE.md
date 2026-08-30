@@ -40,7 +40,7 @@ Beat detection is hand-rolled (`src/lib/audio/beat-detector.ts`).
 | Route | What |
 |---|---|
 | `/` → `/projects` | Project list: open, create, delete |
-| `/project/[id]` | The editor: photo night-stage preview, props, AI panel, Export button |
+| `/project/[id]` | The editor: photo night-stage preview, props, AI panel, Export button, working play bar (audio-driven transport) |
 | `/project/[id]/layout` | Layout editor: photo upload, prop placement |
 | `/timeline?project=` | Timeline editor: effect blocks, beat snap, undo/redo |
 | `/designer` | Redirects into the loaded project |
@@ -98,6 +98,14 @@ npm run build    # Production build
 npx tsc --noEmit # Type check
 npm run lint     # ESLint (baseline: 3 warnings in scripts/loredit-spike)
 ```
+
+The owner starts the app via `Start LightCanvas.bat` on his Desktop (starts
+the dev server, opens the browser; handles a busy port 3000). His guide is
+WALKTHROUGH.md (plain English — keep it truthful when the UI changes), with
+a text copy on his Desktop. The one DB project is "My Christmas Show 2026"
+(his imported 84-prop display). UI copy is deliberately jargon-free:
+"Your Lights", "Make a Show", "lighting moves" — keep new UI text in that
+register.
 
 ## Git
 

@@ -182,6 +182,24 @@ function SvgPreview({ projectId }: { projectId: string }) {
         {/* House — dynamically sized to fill container */}
         <House width={size.w} height={size.h} lights={lights} time={effectiveTime} />
 
+        {/* Plain-language hint: this is not their house yet */}
+        <div
+          className="absolute z-10 flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
+          style={{
+            bottom: 12,
+            left: 12,
+            maxWidth: 340,
+            background: "rgba(255,255,255,0.92)",
+            backdropFilter: "blur(6px)",
+            border: "1px solid rgba(0,0,0,0.08)",
+            color: "var(--ink-3)",
+            boxShadow: "0 4px 12px rgba(0,0,0,.10)",
+          }}
+        >
+          This is a stand-in house. To see your real house here, click
+          &ldquo;Edit Layout&rdquo; and upload a photo of your home.
+        </div>
+
         {/* Edit Layout — floating overlay button */}
         <Link
           href={`/project/${projectId}/layout`}
