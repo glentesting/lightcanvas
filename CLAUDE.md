@@ -52,6 +52,38 @@ API: `projects` (list/create/get/patch/delete/duplicate), `autosave`,
 `upload-depth-map`, `ai/generate` (SSE). All Clerk-free; new rows use
 `owner_id: "local"`, new uploads use a `local/{projectId}/` storage prefix.
 
+## The display model (load-bearing contracts)
+
+- **`Fixture.lor`** is set on fixtures imported from a `.loredit`:
+  `{ propId, propName, stringType, network, unit, startCircuit, channelCount }`.
+  `lor.propName` is the export-mapping key (mirrored in
+  `sequence.loreditPropMap[fixtureId]`) and must NEVER change on rename —
+  `fixture.name` is the free display name (e.g. the 16 unit-01 AC circuits
+  display as "Roof Light String NN" / whatever the owner renames them to).
+- **`geometry.coroShape`** (`"tiered-tree" | "star5" | "arch" | "stake"`)
+  selects exact coroplast geometry from `src/lib/fixtures/coro-shapes.ts` —
+  the single source for both shape AND pixel wiring order, feeding
+  `expandFixturePixels` (preview + effects) and the layout editor outlines.
+  Mini tree = 10 horizontal rows (3 top → 13 bottom), wired bottom-first
+  serpentine so chases climb in bands; arch = semicircle wired leg→top→leg;
+  stake = 5 stacked pixels; star = 20 around a 5-point outline. Chase
+  direction is engine-verified — don't change ordering without re-running
+  `npx tsx scripts/loredit/verify-coro-geometry.mts`.
+- **Shapes without a coroShape** render as multi-point polylines when
+  `layout.points.length >= 2` (traced roof strings, imported face outlines),
+  else kind-based defaults. The layout editor has click-to-trace (inspector
+  → "Trace where it runs on the photo") and "Place a Row" bulk placement
+  (distributes a category evenly along a drawn line, in numeric order).
+- **Wiring conflicts**: LOR fixtures conflict only within the same
+  network+unit on overlapping circuit ranges. Never compare raw start
+  channels across units — that false-positived 1,562 "overlaps" once.
+  Non-LOR fixtures keep the legacy universe/channel check among themselves
+  (`LayoutEditor.tsx` issuesList and `src/lib/exports/validation.ts`).
+- **AC/DumbRGB display vs wire**: channel props carry display bulbs for
+  their outline (`pixelCount`), but the wire truth is `lor.channelCount`
+  (1 or 3) — the preview can animate per-bulb where the hardware dims as
+  one unit; export uses envelopes, so nothing false is exported.
+
 ## The three pipelines that matter
 
 **Layout import (`src/lib/imports/loredit-layout.ts`):** "Import from
@@ -81,8 +113,15 @@ dev mock). Verify with `npx tsx scripts/ai/verify-pipeline.mts`.
 - **Light mode only.**
 - **TypeScript clean** (`npx tsc --noEmit`) and **build passes**
   (`npx next build`) before marking anything done.
-- **Verify by running code, not by reasoning about it.** The verify scripts
-  above exist for exactly this.
+- **Verify by running code, not by reasoning about it.** The suites (all
+  `npx tsx ...`, all must pass before commit):
+  `scripts/loredit/verify-roundtrip.mts` (byte-identical .loredit round-trip),
+  `verify-export.mts` (template fill + grammar), `verify-layout-import.mts`
+  (84-prop import + auto-mapping + export), `verify-coro-geometry.mts`
+  (prop shapes + engine-level chase direction), and
+  `scripts/ai/verify-pipeline.mts` (AI sequencer end-to-end, real audio;
+  uses the real API when ANTHROPIC_API_KEY is present). They need the
+  gitignored reference file in `scripts/loredit-spike/test-fixtures/`.
 - **Never commit** `.loredit` files, MP3s, or template content (gitignored).
 - **No dead buttons, no fake data.** If a control can't work yet, it doesn't
   render. This confusion is why the project stalled once.
@@ -101,12 +140,15 @@ npm run lint     # ESLint (baseline: 3 warnings in scripts/loredit-spike)
 ```
 
 The owner starts the app via `Start LightCanvas.bat` on his Desktop (starts
-the dev server, opens the browser; handles a busy port 3000). His guide is
-WALKTHROUGH.md (plain English — keep it truthful when the UI changes), with
-a text copy on his Desktop. The one DB project is "My Christmas Show 2026"
-(his imported 84-prop display). UI copy is deliberately jargon-free:
-"Your Lights", "Make a Show", "lighting moves" — keep new UI text in that
-register.
+the dev server, opens the browser; handles a busy port 3000) — **check
+whether his server already holds port 3000 before starting your own**. His
+guide is WALKTHROUGH.md (plain English — keep it truthful when the UI
+changes), with a text copy on his Desktop ("LightCanvas - How To.txt";
+regenerate it when WALKTHROUGH.md changes). The one DB project is
+"My Christmas Show 2026" (his imported 84-prop display, his house photo,
+his music, a real AI-generated show) — treat it as his real data, not test
+data. UI copy is deliberately jargon-free: "Your Lights", "Make a Show",
+"lighting moves" — keep new UI text in that register.
 
 ## Git
 
@@ -128,14 +170,24 @@ once broke env parsing here.
 
 ## Known gaps (honest list)
 
-- `.loredit` output not yet opened in S6 (the manual acceptance test) —
-  exact files to open are named in LOREDIT-EXPORT-STATUS.md,
-  AI-PIPELINE-STATUS.md, and LAYOUT-IMPORT-STATUS.md.
-- Prop shapes are exact coro geometry (`src/lib/fixtures/coro-shapes.ts` —
-  chase direction verified against the render engine); roof strings are
-  click-traceable on the photo. Still missing: scale/rotate on shapes, and
-  the tree silhouette is stylized rather than photo-matched.
+- `.loredit` output not yet opened in S6 (THE manual acceptance test, still
+  outstanding) — the files to open sit in
+  `scripts/loredit-spike/test-fixtures/output/`
+  (`lightcanvas-export-test.loredit`, `ai-pipeline-export.loredit`,
+  `layout-import-export.loredit`); details in the matching status docs.
+- No scale/rotate on prop shapes; the tree silhouette is stylized, not a
+  photo-match of the coro cutout (pixel positions are the accurate part).
 - Pixel props export as colorwash only; curtain/bars settings grammar
-  unverified.
-- No lip-sync for the singing faces (deliberate — separate job).
-- ANTHROPIC_API_KEY + `maxDuration` not yet set in Vercel prod.
+  unverified in S6.
+- A chase on a traced AC roof string animates per-bulb in the preview but
+  exports as a single dim envelope (one channel on the wire — the Wiring
+  tab says so).
+- No lip-sync for the singing faces (deliberate — separate job; the ~51
+  FaceV2 mouth/eye sub-props stay unimported by default).
+- The beat analysis after audio upload blocks the page for a minute or two
+  (naive DFT on the main thread); WALKTHROUGH.md warns him.
+- ANTHROPIC_API_KEY + `maxDuration` not yet set in Vercel prod (the key IS
+  in local `.env.local`; live Opus 5 generation verified locally).
+- The night-stage photo preview inherits geometry via shared code but has
+  not been screenshot-verified (the automation browser pane can't
+  composite here).
