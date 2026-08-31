@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import WaveSurfer from "wavesurfer.js";
+import { useTransportStore, registerSeekHandler } from "@/lib/store/transport-store";
 import type { AudioAnalysis } from "@/lib/audio/types";
 
 interface WaveformViewerProps {
@@ -58,23 +59,39 @@ export default function WaveformViewer({ audioUrl, analysis }: WaveformViewerPro
       }
     });
 
+    // this component owns the audio — publish its clock to the shared
+    // transport store so the timeline playhead and the show preview follow
+    const transport = useTransportStore.getState();
     ws.on("audioprocess", () => {
-      if (!cancelled) setCurrentTime(ws.getCurrentTime());
+      if (!cancelled) {
+        setCurrentTime(ws.getCurrentTime());
+        transport.setCurrentTime(ws.getCurrentTime());
+      }
     });
 
     ws.on("seeking", () => {
-      if (!cancelled) setCurrentTime(ws.getCurrentTime());
+      if (!cancelled) {
+        setCurrentTime(ws.getCurrentTime());
+        transport.setCurrentTime(ws.getCurrentTime());
+      }
     });
 
-    ws.on("play", () => { if (!cancelled) setPlaying(true); });
-    ws.on("pause", () => { if (!cancelled) setPlaying(false); });
-    ws.on("finish", () => { if (!cancelled) setPlaying(false); });
+    ws.on("play", () => { if (!cancelled) { setPlaying(true); transport.setPlaying(true); } });
+    ws.on("pause", () => { if (!cancelled) { setPlaying(false); transport.setPlaying(false); } });
+    ws.on("finish", () => { if (!cancelled) { setPlaying(false); transport.setPlaying(false); } });
 
     ws.load(audioUrl);
     wavesurferRef.current = ws;
+    // clicking the timeline ruler seeks the real audio through this handler
+    registerSeekHandler((t) => {
+      const w = wavesurferRef.current;
+      if (w) w.setTime(t);
+    });
 
     return () => {
       cancelled = true;
+      registerSeekHandler(null);
+      useTransportStore.getState().setPlaying(false);
       wavesurferRef.current = null;
       if (isReady) ws.destroy();
     };

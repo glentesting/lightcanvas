@@ -82,7 +82,7 @@ check("every fixture placed on the stage", fixtures.every((f) => {
 check("every fixture carries lor addressing", fixtures.every((f) => !!f.lor));
 
 // shapes reach the preview: pixels distribute along imported polylines
-const faceFixture = fixtures.find((f) => f.name === "FaceV2-Elden Tree Outline")!;
+const faceFixture = fixtures.find((f) => f.lor?.propName === "FaceV2-Elden Tree Outline")!;
 const facePixels = expandFixturePixels(faceFixture);
 const facePts = faceFixture.layout!.points;
 const bbox = facePts.reduce(
@@ -97,7 +97,7 @@ check(
   `${facePixels.length} pixels in bbox ${Math.round(bbox.maxX - bbox.minX)}×${Math.round(bbox.maxY - bbox.minY)}`
 );
 
-const stake = fixtures.find((f) => f.name === "RGB Pixel Stake 01")!;
+const stake = fixtures.find((f) => f.lor?.propName === "RGB Pixel Stake 01")!;
 const stakePixels = expandFixturePixels(stake);
 check(
   "stake renders as a vertical stick (polyline), not a scatter blob",

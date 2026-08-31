@@ -65,9 +65,32 @@ Now you are looking at the main screen. Three parts:
 5. Click **Back to Designer** (top-left) to return to the main screen. The
    picture is now your house.
 
+A few more tricks in the Layout screen:
+
+- **Select several at once:** drag a box around them with your mouse. A bar
+  appears saying how many you grabbed, with a Delete button if you want to
+  clear them out and re-place them.
+- **Night Preview** (top-left toggle) shows your darkened house with every
+  bulb glowing in its own color — trees green, stars gold, roof strings
+  mustard — so you can check placement the way it will actually look.
+- Each tree and its star move together — they're one piece in your yard.
+
 Everything you place, trace, or rename is saved automatically and stays put.
 Don't worry about getting it perfect — you can come back and nudge things
 any time.
+
+## The Timeline page
+
+Click **Timeline** in the left menu to see the show laid out against the
+music — every light piece has its own row, and the colored bars are its
+moves. At the top is a live picture of your house that plays along.
+
+- Press ▶ (or the spacebar) to play. The red line sweeps across the rows
+  and the page scrolls along with it by itself.
+- Click anywhere on the time numbers at the top of the rows to jump the
+  music to that spot.
+- Drag the colored bars to move a light's moves; drag effects in from the
+  left panel to add new ones. Right-click bars to copy or delete them.
 
 ## Using your own song
 

@@ -46,6 +46,27 @@ export function coroShapeFor(fixture: Fixture): CoroShape | null {
   return null;
 }
 
+/** A tree and its star are ONE physical prop (a tiered tree with a star on
+ *  top) wired as two circuits. Pair them by their number so the star always
+ *  sits on its tree's tip — everywhere, derived, never stored. */
+export function pairIndexOf(fixture: Fixture): string | null {
+  const m = (fixture.lor?.propName ?? fixture.name).match(/(?:Base|Star|Tree|Star5?)\s*0?(\d+)\s*$/i);
+  return m ? String(parseInt(m[1], 10)) : null;
+}
+
+/** The star's frame, derived from its paired tree when one exists. */
+export function starFrameFor(star: Fixture, all: Fixture[] | undefined): CoroFrame {
+  const own = coroFrame("star5", star);
+  if (!all) return own;
+  const idx = pairIndexOf(star);
+  if (!idx) return own;
+  const tree = all.find((f) => coroShapeFor(f) === "tiered-tree" && pairIndexOf(f) === idx);
+  if (!tree) return own;
+  const tf = coroFrame("tiered-tree", tree);
+  const size = Math.max(10, tf.w * 0.38);
+  return { cx: tf.cx, cy: tf.cy - tf.h / 2 - size * 0.32, w: size, h: size };
+}
+
 /** Placement frame from the fixture's layout (bounds of its points), with
  *  shape-appropriate minimum sizes. */
 export function coroFrame(shape: CoroShape, fixture: Fixture): CoroFrame {

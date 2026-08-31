@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import WaveformViewer from "@/components/WaveformViewer";
 import Timeline, { PaletteEffectChip, TimelineDndProvider, useTimelineShortcuts } from "@/components/Timeline";
+import ShowCanvas from "@/components/stage/ShowCanvas";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
@@ -25,6 +26,7 @@ function TimelineContent() {
   const storeProjectId = useEditorStore((s) => s.projectId);
   const audioUrl = useEditorStore((s) => s.audioUrl);
   const audioAnalysis = useEditorStore((s) => s.audio);
+  const housePhoto = useEditorStore((s) => s.houseCustomSvg);
   const saveStatus = useEditorStore((s) => s.saveStatus);
   const loadProject = useEditorStore((s) => s.loadProject);
 
@@ -191,6 +193,11 @@ function TimelineContent() {
           <div className="flex-1 flex flex-col min-w-0 min-h-0">
             {audioApiUrl ? (
               <>
+                {/* Live show preview — the same renderer as everywhere else,
+                    following the playhead as you play or scrub */}
+                <div className="shrink-0 relative" style={{ height: 200, borderBottom: "1px solid var(--line)", background: "#0b101e" }}>
+                  <ShowCanvas photoUrl={housePhoto} />
+                </div>
                 <div className="shrink-0" style={{ borderBottom: "1px solid var(--line)" }}>
                   <WaveformViewer audioUrl={audioApiUrl} analysis={audioAnalysis} />
                 </div>

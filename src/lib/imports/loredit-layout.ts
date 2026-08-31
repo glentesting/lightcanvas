@@ -13,6 +13,7 @@
  */
 
 import type { Fixture, FixtureKind } from "@/lib/fixtures/types";
+import { shortNameFor } from "@/lib/fixtures/identity";
 import { parseXml, attr, findChild, findChildren } from "@/lib/exports/loredit/xml";
 
 export interface ImportableProp {
@@ -229,15 +230,15 @@ function coroShapeForName(name: string): "tiered-tree" | "star5" | "arch" | "sta
   return undefined;
 }
 
-/** Friendly display name — the template's demo-house names (windows, columns,
- *  railings) are wrong for the owner's house; his AC strings run along the
- *  roofline, ridges, and peaks. lor.propName keeps the template name so
- *  export mapping is untouched; he renames these as he traces them. */
+/** Short display names ("Tree 03", "Stake 12", "Elden") — lor.propName keeps
+ *  the template name so export mapping is untouched. The AC circuits get
+ *  roof names (his strings run along the roofline/ridges/peaks, not the
+ *  template's windows/columns/railings). */
 function friendlyName(p: ImportableProp): string {
   if (p.stringType === "Traditional" && /^01\./.test(p.name)) {
     return `Roof Light String ${String(p.startCircuit).padStart(2, "0")}`;
   }
-  return p.name;
+  return shortNameFor(p.name) ?? p.name;
 }
 
 /** Turn a selected prop into a LightCanvas fixture. */

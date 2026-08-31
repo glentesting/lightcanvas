@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useEditorStore } from "@/lib/store/editor-store";
 import type { Fixture, FixtureKind } from "@/lib/fixtures/types";
 import { FIXTURE_TEMPLATES, nextStartChannel, autoName } from "@/lib/fixtures/library";
 import { PROP_SIZES } from "@/lib/fixtures/prop-sizes";
-import { coroShapeFor, coroFrame, coroOutlinePath, coroPixelPoints, distributeAlongPath } from "@/lib/fixtures/coro-shapes";
+import { coroShapeFor, coroFrame, coroOutlinePath, starFrameFor, pairIndexOf, distributeAlongPath } from "@/lib/fixtures/coro-shapes";
+import { identityColor } from "@/lib/fixtures/identity";
+import { expandFixturePixels } from "@/lib/scene/pixel-geometry";
+import ShowCanvas from "@/components/stage/ShowCanvas";
 import House from "@/components/editor/house";
 
 // Each prop kind has a default size (in SVG viewBox units out of 720x420)
@@ -20,17 +23,7 @@ const KIND_CATEGORIES: { label: string; kinds: FixtureKind[] }[] = [
   { label: "Other", kinds: ["matrix", "custom"] },
 ];
 
-// Color dot per kind
-const KIND_COLORS: Record<string, string> = {
-  roofline: "#f59e0b",
-  "window-outline": "#3b82f6",
-  "mega-tree": "#22c55e",
-  "mini-tree": "#86efac",
-  bush: "#a78bfa",
-  arch: "#f97316",
-  matrix: "#ec4899",
-  custom: "#94a3b8",
-};
+// Prop identity colors come from the shared table in fixtures/identity.ts
 
 export default function LayoutEditor({
   nightPreview = false,
@@ -67,6 +60,9 @@ export default function LayoutEditor({
   // bulk placement: distribute a whole category along a drawn line
   const [placing, setPlacing] = useState<{ label: string; fixtureIds: string[]; points: Array<{ x: number; y: number }> } | null>(null);
   const [placeChooserOpen, setPlaceChooserOpen] = useState(false);
+  // marquee multi-select: drag on empty canvas, then bulk delete
+  const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const [multiSelected, setMultiSelected] = useState<Set<string>>(new Set());
   const svgRef = useRef<SVGSVGElement>(null);
 
   const toggleVisibility = useCallback((id: string) => {
@@ -102,8 +98,11 @@ export default function LayoutEditor({
     e.stopPropagation();
     e.preventDefault();
     setSelectedId(fixtureId);
+    setMultiSelected(new Set());
     const fixture = fixtures.find((f) => f.id === fixtureId);
     if (!fixture?.layout?.points[0]) return;
+    // a star rides its tree — moving the tree moves the star
+    if (coroShapeFor(fixture) === "star5" && pairIndexOf(fixture)) return;
     const pt = toSvg(e);
     if (!pt) return;
     setDragging({
@@ -115,7 +114,21 @@ export default function LayoutEditor({
     });
   }, [fixtures, toSvg, tracing, placing]);
 
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (tracing || placing || dragging) return;
+    const target = e.target as SVGElement;
+    if (target.closest("[data-prop]")) return;
+    const pt = toSvg(e);
+    if (!pt) return;
+    setMarquee({ x0: pt.x, y0: pt.y, x1: pt.x, y1: pt.y });
+  }, [tracing, placing, dragging, toSvg]);
+
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (marquee) {
+      const pt = toSvg(e);
+      if (pt) setMarquee((m) => (m ? { ...m, x1: pt.x, y1: pt.y } : m));
+      return;
+    }
     if (!dragging) return;
     const pt = toSvg(e);
     if (!pt) return;
@@ -127,9 +140,32 @@ export default function LayoutEditor({
         closed: dragging.closed,
       },
     });
-  }, [dragging, toSvg, updateFixture]);
+  }, [dragging, toSvg, updateFixture, marquee]);
 
-  const handleMouseUp = useCallback(() => setDragging(null), []);
+  const marqueeDoneRef = useRef(false);
+  const handleMouseUp = useCallback(() => {
+    if (marquee) {
+      const minX = Math.min(marquee.x0, marquee.x1);
+      const maxX = Math.max(marquee.x0, marquee.x1);
+      const minY = Math.min(marquee.y0, marquee.y1);
+      const maxY = Math.max(marquee.y0, marquee.y1);
+      if (maxX - minX > 6 || maxY - minY > 6) {
+        const hit = new Set<string>();
+        for (const f of fixtures) {
+          const px = expandFixturePixels(f, fixtures);
+          if (px.length === 0) continue;
+          const cx = px.reduce((a, q) => a + q.x, 0) / px.length;
+          const cy = px.reduce((a, q) => a + q.y, 0) / px.length;
+          if (cx >= minX && cx <= maxX && cy >= minY && cy <= maxY) hit.add(f.id);
+        }
+        setMultiSelected(hit);
+        setSelectedId(null);
+        marqueeDoneRef.current = hit.size > 0;
+      }
+      setMarquee(null);
+    }
+    setDragging(null);
+  }, [marquee, fixtures]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     const pt = toSvg(e);
@@ -143,9 +179,40 @@ export default function LayoutEditor({
     }
     const target = e.target as SVGElement;
     if (!target.closest("[data-prop]")) {
+      if (marqueeDoneRef.current) {
+        marqueeDoneRef.current = false;
+        return;
+      }
       setSelectedId(null);
+      setMultiSelected(new Set());
     }
   }, [toSvg, tracing, placing]);
+
+  const deleteMultiSelected = useCallback(() => {
+    for (const id of multiSelected) deleteFixture(id);
+    setMultiSelected(new Set());
+    setSelectedId(null);
+  }, [multiSelected, deleteFixture]);
+
+  // Delete key removes the marquee selection
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if ((e.key === "Delete" || e.key === "Backspace") && multiSelected.size > 0) {
+        e.preventDefault();
+        deleteMultiSelected();
+      }
+      if (e.key === "Escape") {
+        setMultiSelected(new Set());
+        setMarquee(null);
+        setTracing(null);
+        setPlacing(null);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [multiSelected, deleteMultiSelected]);
 
   const finishTracing = useCallback(() => {
     if (!tracing || tracing.points.length < 2) return;
@@ -184,7 +251,8 @@ export default function LayoutEditor({
       { label: "Yard Stakes", match: (f) => coroShapeFor(f) === "stake" },
       { label: "Arches", match: (f) => coroShapeFor(f) === "arch" },
       { label: "Mini Trees", match: (f) => coroShapeFor(f) === "tiered-tree" },
-      { label: "Tree Stars", match: (f) => coroShapeFor(f) === "star5" },
+      // paired stars ride their trees; only free-standing stars are placeable
+      { label: "Tree Stars", match: (f) => coroShapeFor(f) === "star5" && !fixtures.some((t) => coroShapeFor(t) === "tiered-tree" && pairIndexOf(t) === pairIndexOf(f)) },
     ];
     return defs
       .map((d) => ({
@@ -436,30 +504,23 @@ export default function LayoutEditor({
               border: nightPreview ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.06)",
             }}
           >
-            {houseCustomSvg ? (
+            {nightPreview ? (
+              /* Night view = the ONE shared renderer (same pixels, same
+                 colors as the designer preview and timeline preview) */
+              <div style={{ width: 720, height: 420 }}>
+                <ShowCanvas photoUrl={houseCustomSvg ?? undefined} />
+              </div>
+            ) : houseCustomSvg ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={houseCustomSvg}
                 alt="Custom house"
                 width={720}
                 height={420}
-                style={{
-                  width: 720, height: 420, objectFit: "cover",
-                  filter: nightPreview ? "brightness(0.25) saturate(0.4)" : "none",
-                  transition: "filter 0.4s ease",
-                }}
+                style={{ width: 720, height: 420, objectFit: "cover" }}
               />
             ) : (
-              <div style={{ position: "relative" }}>
-                <House width={720} height={420} id="layout-house" />
-                {nightPreview && (
-                  <div style={{
-                    position: "absolute", inset: 0,
-                    background: "rgba(8, 12, 30, 0.7)",
-                    transition: "opacity 0.4s ease",
-                  }} />
-                )}
-              </div>
+              <House width={720} height={420} id="layout-house" />
             )}
             {/* Interactive prop overlay */}
             <svg
@@ -469,10 +530,24 @@ export default function LayoutEditor({
               viewBox="0 0 720 420"
               style={{ position: "absolute", inset: 0, cursor: tracing || placing ? "crosshair" : dragging ? "grabbing" : "default" }}
               onClick={handleCanvasClick}
+              onMouseDown={handleCanvasMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
             >
+              {marquee && (
+                <rect
+                  x={Math.min(marquee.x0, marquee.x1)}
+                  y={Math.min(marquee.y0, marquee.y1)}
+                  width={Math.abs(marquee.x1 - marquee.x0)}
+                  height={Math.abs(marquee.y1 - marquee.y0)}
+                  fill="rgba(59,130,246,0.10)"
+                  stroke="#3b82f6"
+                  strokeWidth={1}
+                  strokeDasharray="4 3"
+                  pointerEvents="none"
+                />
+              )}
               {/* Glow filter for night preview */}
               {nightPreview && (
                 <defs>
@@ -507,12 +582,39 @@ export default function LayoutEditor({
                 <PropShape
                   key={f.id}
                   fixture={f}
-                  isSelected={f.id === selectedId}
+                  allFixtures={fixtures}
+                  isSelected={f.id === selectedId || multiSelected.has(f.id)}
                   nightMode={nightPreview}
                   onMouseDown={(e) => handlePropMouseDown(e, f.id)}
                 />
               ))}
             </svg>
+
+            {/* Multi-select toolbar */}
+            {multiSelected.size > 0 && !tracing && !placing && (
+              <div
+                className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-3 px-4 py-2 rounded-xl z-20"
+                style={{ background: "rgba(255,255,255,0.95)", border: "1px solid var(--line)", boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}
+              >
+                <span className="text-xs font-medium" style={{ color: "var(--ink)" }}>
+                  {multiSelected.size} light piece{multiSelected.size !== 1 ? "s" : ""} selected
+                </span>
+                <button
+                  onClick={deleteMultiSelected}
+                  className="h-7 px-3 rounded-lg text-xs font-semibold"
+                  style={{ background: "#fee2e2", border: "1px solid #fca5a5", color: "#b91c1c", cursor: "pointer" }}
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setMultiSelected(new Set())}
+                  className="h-7 px-3 rounded-lg text-xs font-medium"
+                  style={{ border: "1px solid var(--line)", background: "#fff", color: "var(--ink)", cursor: "pointer" }}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
 
             {/* Mode banner / bulk placement entry */}
             {tracing || placing ? (
@@ -609,7 +711,7 @@ export default function LayoutEditor({
                 </label>
               </div>
               <div className="flex items-center gap-2">
-                <span className="shrink-0 w-3 h-3 rounded-full" style={{ background: KIND_COLORS[selected.kind] ?? "#94a3b8" }} />
+                <span className="shrink-0 w-3 h-3 rounded-full" style={{ background: identityColor(selected) }} />
                 <input
                   type="text"
                   value={selected.name}
@@ -981,31 +1083,43 @@ export default function LayoutEditor({
   );
 }
 
-/* --- Prop shape on the canvas --- */
+/* --- Prop shape on the canvas ---
+   Geometry comes from the SAME source as every preview: expandFixturePixels
+   for pixel dots, coro-shapes for silhouettes. Idle colors come from the
+   shared identity table. In night mode the ShowCanvas underlay draws the
+   lights; this component only provides hit areas, selection, and labels. */
 function PropShape({
   fixture,
+  allFixtures,
   isSelected,
   nightMode,
   onMouseDown,
 }: {
   fixture: Fixture;
+  allFixtures: Fixture[];
   isSelected: boolean;
   nightMode?: boolean;
   onMouseDown: (e: React.MouseEvent) => void;
 }) {
   const defaults = PROP_DEFAULTS[fixture.kind] || { w: 40, h: 40, cx: 360, cy: 210 };
   const pts = fixture.layout?.points ?? [];
-  // Exact coro-prop geometry first, then imported/traced shapes, then kind shapes
   const coro = coroShapeFor(fixture);
-  const coroF = coro ? coroFrame(coro, fixture) : null;
+  const coroF = coro
+    ? coro === "star5"
+      ? starFrameFor(fixture, allFixtures)
+      : coroFrame(coro, fixture)
+    : null;
   const traced = !coro && pts.length >= 2 ? pts : null;
-  const bounds = traced
-    ? traced.reduce(
-        (b, p) => ({
-          minX: Math.min(b.minX, p.x),
-          maxX: Math.max(b.maxX, p.x),
-          minY: Math.min(b.minY, p.y),
-          maxY: Math.max(b.maxY, p.y),
+
+  // shared pixel positions — identical to the preview renderers
+  const pixels = expandFixturePixels(fixture, allFixtures);
+  const bounds = pixels.length
+    ? pixels.reduce(
+        (b, q) => ({
+          minX: Math.min(b.minX, q.x),
+          maxX: Math.max(b.maxX, q.x),
+          minY: Math.min(b.minY, q.y),
+          maxY: Math.max(b.maxY, q.y),
         }),
         { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }
       )
@@ -1015,155 +1129,91 @@ function PropShape({
   const w = coroF ? Math.max(12, coroF.w) : bounds ? Math.max(12, bounds.maxX - bounds.minX) : defaults.w;
   const h = coroF ? Math.max(12, coroF.h) : bounds ? Math.max(12, bounds.maxY - bounds.minY) : defaults.h;
 
-  // Night mode: warm white / colored glow; Day mode: blue outlines
-  const nightColors: Record<string, string> = {
-    roofline: "#fbbf24", "window-outline": "#fde68a", bush: "#86efac",
-    "mega-tree": "#f87171", "mini-tree": "#34d399", arch: "#60a5fa",
-    matrix: "#c084fc", custom: "#fbbf24",
-  };
-  const glowColor = nightColors[fixture.kind] || "#fbbf24";
+  const idColor = identityColor(fixture);
+  const stroke = isSelected ? "#3b82f6" : idColor;
+  const strokeW = isSelected ? 2.5 : 1.5;
+  const groupOpacity = isSelected ? 1 : 0.9;
+  const isPairedStar = coro === "star5" && !!pairIndexOf(fixture) &&
+    allFixtures.some((f) => coroShapeFor(f) === "tiered-tree" && pairIndexOf(f) === pairIndexOf(fixture));
 
-  const stroke = nightMode ? glowColor : isSelected ? "#3b82f6" : "#64748b";
-  const fill = nightMode ? glowColor : isSelected ? "#3b82f6" : "#94a3b8";
-  const fillOpacity = nightMode ? 0.35 : isSelected ? 0.15 : 0.06;
-  const strokeW = nightMode ? 3 : isSelected ? 2.5 : 1.5;
-  const groupOpacity = nightMode ? 1 : isSelected ? 1 : 0.55;
-
-  // Anchor node positions (corners of bounding box)
-  const anchors = isSelected
-    ? [
-        { x: cx - w / 2, y: cy - h / 2 },
-        { x: cx + w / 2, y: cy - h / 2 },
-        { x: cx + w / 2, y: cy + h / 2 },
-        { x: cx - w / 2, y: cy + h / 2 },
-      ]
-    : [];
-
-  // Label pill dimensions
+  // Label pill
   const labelText = fixture.name;
   const labelW = labelText.length * 5.5 + 14;
   const labelH = 16;
   const labelX = cx - labelW / 2;
   const labelY = cy - h / 2 - 22;
 
+  // Night mode: the ShowCanvas underlay IS the picture — only interaction here
+  if (nightMode) {
+    return (
+      <g data-prop={fixture.id} onMouseDown={onMouseDown} style={{ cursor: isPairedStar ? "default" : "grab" }}>
+        <rect x={cx - w / 2 - 6} y={cy - h / 2 - 6} width={w + 12} height={h + 12} fill="transparent" />
+        {isSelected && (
+          <rect x={cx - w / 2 - 4} y={cy - h / 2 - 4} width={w + 8} height={h + 8} rx={4}
+            fill="none" stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="4 3" />
+        )}
+      </g>
+    );
+  }
+
   return (
     <g data-prop={fixture.id} onMouseDown={onMouseDown}
-      style={{ cursor: "grab", opacity: groupOpacity, filter: nightMode ? "url(#glow)" : "none" }}>
+      style={{ cursor: isPairedStar ? "default" : "grab", opacity: groupOpacity }}>
       {/* Hit area */}
       <rect x={cx - w / 2 - 6} y={cy - h / 2 - 6} width={w + 12} height={h + 12} fill="transparent" />
 
-      {/* Exact coro-prop silhouette + its real pixel positions */}
+      {/* Silhouette guide */}
       {coro && coroF && (
-        <>
-          <path
-            d={coroOutlinePath(coro, coroF)}
-            fill={fill}
-            fillOpacity={fillOpacity + 0.06}
-            stroke={stroke}
-            strokeWidth={strokeW}
-            strokeLinejoin="round"
-          />
-          {coroPixelPoints(coro, Math.min(fixture.pixelCount, 90), coroF).map((p, i) => (
-            <circle key={i} cx={p.x} cy={p.y} r={isSelected ? 1.6 : 1.1} fill={fill} opacity={0.75} />
-          ))}
-        </>
+        <path
+          d={coroOutlinePath(coro, coroF)}
+          fill={coro === "arch" ? "none" : idColor}
+          fillOpacity={coro === "arch" ? 0 : 0.16}
+          stroke={stroke}
+          strokeWidth={strokeW}
+          strokeLinejoin="round"
+        />
       )}
-
-      {/* Traced shape (imported from LOR or drawn) — real geometry wins */}
       {traced && (
-        <>
-          <polyline
-            points={(fixture.layout?.closed ? [...traced, traced[0]] : traced)
-              .map((p) => `${p.x},${p.y}`)
-              .join(" ")}
-            fill={fixture.layout?.closed ? fill : "none"}
-            fillOpacity={fixture.layout?.closed ? fillOpacity : 0}
-            stroke={stroke}
-            strokeWidth={strokeW}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-          {traced.length <= 12 &&
-            traced.map((p, i) => (
-              <circle key={i} cx={p.x} cy={p.y} r={isSelected ? 2.5 : 1.5} fill={fill} opacity={0.7} />
-            ))}
-        </>
+        <polyline
+          points={(fixture.layout?.closed ? [...traced, traced[0]] : traced)
+            .map((q) => `${q.x},${q.y}`)
+            .join(" ")}
+          fill={fixture.layout?.closed ? idColor : "none"}
+          fillOpacity={fixture.layout?.closed ? 0.12 : 0}
+          stroke={stroke}
+          strokeWidth={strokeW}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
       )}
 
-      {/* Shape */}
-      {!traced && fixture.kind === "roofline" && (
-        <>
-          <line x1={cx - w / 2} y1={cy} x2={cx + w / 2} y2={cy}
-            stroke={stroke} strokeWidth={strokeW + 1} strokeLinecap="round" />
-          {Array.from({ length: 12 }).map((_, i) => (
-            <circle key={i} cx={cx - w / 2 + (w / 11) * i} cy={cy} r={isSelected ? 3 : 2} fill={fill} opacity={0.7} />
-          ))}
-        </>
-      )}
-      {!traced && fixture.kind === "window-outline" && (
-        <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={3}
-          fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={strokeW} />
-      )}
-      {!traced && fixture.kind === "mega-tree" && (
-        <>
-          <polygon points={`${cx},${cy - h / 2} ${cx - w / 2},${cy + h * 0.35} ${cx + w / 2},${cy + h * 0.35}`}
-            fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={strokeW} strokeLinejoin="round" />
-          <rect x={cx - 5} y={cy + h * 0.35} width={10} height={h * 0.15} fill={fill} fillOpacity={0.15} stroke={stroke} strokeWidth={1} />
-        </>
-      )}
-      {!traced && fixture.kind === "mini-tree" && (
-        <>
-          <polygon points={`${cx},${cy - h / 2} ${cx - w / 2},${cy + h * 0.35} ${cx + w / 2},${cy + h * 0.35}`}
-            fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={strokeW} strokeLinejoin="round" />
-          <rect x={cx - 4} y={cy + h * 0.35} width={8} height={h * 0.15} fill={fill} fillOpacity={0.15} stroke={stroke} strokeWidth={1} />
-        </>
-      )}
-      {!traced && fixture.kind === "arch" && (
-        <path d={`M ${cx - w / 2} ${cy + h / 2} Q ${cx} ${cy - h / 2} ${cx + w / 2} ${cy + h / 2}`}
-          fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={strokeW} />
-      )}
-      {!traced && fixture.kind === "bush" && (
-        <ellipse cx={cx} cy={cy} rx={w / 2} ry={h / 2}
-          fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={strokeW} />
-      )}
-      {/* Fallback for kinds without a dedicated glyph (custom props, imported stars) */}
-      {!traced && (fixture.kind === "custom" || !["roofline", "window-outline", "mega-tree", "mini-tree", "arch", "bush", "matrix"].includes(fixture.kind)) && (
-        <circle cx={cx} cy={cy} r={Math.min(w, h) / 2}
-          fill={fill} fillOpacity={fillOpacity + 0.1} stroke={stroke} strokeWidth={strokeW} />
-      )}
-      {!traced && fixture.kind === "matrix" && (
-        <>
-          <rect x={cx - w / 2} y={cy - h / 2} width={w} height={h} rx={2}
-            fill={fill} fillOpacity={fillOpacity} stroke={stroke} strokeWidth={strokeW} />
-          {Array.from({ length: 3 }).map((_, r) =>
-            Array.from({ length: 5 }).map((_, c) => (
-              <circle key={`${r}-${c}`} cx={cx - w / 2 + w * (c + 0.5) / 5} cy={cy - h / 2 + h * (r + 0.5) / 3} r={1.5} fill={fill} opacity={0.4} />
-            ))
-          )}
-        </>
-      )}
-
-      {/* Anchor nodes (selected only) */}
-      {anchors.map((a, i) => (
-        <g key={i}>
-          <circle cx={a.x} cy={a.y} r={5} fill="#FFFFFF" stroke="#3b82f6" strokeWidth={2} />
-        </g>
+      {/* The real pixels — same positions as every preview */}
+      {pixels.slice(0, 120).map((q) => (
+        <circle key={q.pixelIndex} cx={q.x} cy={q.y} r={isSelected ? 1.7 : 1.2} fill={idColor} opacity={0.85} />
       ))}
 
-      {/* Label pill */}
-      <rect x={labelX} y={labelY} width={labelW} height={labelH} rx={8}
-        fill={nightMode ? "rgba(0,0,0,0.6)" : isSelected ? "#3b82f6" : "#FFFFFF"}
-        fillOpacity={nightMode ? 0.7 : isSelected ? 1 : 0.92}
-        stroke={nightMode ? glowColor : isSelected ? "#3b82f6" : "#cbd5e1"}
-        strokeWidth={nightMode ? 0.5 : isSelected ? 0 : 0.5} />
-      <text x={cx} y={labelY + labelH / 2 + 3.5} textAnchor="middle" fontSize="9" fontWeight="600"
-        fill={nightMode ? glowColor : isSelected ? "#FFFFFF" : "#475569"}
-        style={{ pointerEvents: "none" }}>
-        {labelText}
-      </text>
+      {/* Selection ring */}
+      {isSelected && (
+        <rect x={cx - w / 2 - 4} y={cy - h / 2 - 4} width={w + 8} height={h + 8} rx={4}
+          fill="none" stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="4 3" />
+      )}
+
+      {/* Label pill (selected only for stars, so tree labels stay readable) */}
+      {(isSelected || !isPairedStar) && (
+        <g>
+          <rect x={labelX} y={labelY} width={labelW} height={labelH} rx={labelH / 2}
+            fill="#FFFFFF" fillOpacity={isSelected ? 1 : 0.92}
+            stroke={isSelected ? "#3b82f6" : "#cbd5e1"} strokeWidth={isSelected ? 0 : 0.5} />
+          <text x={cx} y={labelY + 11} textAnchor="middle" fontSize={9} fontWeight={600}
+            fill={isSelected ? "#3b82f6" : "#475569"}>
+            {labelText}
+          </text>
+        </g>
+      )}
     </g>
   );
 }
+
 
 /* --- Add Prop Dialog --- */
 function AddPropDialog({

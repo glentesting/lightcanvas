@@ -20,6 +20,8 @@ G4-MP3 Director plays.
 - `CLEANUP-STATUS.md` — what was deleted and what routes remain.
 - `LAYOUT-IMPORT-STATUS.md` — importing the owner's display from a .loredit.
 - `LAYOUT-GEOMETRY-STATUS.md` — exact coro prop shapes, tracing, bulk placement.
+- `GAP-ANALYSIS.md` — ranked gaps vs. real sequencing needs (2026-08-29).
+- `EDITOR-UPGRADE-STATUS.md` — the one-renderer unification, timeline transport, marquee.
 
 Keep these truthful: when a session changes what works, update the matching
 status doc in the same commit.
@@ -42,8 +44,8 @@ Beat detection is hand-rolled (`src/lib/audio/beat-detector.ts`).
 |---|---|
 | `/` → `/projects` | Project list: open, create, delete |
 | `/project/[id]` | The editor: photo night-stage preview, props, AI panel, Export button, working play bar (audio-driven transport) |
-| `/project/[id]/layout` | Layout editor: photo upload, exact coro prop shapes, click-to-trace roof strings, "Place a Row" bulk placement |
-| `/timeline?project=` | Timeline editor: effect blocks, beat snap, undo/redo |
+| `/project/[id]/layout` | Layout editor: photo upload, exact coro prop shapes, identity colors, marquee multi-select + bulk delete, click-to-trace roof strings, "Place a Row", real Night Preview (ShowCanvas) |
+| `/timeline?project=` | Timeline editor: live show preview strip, playhead + follow-scroll + ruler seek, effect blocks, beat snap, undo/redo |
 | `/designer` | Redirects into the loaded project |
 | `/dev/stage`, `/dev/visualizer-v2` | Dev harnesses (404 in prod) |
 
@@ -53,6 +55,23 @@ API: `projects` (list/create/get/patch/delete/duplicate), `autosave`,
 `owner_id: "local"`, new uploads use a `local/{projectId}/` storage prefix.
 
 ## The display model (load-bearing contracts)
+
+- **ONE renderer.** `src/components/stage/ShowCanvas.tsx` (2D canvas over
+  `expandFixturePixels` + `renderFrame`) draws the show everywhere: timeline
+  preview strip, designer no-photo fallback, layout editor Night Preview.
+  The three.js photo night-stage reads the same `expandFixturePixels`.
+  Idle = identity colors (`src/lib/fixtures/identity.ts` — the ONLY prop
+  color table); playing = engine colors. Never add another draw path.
+- **Transport is shared.** WaveSurfer (timeline) and the designer play bar
+  publish to `useTransportStore`; `registerSeekHandler`/`requestSeek` route
+  seeks to whoever owns the audio. The timeline has a playhead,
+  follow-scroll, and ruler click-to-seek built on this.
+- **Tree+star pairing**: a star's position is DERIVED from its paired tree
+  (`starFrameFor`/`pairIndexOf` in coro-shapes) — one visual prop, two
+  circuits. Paired stars don't drag and are excluded from Place a Row.
+- **Short display names** ("Tree 01", "Stake 12", Elden/Felix/Ralphie/Zuzu)
+  are set at import (`shortNameFor`) and were migrated onto the live
+  project; `lor.propName` still carries the template name for export.
 
 - **`Fixture.lor`** is set on fixtures imported from a `.loredit`:
   `{ propId, propName, stringType, network, unit, startCircuit, channelCount }`.
@@ -188,6 +207,7 @@ once broke env parsing here.
   (naive DFT on the main thread); WALKTHROUGH.md warns him.
 - ANTHROPIC_API_KEY + `maxDuration` not yet set in Vercel prod (the key IS
   in local `.env.local`; live Opus 5 generation verified locally).
-- The night-stage photo preview inherits geometry via shared code but has
-  not been screenshot-verified (the automation browser pane can't
-  composite here).
+- The owner's project holds 83 of the 84 imported props — he deleted
+  "Roof Light String 15" himself; re-import with "Add alongside" restores it.
+- Preview shows 10 effect types but pixel props export as colorwash — the
+  what-you-see-vs-what-exports gap is #2 on GAP-ANALYSIS.md's follow-ups.

@@ -1,6 +1,6 @@
 import type { Fixture } from "@/lib/fixtures/types";
 import { propSize } from "@/lib/fixtures/prop-sizes";
-import { coroShapeFor, coroFrame, coroPixelPoints } from "@/lib/fixtures/coro-shapes";
+import { coroShapeFor, coroFrame, coroPixelPoints, starFrameFor } from "@/lib/fixtures/coro-shapes";
 import type { LightPoint } from "./types";
 
 /**
@@ -12,7 +12,7 @@ import type { LightPoint } from "./types";
  * - matrix: row-major for horizontal wiring, column-major for vertical
  * - everything else: linear along the run
  */
-export function expandFixturePixels(fixture: Fixture): LightPoint[] {
+export function expandFixturePixels(fixture: Fixture, allFixtures?: Fixture[]): LightPoint[] {
   const n = fixture.pixelCount;
   if (n <= 0) return [];
 
@@ -26,7 +26,9 @@ export function expandFixturePixels(fixture: Fixture): LightPoint[] {
   // (chases must climb trees in rows, travel over arches, etc.)
   const coro = coroShapeFor(fixture);
   if (coro) {
-    return coroPixelPoints(coro, n, coroFrame(coro, fixture)).map((p, i) =>
+    // a star rides on its paired tree's tip (one physical prop, two circuits)
+    const frame = coro === "star5" ? starFrameFor(fixture, allFixtures) : coroFrame(coro, fixture);
+    return coroPixelPoints(coro, n, frame).map((p, i) =>
       point(fixture, i, p.x, p.y, coro === "stake" ? 1.8 : 1.9)
     );
   }
@@ -71,7 +73,7 @@ export function expandFixturePixels(fixture: Fixture): LightPoint[] {
 }
 
 export function expandAllFixtures(fixtures: Fixture[]): LightPoint[] {
-  return fixtures.flatMap(expandFixturePixels);
+  return fixtures.flatMap((f) => expandFixturePixels(f, fixtures));
 }
 
 // ── shapes ──────────────────────────────────────────────────

@@ -1,5 +1,22 @@
 import { create } from "zustand";
 
+/**
+ * Whoever owns the actual audio element (WaveSurfer on the timeline page,
+ * the play bar on the designer) registers here so seeks from anywhere —
+ * clicking the timeline ruler, scrubbing — move the real audio, which then
+ * publishes the time back through setCurrentTime.
+ */
+let seekHandler: ((t: number) => void) | null = null;
+
+export function registerSeekHandler(fn: ((t: number) => void) | null): void {
+  seekHandler = fn;
+}
+
+export function requestSeek(t: number): void {
+  if (seekHandler) seekHandler(t);
+  else useTransportStore.getState().setCurrentTime(t);
+}
+
 interface TransportState {
   isPlaying: boolean;
   currentTime: number;

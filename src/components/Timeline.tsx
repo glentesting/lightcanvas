@@ -13,7 +13,7 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { useEditorStore } from "@/lib/store/editor-store";
-import { useTransportStore } from "@/lib/store/transport-store";
+import { useTransportStore, requestSeek } from "@/lib/store/transport-store";
 import { EFFECT_COLORS, EFFECT_NAMES, DEFAULT_EFFECT_PARAMS } from "@/lib/timeline/constants";
 import { secondsToPx, pxToSeconds, snapToBeat } from "@/lib/timeline/snapping";
 import type { EffectId, EffectBlock } from "@/lib/timeline/types";
@@ -47,6 +47,7 @@ export default function Timeline({ analysis }: TimelineProps) {
   const deleteBlocks = useEditorStore((s) => s.deleteBlocks);
   const duplicateBlocks = useEditorStore((s) => s.duplicateBlocks);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   return (
     <div
@@ -105,7 +106,7 @@ export default function Timeline({ analysis }: TimelineProps) {
         </div>
       )}
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto" ref={scrollRef}>
         <div style={{ minWidth: LABEL_WIDTH + totalWidth + 40, position: "relative" }}>
           {/* Header row */}
           <div className="flex sticky top-0 z-10" style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)" }}>
@@ -125,7 +126,15 @@ export default function Timeline({ analysis }: TimelineProps) {
             >
               Tracks
             </div>
-            <div className="relative" style={{ width: totalWidth, height: 32 }}>
+            <div
+              className="relative"
+              style={{ width: totalWidth, height: 32, cursor: "pointer" }}
+              onMouseDown={(e) => {
+                // click (or drag) the ruler to jump the whole app to that moment
+                const rect = e.currentTarget.getBoundingClientRect();
+                requestSeek(Math.max(0, Math.min(duration, pxToSeconds(e.clientX - rect.left, zoom))));
+              }}
+            >
               {Array.from({ length: Math.ceil(duration / 4) + 1 }).map((_, i) => {
                 const t = i * 4;
                 const x = secondsToPx(t, zoom);
@@ -185,6 +194,9 @@ export default function Timeline({ analysis }: TimelineProps) {
               );
             })
           )}
+
+          {/* Playhead — follows the shared transport clock */}
+          <TimelinePlayhead zoom={zoom} scrollRef={scrollRef} />
         </div>
       </div>
 
@@ -195,6 +207,40 @@ export default function Timeline({ analysis }: TimelineProps) {
       {contextMenu && (
         <TimelineContextMenu x={contextMenu.x} y={contextMenu.y} onClose={() => setContextMenu(null)} />
       )}
+    </div>
+  );
+}
+
+/* ─── Playhead (isolated: re-renders at the audio tick rate, the grid doesn't) ─── */
+function TimelinePlayhead({
+  zoom,
+  scrollRef,
+}: {
+  zoom: number;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const currentTime = useTransportStore((s) => s.currentTime);
+  const isPlaying = useTransportStore((s) => s.isPlaying);
+  const x = LABEL_WIDTH + secondsToPx(currentTime, zoom);
+
+  // keep the playhead in view while playing
+  useEffect(() => {
+    if (!isPlaying) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const margin = 80;
+    if (x < el.scrollLeft + LABEL_WIDTH + margin || x > el.scrollLeft + el.clientWidth - margin) {
+      el.scrollLeft = Math.max(0, x - el.clientWidth * 0.3);
+    }
+  }, [x, isPlaying, scrollRef]);
+
+  return (
+    <div
+      className="absolute top-0 bottom-0 pointer-events-none z-30"
+      style={{ left: x, width: 0 }}
+    >
+      <div style={{ position: "absolute", top: 0, bottom: 0, width: 2, background: "oklch(60% 0.18 25)", boxShadow: "0 0 6px oklch(60% 0.18 25 / .5)" }} />
+      <div style={{ position: "absolute", top: 0, left: -5, width: 0, height: 0, borderLeft: "6px solid transparent", borderRight: "6px solid transparent", borderTop: "8px solid oklch(60% 0.18 25)" }} />
     </div>
   );
 }
