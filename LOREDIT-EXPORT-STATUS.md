@@ -1,6 +1,6 @@
 # .loredit Export — Status
 
-**Date:** 2026-08-27
+**Date:** 2026-08-27 (export grammar widened 2026-08-30 — see SEQUENCING-UPGRADE-STATUS.md)
 **Goal:** a working `.loredit` export, reachable from the UI, that writes real sequence
 data onto the owner's actual props. Success = LOR S6 v6.6.12 opens the file and shows
 effects on the right props at the right times.
@@ -18,8 +18,8 @@ effects on exactly these props in the first 30 seconds:
 | Prop | What you should see |
 |---|---|
 | RGB Mini Tree Base 01 | red/green colorwash 0–4 s, blue fade-up/down 4–8 s |
-| RGB Mini Tree Base 02 | white colorwash 2–8 s |
-| RGB Mini Tree Base 03, 04 | amber colorwash 10–15 s (came from one group block) |
+| RGB Mini Tree Base 02 | white **bars marching right** 2–8 s (was a colorwash before 2026-08-30) |
+| RGB Mini Tree Base 03, 04 | amber **bars** 10–15 s (came from one group block) |
 | RGB Arch 01 | red/green colorwash 0–8 s |
 | 01.01 AC Top Window 01 | fade up/down 0–4 s, beat pulses 4–8 s, shimmer 8–10 s, twinkle 10–14 s |
 | 01.02 AC Top Window 02 | steady 80% 0–30 s |
@@ -62,10 +62,22 @@ npx tsx scripts/loredit/verify-export.mts
     (LOR rows are non-overlapping).
   - **DumbRGB (faces)** → `<channel>` rows with the color packed as signed 32-bit ARGB
     in `intensity` (full red = -65536, confirmed in output).
-  - **RGB (pixel)** → `<track>` rows, colorwash motion effects only, written to the
-    first track row (whole prop). The settings string is the exact shape LOR writes
-    (`Mix_Average|0|0|full|20|lightorama_colorwash:<colors>:full,full,single_color|lightorama_none::`)
-    with only the ARGB color list substituted (block color1/color2).
+  - **RGB (pixel)** → `<track>` rows, motion effects written to the first track row
+    (whole prop), using three grammars — **colorwash, curtain and bars** (2026-08-30).
+    Together these are 94% of the reference file's motion effects (11,578 + 3,332 +
+    344 of 15,971). Chase/meteor → bars, or curtain center,open|close for
+    center-out/in; wave → bars; fireworks → one curtain center,open per burst;
+    strobe → colorwash with the observed `blink_in_unison` intensity mode;
+    wash/fade/pulse/twinkle/sparkle → colorwash. Fade keeps its intensity ramps and
+    pulse now gets per-beat decay ramps, matching the AC path.
+    Every string is a verbatim-observed LOR form with ONLY the six ARGB colour slots
+    substituted — including LOR's own per-direction bar widths (expand/compress use
+    22, the rest 12) and its six-slot palette shape.
+    **Do not hand-edit these strings.** `scripts/loredit/verify-effect-grammar.mts`
+    learns LOR's vocabulary from the reference file and fails on anything the app
+    emits that LOR would not write. It caught three real defects when introduced,
+    including a long-standing two-colour colorwash that used a slot count LOR
+    never writes.
 - **Timing grid.** Detected beats are written as a new `TimingGridFree` named
   "LightCanvas Beats" alongside the template's untouched grids.
 - **Metadata.** Fresh sequence GUID, `author="LightCanvas"`, `createdAt` in LOR's
@@ -79,10 +91,15 @@ npx tsx scripts/loredit/verify-export.mts
 
 ## What's stubbed / simplified (by design, for now)
 
-- **Pixel props get colorwash only.** Chase, wave, meteor, etc. all flatten to a
-  colorwash in the block's colors. Colorwash is the one settings grammar verified
-  against the reference file; composing curtain/bars/spirals strings is the next
-  increment (test one string at a time in S6).
+- **Twinkle and sparkle still flatten to colorwash on pixel props** — LOR has no
+  twinkling motion effect for RGB props at all, so this is a limit of the format, not
+  a shortcut. Meteor loses its fading tail (becomes a hard-edged bar) and fireworks
+  lose their random burst positions and white flash. Ripple, blendedbars, plasma,
+  mystify, spirals, spinner and garland exist in the reference and are NOT yet used —
+  they are the next increment.
+  All of the above is disclosed in the app before export by
+  `src/lib/exports/loredit/fidelity.ts`, which the Export dialog and the timeline's
+  parameter panel both read. Keep that table in step with `effects.ts`.
 - **DumbRGB blocks are constant-color only** — no ramps, because ramp semantics for
   packed ARGB values are unverified.
 - **Multi-circuit Traditional props** (2/4/8-channel props exist in the template) get

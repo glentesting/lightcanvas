@@ -18,6 +18,11 @@ import { EFFECT_COLORS, EFFECT_NAMES, DEFAULT_EFFECT_PARAMS } from "@/lib/timeli
 import { secondsToPx, pxToSeconds, snapToBeat } from "@/lib/timeline/snapping";
 import type { EffectId, EffectBlock } from "@/lib/timeline/types";
 import type { AudioAnalysis } from "@/lib/audio/types";
+import { setPresets, nextGroupColor } from "@/lib/fixtures/sets";
+import { barSeconds, pasteAt, repeatSelection, repeatCount } from "@/lib/timeline/repeat";
+import { useClipboardStore } from "@/lib/timeline/clipboard-store";
+import { summariseExportFidelity, FIDELITY_COLOR } from "@/lib/exports/loredit/fidelity";
+import type { Fixture } from "@/lib/fixtures/types";
 import { addUserPreset } from "@/components/PresetLibrary";
 import { BUILTIN_PRESETS } from "@/lib/presets/builtins";
 import type { EffectPreset } from "@/lib/presets/types";
@@ -44,8 +49,6 @@ export default function Timeline({ analysis }: TimelineProps) {
   const duration = analysis?.duration ?? 180;
   const totalWidth = secondsToPx(duration, zoom);
 
-  const deleteBlocks = useEditorStore((s) => s.deleteBlocks);
-  const duplicateBlocks = useEditorStore((s) => s.duplicateBlocks);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -69,42 +72,11 @@ export default function Timeline({ analysis }: TimelineProps) {
         }
       }}
     >
-      {/* Selection toolbar */}
-      {selectedBlockIds.length > 0 && (
-        <div
-          className="flex items-center gap-2 px-3.5 shrink-0"
-          style={{ height: 32, background: "var(--accent-50)", borderBottom: "1px solid var(--accent-200)" }}
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <span className="text-xs font-medium" style={{ color: "var(--accent-ink)" }}>
-            {selectedBlockIds.length} selected
-          </span>
-          <div className="flex-1" />
-          <button
-            onClick={() => duplicateBlocks(selectedBlockIds)}
-            className="inline-flex items-center gap-1 h-6 px-2 rounded text-xs font-medium transition-colors"
-            style={{ background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink-2)" }}
-            title="Duplicate (Ctrl+D)"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-            </svg>
-            Duplicate
-          </button>
-          <button
-            onClick={() => deleteBlocks(selectedBlockIds)}
-            className="inline-flex items-center gap-1 h-6 px-2 rounded text-xs font-medium transition-colors"
-            style={{ background: "#fee2e2", border: "1px solid #fca5a5", color: "#b91c1c" }}
-            title="Delete (Del)"
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
-            Delete
-          </button>
-        </div>
-      )}
+      {/* Sets of lights — put one lighting move on a whole set at once */}
+      <GroupBar />
+
+      {/* Selection toolbar — copy, paste at the playhead, repeat every bar */}
+      <SelectionToolbar analysis={analysis} duration={duration} />
 
       <div className="flex-1 overflow-auto" ref={scrollRef}>
         <div style={{ minWidth: LABEL_WIDTH + totalWidth + 40, position: "relative" }}>
@@ -174,6 +146,7 @@ export default function Timeline({ analysis }: TimelineProps) {
                     analysis={analysis}
                     isGroup
                     groupColor={group.color}
+                    memberCount={group.fixtureIds.length}
                   />
                 );
               }
@@ -207,6 +180,504 @@ export default function Timeline({ analysis }: TimelineProps) {
       {contextMenu && (
         <TimelineContextMenu x={contextMenu.x} y={contextMenu.y} onClose={() => setContextMenu(null)} />
       )}
+    </div>
+  );
+}
+
+/* ─── Selection toolbar: copy, paste at the playhead, repeat every bar ───
+   Real shows are built from repetition, so copying a phrase and stamping it
+   down the song is the main way work gets done here — not placing 3,000
+   blocks by hand. Paste always lands on a beat; repeat always lands on a bar
+   line, re-snapped each time so it cannot drift out of time. */
+function SelectionToolbar({ analysis, duration }: { analysis: AudioAnalysis | null; duration: number }) {
+  const selectedBlockIds = useEditorStore((s) => s.selectedBlockIds);
+  const allBlocks = useEditorStore((s) => s.sequence.blocks);
+  const tracks = useEditorStore((s) => s.sequence.tracks);
+  const deleteBlocks = useEditorStore((s) => s.deleteBlocks);
+  const duplicateBlocks = useEditorStore((s) => s.duplicateBlocks);
+  const addBlocks = useEditorStore((s) => s.addBlocks);
+  const setSelection = useEditorStore((s) => s.setSelection);
+
+  const clip = useClipboardStore((s) => s.clip);
+  const copyToClipboard = useClipboardStore((s) => s.copy);
+
+  const [repeatOpen, setRepeatOpen] = useState(false);
+  const [everyBars, setEveryBars] = useState(1);
+  const [times, setTimes] = useState(7);
+  const [note, setNote] = useState<string | null>(null);
+
+  const beats = useMemo(() => analysis?.beats ?? [], [analysis?.beats]);
+  const bar = useMemo(() => barSeconds(analysis), [analysis]);
+  const selected = useMemo(
+    () => allBlocks.filter((b) => selectedBlockIds.includes(b.id)),
+    [allBlocks, selectedBlockIds]
+  );
+
+  const doCopy = useCallback(() => {
+    if (selected.length === 0) return;
+    copyToClipboard(selected);
+    setNote(`Copied ${selected.length} move${selected.length !== 1 ? "s" : ""}.`);
+  }, [selected, copyToClipboard]);
+
+  const doPaste = useCallback(() => {
+    if (clip.entries.length === 0) return;
+    const at = useTransportStore.getState().currentTime;
+    const { blocks, droppedTracks } = pasteAt(
+      clip, at, beats, new Set(tracks.map((t) => t.id)), duration
+    );
+    if (blocks.length === 0) {
+      setNote("Nothing to paste here — those rows are gone.");
+      return;
+    }
+    addBlocks(blocks);
+    setSelection(blocks.map((b) => b.id));
+    setNote(
+      `Pasted ${blocks.length} move${blocks.length !== 1 ? "s" : ""} at ${fmtTime(blocks[0].start)}` +
+      (droppedTracks ? ` (${droppedTracks} skipped — their row no longer exists)` : "")
+    );
+  }, [clip, beats, tracks, duration, addBlocks, setSelection]);
+
+  const repeatOpts = useMemo(
+    () => ({ everyBars, times, bar, beats, maxTime: duration }),
+    [everyBars, times, bar, beats, duration]
+  );
+  const willAdd = useMemo(
+    () => (repeatOpen ? repeatCount(selected, repeatOpts) : 0),
+    [repeatOpen, selected, repeatOpts]
+  );
+
+  const doRepeat = useCallback(() => {
+    const made = repeatSelection(selected, repeatOpts);
+    if (made.length === 0) {
+      setNote("That would run past the end of the song.");
+      return;
+    }
+    addBlocks(made);
+    setSelection([...selectedBlockIds, ...made.map((b) => b.id)]);
+    setRepeatOpen(false);
+    setNote(`Repeated ${made.length} move${made.length !== 1 ? "s" : ""} across the song.`);
+  }, [selected, repeatOpts, addBlocks, setSelection, selectedBlockIds]);
+
+  // Ctrl+C / Ctrl+V, alongside the existing Ctrl+D / Delete / Ctrl+Z
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const key = e.key.toLowerCase();
+      if (key === "c" && selected.length > 0) {
+        e.preventDefault();
+        doCopy();
+      } else if (key === "v" && clip.entries.length > 0) {
+        e.preventDefault();
+        doPaste();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected, clip, doCopy, doPaste]);
+
+  // the little confirmation line clears itself
+  useEffect(() => {
+    if (!note) return;
+    const timer = setTimeout(() => setNote(null), 5000);
+    return () => clearTimeout(timer);
+  }, [note]);
+
+  const hasSelection = selectedBlockIds.length > 0;
+  const canPaste = clip.entries.length > 0;
+  if (!hasSelection && !canPaste && !note) return null;
+
+  const btn = {
+    background: "var(--surface)",
+    border: "1px solid var(--line)",
+    color: "var(--ink-2)",
+    cursor: "pointer",
+  } as const;
+
+  return (
+    <div
+      className="flex items-center gap-2 px-3.5 shrink-0 relative flex-wrap"
+      style={{ minHeight: 32, paddingTop: 3, paddingBottom: 3, background: "var(--accent-50)", borderBottom: "1px solid var(--accent-200)" }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <span className="text-xs font-medium" style={{ color: "var(--accent-ink)" }}>
+        {hasSelection ? `${selectedBlockIds.length} selected` : "Nothing selected"}
+      </span>
+
+      {note && (
+        <span className="text-xs" style={{ color: "var(--ink-3)" }}>· {note}</span>
+      )}
+
+      <div className="flex-1" />
+
+      <button
+        onClick={doCopy}
+        disabled={!hasSelection}
+        title="Copy the selected moves (Ctrl+C)"
+        className="inline-flex items-center gap-1 h-6 px-2 rounded text-xs font-medium"
+        style={{ ...btn, opacity: hasSelection ? 1 : 0.45 }}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+        Copy
+      </button>
+
+      <button
+        onClick={doPaste}
+        disabled={!canPaste}
+        title={canPaste
+          ? `Paste ${clip.entries.length} move${clip.entries.length !== 1 ? "s" : ""} at the playhead, landed on the nearest beat (Ctrl+V)`
+          : "Copy something first"}
+        className="inline-flex items-center gap-1 h-6 px-2 rounded text-xs font-medium"
+        style={{ ...btn, opacity: canPaste ? 1 : 0.45 }}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+          <rect x="8" y="2" width="8" height="4" rx="1" />
+        </svg>
+        Paste at playhead{canPaste ? ` (${clip.entries.length})` : ""}
+      </button>
+
+      <button
+        onClick={() => setRepeatOpen((v) => !v)}
+        disabled={!hasSelection}
+        title="Stamp this selection down the song, once every bar"
+        className="inline-flex items-center gap-1 h-6 px-2 rounded text-xs font-medium"
+        style={{ ...btn, opacity: hasSelection ? 1 : 0.45 }}
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <polyline points="17 1 21 5 17 9" /><path d="M3 11V9a4 4 0 0 1 4-4h14" />
+          <polyline points="7 23 3 19 7 15" /><path d="M21 13v2a4 4 0 0 1-4 4H3" />
+        </svg>
+        Repeat…
+      </button>
+
+      <button
+        onClick={() => duplicateBlocks(selectedBlockIds)}
+        disabled={!hasSelection}
+        className="inline-flex items-center gap-1 h-6 px-2 rounded text-xs font-medium"
+        style={{ ...btn, opacity: hasSelection ? 1 : 0.45 }}
+        title="Drop one copy straight after this one (Ctrl+D)"
+      >
+        Duplicate
+      </button>
+
+      <button
+        onClick={() => deleteBlocks(selectedBlockIds)}
+        disabled={!hasSelection}
+        className="inline-flex items-center gap-1 h-6 px-2 rounded text-xs font-medium"
+        style={{ background: "#fee2e2", border: "1px solid #fca5a5", color: "#b91c1c", cursor: "pointer", opacity: hasSelection ? 1 : 0.45 }}
+        title="Delete (Del)"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+        </svg>
+        Delete
+      </button>
+
+      {repeatOpen && hasSelection && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setRepeatOpen(false)} />
+          <div
+            className="absolute z-40 rounded-lg p-3"
+            style={{ top: 30, right: 12, width: 292, background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow-lg)" }}
+          >
+            <p className="text-xs font-semibold mb-1">Repeat this down the song</p>
+            <p className="text-xs mb-2.5" style={{ color: "var(--ink-4)" }}>
+              One bar of your song is about {bar.toFixed(2)} seconds. Each copy is nudged onto the
+              nearest beat so it stays in time.
+            </p>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs shrink-0" style={{ color: "var(--ink-3)" }}>Every</span>
+              <select
+                value={everyBars}
+                onChange={(e) => setEveryBars(Number(e.target.value))}
+                className="h-7 px-1.5 rounded-md text-xs flex-1"
+                style={{ border: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}
+              >
+                <option value={1}>1 bar</option>
+                <option value={2}>2 bars</option>
+                <option value={4}>4 bars</option>
+                <option value={8}>8 bars</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2 mb-2.5">
+              <span className="text-xs shrink-0" style={{ color: "var(--ink-3)" }}>Repeat</span>
+              <input
+                type="number"
+                min={1}
+                max={512}
+                value={times}
+                onChange={(e) => setTimes(Math.max(1, Math.min(512, Number(e.target.value) || 1)))}
+                className="h-7 px-1.5 rounded-md text-xs flex-1"
+                style={{ border: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}
+              />
+              <span className="text-xs shrink-0" style={{ color: "var(--ink-3)" }}>more times</span>
+            </div>
+            <p className="text-xs mb-2.5" style={{ color: willAdd > 0 ? "var(--ink-3)" : "#b45309" }}>
+              {willAdd > 0
+                ? `Adds ${willAdd.toLocaleString()} lighting move${willAdd !== 1 ? "s" : ""}. Ctrl+Z undoes the whole lot.`
+                : "That would run past the end of the song."}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setRepeatOpen(false)}
+                className="h-7 px-3 rounded-md text-xs font-medium"
+                style={{ border: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink)", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={doRepeat}
+                disabled={willAdd === 0}
+                className="h-7 px-3 rounded-md text-xs font-semibold"
+                style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)", cursor: "pointer", opacity: willAdd === 0 ? 0.5 : 1 }}
+              >
+                Repeat it
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function fmtTime(t: number): string {
+  return `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+}
+
+/* ─── Sets of lights ──────────────────────────────────────
+   A set is a row that stands for many light pieces at once. Drop one lighting
+   move on the set's row and every piece in it does that move — which is how
+   the purchased shows are built. The set row sits at the top of the track
+   list; a piece's own row still wins over the set's, so you can group
+   everything and then override one piece. */
+function GroupBar() {
+  const fixtures = useEditorStore((s) => s.fixtures);
+  const groups = useEditorStore((s) => s.groups);
+  const addGroup = useEditorStore((s) => s.addGroup);
+  const deleteGroup = useEditorStore((s) => s.deleteGroup);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
+
+  const presets = useMemo(() => setPresets(fixtures, groups), [fixtures, groups]);
+
+  const makeGroup = useCallback(
+    (name: string, fixtureIds: string[], color: string) => {
+      addGroup({ id: crypto.randomUUID(), name, fixtureIds, color });
+      setPickerOpen(false);
+      setCustomOpen(false);
+    },
+    [addGroup]
+  );
+
+  return (
+    <div
+      className="flex items-center gap-2 px-3.5 shrink-0 relative flex-wrap"
+      style={{ minHeight: 34, paddingTop: 4, paddingBottom: 4, background: "var(--surface)", borderBottom: "1px solid var(--line)" }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <span className="text-xs font-semibold shrink-0" style={{ color: "var(--ink-4)", letterSpacing: "0.06em", textTransform: "uppercase", fontSize: 10 }}>
+        Sets of lights
+      </span>
+
+      {groups.map((g) => (
+        <span
+          key={g.id}
+          className="inline-flex items-center gap-1.5 h-6 pl-2 pr-1 rounded-full text-xs font-medium"
+          style={{ background: `${g.color ?? "#6366f1"}18`, color: g.color ?? "#6366f1", border: `1px solid ${g.color ?? "#6366f1"}55` }}
+          title={`${g.name} — ${g.fixtureIds.length} light pieces. Drop a lighting move on its row to move them all together.`}
+        >
+          {g.name}
+          <span style={{ opacity: 0.75 }}>{g.fixtureIds.length}</span>
+          <button
+            onClick={() => deleteGroup(g.id)}
+            title={`Remove the "${g.name}" set (the light pieces stay; only the set row and its moves go)`}
+            className="w-4 h-4 rounded-full flex items-center justify-center"
+            style={{ background: "transparent", border: "none", color: "inherit", cursor: "pointer", opacity: 0.7 }}
+          >
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </span>
+      ))}
+
+      <button
+        onClick={() => setPickerOpen((v) => !v)}
+        disabled={fixtures.length < 2}
+        className="inline-flex items-center gap-1 h-6 px-2 rounded-full text-xs font-medium"
+        style={{ background: "var(--panel)", border: "1px dashed var(--line)", color: "var(--ink-3)", cursor: fixtures.length < 2 ? "default" : "pointer" }}
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+          <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        Make a set
+      </button>
+
+      {groups.length === 0 && (
+        <span className="text-xs" style={{ color: "var(--ink-4)" }}>
+          A set gives you one row that moves a whole batch of lights together.
+        </span>
+      )}
+
+      {pickerOpen && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setPickerOpen(false)} />
+          <div
+            className="absolute z-40 rounded-lg overflow-hidden"
+            style={{ top: 32, left: 12, width: 300, background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow-lg)" }}
+          >
+            <div className="px-3 py-2" style={{ borderBottom: "1px solid var(--line)", background: "var(--panel)" }}>
+              <p className="text-xs font-semibold">Make a set of lights</p>
+            </div>
+            {presets.length === 0 && (
+              <p className="text-xs px-3 py-2.5" style={{ color: "var(--ink-4)" }}>
+                Every ready-made set already exists. Use &ldquo;Pick pieces myself&rdquo; for anything else.
+              </p>
+            )}
+            {presets.map((p) => (
+              <button
+                key={p.label}
+                onClick={() => makeGroup(p.label, p.fixtureIds, p.color)}
+                className="w-full text-left px-3 py-2 flex items-center gap-2.5 transition-colors hover:bg-[var(--panel)]"
+                style={{ background: "transparent", border: "none", borderBottom: "1px solid var(--line)", cursor: "pointer" }}
+              >
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: p.color }} />
+                <span className="flex-1 min-w-0">
+                  <span className="block text-xs font-medium">{p.label}</span>
+                  <span className="block text-xs" style={{ color: "var(--ink-4)", fontSize: 10 }}>{p.hint}</span>
+                </span>
+                <span className="text-xs shrink-0" style={{ color: "var(--ink-4)" }}>{p.fixtureIds.length}</span>
+              </button>
+            ))}
+            <button
+              onClick={() => { setPickerOpen(false); setCustomOpen(true); }}
+              className="w-full text-left px-3 py-2 text-xs font-medium transition-colors hover:bg-[var(--panel)]"
+              style={{ background: "transparent", border: "none", color: "var(--accent-ink, #1e40af)", cursor: "pointer" }}
+            >
+              Pick pieces myself…
+            </button>
+          </div>
+        </>
+      )}
+
+      {customOpen && (
+        <CustomGroupDialog
+          fixtures={fixtures}
+          defaultColor={nextGroupColor(groups)}
+          onCancel={() => setCustomOpen(false)}
+          onCreate={makeGroup}
+        />
+      )}
+    </div>
+  );
+}
+
+function CustomGroupDialog({
+  fixtures,
+  defaultColor,
+  onCancel,
+  onCreate,
+}: {
+  fixtures: Fixture[];
+  defaultColor: string;
+  onCancel: () => void;
+  onCreate: (name: string, ids: string[], color: string) => void;
+}) {
+  const [name, setName] = useState("");
+  const [chosen, setChosen] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return q ? fixtures.filter((f) => f.name.toLowerCase().includes(q)) : fixtures;
+  }, [fixtures, search]);
+
+  const toggle = (id: string) =>
+    setChosen((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const canCreate = name.trim().length > 0 && chosen.size >= 2;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "rgba(248, 247, 244, 0.72)", backdropFilter: "blur(8px)" }}
+      onClick={onCancel}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <div
+        className="rounded-xl overflow-hidden w-full max-w-md flex flex-col"
+        style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow-lg)", maxHeight: "80vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-5 pt-5 pb-3">
+          <h3 className="text-sm font-semibold mb-1">Make a set of lights</h3>
+          <p className="text-xs mb-3" style={{ color: "var(--ink-4)" }}>
+            Choose the pieces that should move together. You&apos;ll get one row on the timeline that
+            drives all of them at once.
+          </p>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Name this set (e.g. Left side of the yard)"
+            className="w-full h-8 px-2.5 rounded-md text-xs mb-2"
+            style={{ border: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink)" }}
+          />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search your lights..."
+            className="w-full h-8 px-2.5 rounded-md text-xs"
+            style={{ border: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink)" }}
+          />
+        </div>
+        <div className="px-5 flex-1 overflow-y-auto" style={{ minHeight: 120 }}>
+          <div className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--line)" }}>
+            {visible.map((f, i) => (
+              <label
+                key={f.id}
+                className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer transition-colors hover:bg-[var(--panel)]"
+                style={{ borderBottom: i < visible.length - 1 ? "1px solid var(--line)" : undefined }}
+              >
+                <input type="checkbox" checked={chosen.has(f.id)} onChange={() => toggle(f.id)} className="rounded" />
+                <span className="text-xs flex-1 truncate" style={{ color: "var(--ink-2)" }}>{f.name}</span>
+                <span className="text-xs" style={{ color: "var(--ink-4)", fontSize: 10 }}>{f.pixelCount}px</span>
+              </label>
+            ))}
+            {visible.length === 0 && (
+              <p className="text-xs px-2.5 py-2" style={{ color: "var(--ink-4)" }}>No lights match that search.</p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center justify-between px-5 py-3" style={{ borderTop: "1px solid var(--line)", background: "var(--panel)" }}>
+          <span className="text-xs" style={{ color: "var(--ink-4)" }}>
+            {chosen.size} chosen{chosen.size === 1 ? " — pick at least two" : ""}
+          </span>
+          <div className="flex gap-2">
+            <button onClick={onCancel} className="h-8 px-4 rounded-md text-xs font-medium" style={{ border: "1px solid var(--line)", background: "var(--surface)", color: "var(--ink)" }}>
+              Cancel
+            </button>
+            <button
+              onClick={() => onCreate(name.trim(), [...chosen], defaultColor)}
+              disabled={!canCreate}
+              className="h-8 px-4 rounded-md text-xs font-medium"
+              style={{ background: "var(--accent)", color: "#fff", border: "1px solid var(--accent)", opacity: canCreate ? 1 : 0.5 }}
+            >
+              Make the set
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -258,6 +729,7 @@ function TrackRow({
   analysis,
   isGroup,
   groupColor,
+  memberCount,
 }: {
   trackId: string;
   trackIndex: number;
@@ -270,6 +742,7 @@ function TrackRow({
   analysis: AudioAnalysis | null;
   isGroup?: boolean;
   groupColor?: string;
+  memberCount?: number;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `track:${trackId}`,
@@ -309,7 +782,7 @@ function TrackRow({
           )}
           {isGroup && (
             <div className="text-xs" style={{ color: "var(--ink-4)", fontSize: 10 }}>
-              Group
+              {memberCount} pieces together
             </div>
           )}
         </div>
@@ -673,7 +1146,26 @@ export function ParameterPanel() {
   const [showSavePreset, setShowSavePreset] = useState(false);
   const [presetName, setPresetName] = useState("");
 
+  const fixtures = useEditorStore((s) => s.fixtures);
+  const groups = useEditorStore((s) => s.groups);
+
   const selectedBlock = blocks.find((b) => b.id === selectedBlockIds[0]);
+
+  // What this move will really do on the house — the same table the export
+  // dialog reads, shown here so a mismatch is spotted while building, not
+  // after the file is already on the controller.
+  const fidelity = useMemo(() => {
+    if (!selectedBlock) return null;
+    const targets = fixtures.filter(
+      (f) =>
+        f.id === selectedBlock.trackId ||
+        groups.some((g) => g.id === selectedBlock.trackId && g.fixtureIds.includes(f.id))
+    );
+    if (targets.length === 0) return null;
+    const rows = summariseExportFidelity([selectedBlock], targets, groups);
+    // the plainest outcome is the one worth warning about
+    return rows.find((r) => r.fidelity === "approximate") ?? rows.find((r) => r.fidelity === "close") ?? null;
+  }, [selectedBlock, fixtures, groups]);
 
   if (!selectedBlock || selectedBlockIds.length !== 1) return null;
 
@@ -726,6 +1218,12 @@ export function ParameterPanel() {
       }}
       onMouseDown={(e) => e.stopPropagation()}
     >
+      {fidelity && (
+        <p className="text-xs" style={{ color: FIDELITY_COLOR[fidelity.fidelity].ink }}>
+          <strong>On the house:</strong> {fidelity.asExported}
+          {fidelity.loses ? ` Won't carry over: ${fidelity.loses}` : ""}
+        </p>
+      )}
       <div className="flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2">
           <label className="text-xs font-medium" style={{ color: "var(--ink-3)" }}>Color</label>

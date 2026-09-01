@@ -67,29 +67,39 @@ timing marks. That is the bar a "finished show" sits at.
 
 8. **Arch shadow artifact.** *Trivial.* → **This session.**
 
-### NEEDED SOON (should fix, doesn't block a first show)
+### NEEDED SOON — items 9–13 DONE 2026-08-30 (SEQUENCING-UPGRADE-STATUS.md)
 
-9. **Scrub/seek in the designer preview** — the main screen can play/pause
-   but not jump around the song.
-10. **What-you-see-is-what-exports honesty.** The preview renders 10
-    LightCanvas effects; export flattens pixel props to color washes and AC
-    props to brightness ramps. He will see a chase in the app and get a
-    wash in LOR. Either grow the export grammar (curtain/bars — needs S6
-    verification) or show an "as exported" preview mode. Right now this is
-    the biggest honesty gap left.
-11. **Undo visible in the layout editor.** Undo exists in the data layer;
-    the layout page gives no button/shortcut hint, so a bad bulk placement
-    feels destructive.
-12. **Group tracks in the timeline** — the purchased show leans on prop
-    groups ("all arches") heavily; the app has groups in the data model but
-    no UI to make/use them.
-13. **Copy/paste and repeat for blocks** — 50,695 effects in the reference
-    are built from repetition; the timeline has duplicate but no paste-at-
-    beat or repeat-every-bar.
-14. **The manual S6 acceptance test** — three exported files still have
-    never been opened in the real Light-O-Rama program. Everything else can
-    be perfect and the season still fails if this fails. Not code; someone
-    must double-click S6.
+9. ~~**Scrub/seek in the designer preview**~~ — **DONE.** The song bar is
+   click/drag scrubbable, with a playhead, hover time readout, and
+   space/arrow/Home keys. It seeks the real audio through the shared
+   transport, so the house preview follows even while paused.
+10. ~~**What-you-see-is-what-exports honesty**~~ — **DONE, both halves.**
+    The export grammar grew: pixel props now use **colorwash + curtain +
+    bars** (94% of the reference's motion effects), so chase/wave/meteor
+    actually move and fireworks burst. And what still cannot survive is
+    stated in plain English *before* export — a "What will actually reach
+    your lights" panel in the Export dialog plus a line in the timeline's
+    parameter panel, both reading one table (`fidelity.ts`).
+    Still S6-unverified (item 14 covers that). Twinkle/sparkle genuinely
+    have no LOR pixel equivalent and are disclosed, not hidden.
+11. ~~**Undo visible in the layout editor**~~ — **DONE**, and undo was
+    quietly broken: autosave status flips were being recorded as undo steps,
+    and bulk actions made one step per prop. Both fixed; there are now
+    Undo/Redo buttons, shortcuts, and an "Undo that" toast after bulk edits.
+12. ~~**Group tracks in the timeline**~~ — **DONE.** A "Sets of lights" bar
+    with one-click presets built from the real display (All Arches, All Mini
+    Trees, All Yard Stakes, All Roof Lights, All Singing Faces, All Tree
+    Stars = all 83 pieces) plus a custom picker. Set rows accept dropped
+    effects and fan out to every member.
+13. ~~**Copy/paste and repeat for blocks**~~ — **DONE.** Copy (Ctrl+C),
+    Paste at playhead (Ctrl+V) with every block landing on a beat, and
+    Repeat-every-N-bars with a live count. Bar length comes from the
+    detected downbeats; each repeat is measured from the original anchor and
+    re-snapped, so it cannot drift.
+14. **The manual S6 acceptance test** — STILL OUTSTANDING, and now the
+    single most valuable thing left. Three exported files have never been
+    opened in the real Light-O-Rama program, and the export grammar just
+    grew two new effect types. Not code; someone must double-click S6.
 
 ### NICE TO HAVE (genuinely optional this season)
 

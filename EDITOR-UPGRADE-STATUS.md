@@ -67,16 +67,20 @@ tips — and the same picture appears at the top of the timeline.
 
 ## What remains (from GAP-ANALYSIS.md, in order)
 
-1. **Scrub/seek on the designer page** (main screen can play/pause only).
-2. **"As exported" honesty** — the app previews 10 effect types but pixel
-   props export as color washes; either grow the export grammar (needs the
-   S6 test) or add an export-fidelity preview toggle.
-3. **Undo button in the layout editor** (undo exists, it's just invisible).
-4. **Group tracks UI** in the timeline; copy/paste-at-beat for blocks.
+Items 1–4 below were all done in the following session — see
+**SEQUENCING-UPGRADE-STATUS.md** (2026-08-30).
+
+1. ~~Scrub/seek on the designer page~~ — done.
+2. ~~"As exported" honesty~~ — done: export grammar grew to colorwash +
+   curtain + bars, and what still cannot survive is stated in the app before
+   you export.
+3. ~~Undo button in the layout editor~~ — done (and undo itself was found to
+   be recording the wrong steps; fixed).
+4. ~~Group tracks UI; copy/paste-at-beat~~ — done, plus repeat-every-bar.
 5. **The S6 open test** — still the season's gate, still manual, three
    files waiting in `scripts/loredit-spike/test-fixtures/output/`.
-6. Nice-to-haves: scale/rotate, per-strand rows, richer effects, lip-sync,
-   waveform zoom-sync.
+6. Nice-to-haves: scale/rotate, per-strand rows, richer effects (ripple,
+   plasma, spirals…), lip-sync, waveform zoom-sync.
 
 ## Where things live (for the next session)
 

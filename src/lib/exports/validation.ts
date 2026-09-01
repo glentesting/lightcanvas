@@ -25,10 +25,45 @@ export function validateFixtures(
 ): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
-  // 1. Channel overlap detection
-  for (let i = 0; i < fixtures.length; i++) {
-    for (let j = i + 1; j < fixtures.length; j++) {
-      const a = fixtures[i], b = fixtures[j];
+  // 1. Wiring conflicts. Two different addressing systems, never compared
+  //    against each other (see LayoutEditor.tsx, which applies the same rule):
+  //     - Fixtures imported from Light-O-Rama address by controller unit
+  //       (network + unit + circuit range). Comparing their raw start channels
+  //       across units is meaningless and once flooded the UI with 1,562 false
+  //       "overlaps".
+  //     - Hand-made fixtures keep the legacy universe/channel comparison,
+  //       among themselves only.
+  const lorFixtures = fixtures.filter((f) => f.lor);
+  const byUnit = new Map<string, Fixture[]>();
+  for (const f of lorFixtures) {
+    const key = `${f.lor!.network}|${f.lor!.unit}`;
+    const arr = byUnit.get(key) ?? [];
+    arr.push(f);
+    byUnit.set(key, arr);
+  }
+  for (const group of byUnit.values()) {
+    for (let i = 0; i < group.length; i++) {
+      for (let j = i + 1; j < group.length; j++) {
+        const a = group[i], b = group[j];
+        const aEnd = a.lor!.startCircuit + a.lor!.channelCount - 1;
+        const bEnd = b.lor!.startCircuit + b.lor!.channelCount - 1;
+        if (a.lor!.startCircuit <= bEnd && b.lor!.startCircuit <= aEnd) {
+          issues.push({
+            type: "warning",
+            category: "channel-overlap",
+            message: `${a.name} and ${b.name} share plugs on controller unit ${a.lor!.unit}`,
+            details:
+              "Fix in Layout before exporting to avoid flickering or wrong colors on hardware.",
+          });
+        }
+      }
+    }
+  }
+
+  const plainFixtures = fixtures.filter((f) => !f.lor);
+  for (let i = 0; i < plainFixtures.length; i++) {
+    for (let j = i + 1; j < plainFixtures.length; j++) {
+      const a = plainFixtures[i], b = plainFixtures[j];
       const aUni = a.universe ?? 1, bUni = b.universe ?? 1;
       if (aUni !== bUni) continue;
       const aStart = a.startChannel;
@@ -49,9 +84,10 @@ export function validateFixtures(
     }
   }
 
-  // 2. Universe overflow
+  // 2. Universe overflow \u2014 a DMX/E1.31 concept. LOR-addressed fixtures are not
+  //    on universes at all, so counting them here would invent a problem.
   const universeChannels = new Map<number, { total: number; fixtures: string[] }>();
-  for (const f of fixtures) {
+  for (const f of plainFixtures) {
     const uni = f.universe ?? 1;
     const channels = f.pixelCount * 3;
     const entry = universeChannels.get(uni) || { total: 0, fixtures: [] };

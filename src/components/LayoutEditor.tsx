@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useEditorStore } from "@/lib/store/editor-store";
+import { useUndoRedo } from "@/lib/store/use-undo";
 import type { Fixture, FixtureKind } from "@/lib/fixtures/types";
 import { FIXTURE_TEMPLATES, nextStartChannel, autoName } from "@/lib/fixtures/library";
 import { PROP_SIZES } from "@/lib/fixtures/prop-sizes";
@@ -38,7 +39,10 @@ export default function LayoutEditor({
   const addFixture = useEditorStore((s) => s.addFixture);
   const updateFixture = useEditorStore((s) => s.updateFixture);
   const deleteFixture = useEditorStore((s) => s.deleteFixture);
+  const deleteFixtures = useEditorStore((s) => s.deleteFixtures);
+  const updateFixtures = useEditorStore((s) => s.updateFixtures);
   const houseCustomSvg = useEditorStore((s) => s.houseCustomSvg);
+  const { canUndo, undo } = useUndoRedo();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{
@@ -62,6 +66,9 @@ export default function LayoutEditor({
   const [placeChooserOpen, setPlaceChooserOpen] = useState(false);
   // marquee multi-select: drag on empty canvas, then bulk delete
   const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  // after a big change, say what happened and offer the way back — the
+  // point is that no bulk edit here should ever feel permanent
+  const [notice, setNotice] = useState<string | null>(null);
   const [multiSelected, setMultiSelected] = useState<Set<string>>(new Set());
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -189,10 +196,14 @@ export default function LayoutEditor({
   }, [toSvg, tracing, placing]);
 
   const deleteMultiSelected = useCallback(() => {
-    for (const id of multiSelected) deleteFixture(id);
+    const n = multiSelected.size;
+    if (n === 0) return;
+    // one store update = one undo step, so Undo brings back all N, not one
+    deleteFixtures([...multiSelected]);
     setMultiSelected(new Set());
     setSelectedId(null);
-  }, [multiSelected, deleteFixture]);
+    setNotice(`Deleted ${n} light piece${n !== 1 ? "s" : ""}.`);
+  }, [multiSelected, deleteFixtures]);
 
   // Delete key removes the marquee selection
   useEffect(() => {
@@ -214,6 +225,13 @@ export default function LayoutEditor({
     return () => window.removeEventListener("keydown", onKey);
   }, [multiSelected, deleteMultiSelected]);
 
+  // the notice fades on its own so it never becomes clutter
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 9000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
   const finishTracing = useCallback(() => {
     if (!tracing || tracing.points.length < 2) return;
     updateFixture(tracing.fixtureId, { layout: { points: tracing.points, closed: false } });
@@ -223,12 +241,15 @@ export default function LayoutEditor({
   const finishPlacing = useCallback(() => {
     if (!placing || placing.points.length < 2) return;
     const targets = distributeAlongPath(placing.points, placing.fixtureIds.length);
+    // built up first, then applied in ONE store update, so a single Undo puts
+    // the whole row back where it was
+    const patches: Array<{ id: string; patch: Partial<Fixture> }> = [];
     placing.fixtureIds.forEach((id, i) => {
       const f = fixtures.find((x) => x.id === id);
       if (!f) return;
       const pts = f.layout?.points ?? [];
       if (pts.length === 0) {
-        updateFixture(id, { layout: { points: [targets[i]], closed: false } });
+        patches.push({ id, patch: { layout: { points: [targets[i]], closed: false } } });
         return;
       }
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -238,12 +259,16 @@ export default function LayoutEditor({
       }
       const dx = targets[i].x - (minX + maxX) / 2;
       const dy = targets[i].y - (minY + maxY) / 2;
-      updateFixture(id, {
-        layout: { points: pts.map((q) => ({ x: q.x + dx, y: q.y + dy })), closed: f.layout?.closed },
+      patches.push({
+        id,
+        patch: { layout: { points: pts.map((q) => ({ x: q.x + dx, y: q.y + dy })), closed: f.layout?.closed } },
       });
     });
+    updateFixtures(patches);
+    const label = placing.label;
     setPlacing(null);
-  }, [placing, fixtures, updateFixture]);
+    setNotice(`Placed ${patches.length} ${label.toLowerCase()} along your line.`);
+  }, [placing, fixtures, updateFixtures]);
 
   // categories offered for bulk placement, in chase order (sorted by name)
   const placeableGroups = useMemo(() => {
@@ -589,6 +614,34 @@ export default function LayoutEditor({
                 />
               ))}
             </svg>
+
+            {/* What just happened, and the way back out of it */}
+            {notice && (
+              <div
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-3 px-4 py-2 rounded-xl z-30"
+                style={{ background: "rgba(255,255,255,0.97)", border: "1px solid var(--line)", boxShadow: "0 4px 16px rgba(0,0,0,0.14)" }}
+              >
+                <span className="text-xs" style={{ color: "var(--ink)" }}>{notice}</span>
+                <button
+                  onClick={() => { undo(); setNotice(null); }}
+                  disabled={!canUndo}
+                  className="h-7 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                  style={{ background: "#1e3a5f", color: "#fff", cursor: canUndo ? "pointer" : "default", opacity: canUndo ? 1 : 0.5 }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="9 14 4 9 9 4" /><path d="M20 20v-7a4 4 0 0 0-4-4H4" />
+                  </svg>
+                  Undo that
+                </button>
+                <button
+                  onClick={() => setNotice(null)}
+                  className="h-7 px-2 rounded-lg text-xs font-medium"
+                  style={{ border: "1px solid var(--line)", background: "#fff", color: "var(--ink-3)", cursor: "pointer" }}
+                >
+                  Keep it
+                </button>
+              </div>
+            )}
 
             {/* Multi-select toolbar */}
             {multiSelected.size > 0 && !tracing && !placing && (

@@ -22,19 +22,29 @@ Now you are looking at the main screen. Three parts:
 
 - **Left side — "Your Lights."** A list of every light piece in your yard:
   your 8 mini trees, 8 arches, 40 yard stakes, the 4 singing faces, and the
-  plug-in lights for the roof and windows. All 84 of them, already set up
+  plug-in lights for the roof and windows. All 83 of them, already set up
   with the right number of bulbs and the right plugs on your controller
   boxes. You never have to type any of that. Click any name in the list to
   see its details on the right side.
 
-- **Middle — the picture.** For now it shows a stand-in cartoon house.
-  Once you add a photo of your real house (next section), this becomes your
-  house at night with your actual lights on it.
+- **Middle — the picture.** Your house at night, with your actual lights
+  drawn on it in the right places. (If you ever start a fresh project, you
+  get a plain stand-in house until you add a photo — see the next section.)
 
 - **Bottom — the play bar.** There is already a finished show in here, set
   to the song "Wreaths Like Horseshoes." **Click the round blue ▶ button.**
   The music plays and the lights on the picture dance along with it. Click
   the same button to pause.
+
+  **You can also jump around the song.** Click anywhere on the long bar next
+  to the play button and the music — and the lights — go straight to that
+  moment. Drag along it to scrub back and forth; a little clock follows your
+  cursor so you can see where you'll land. This works while paused too,
+  which is handy when you want to park on one moment and just look.
+
+  Keyboard, if you prefer: **spacebar** plays and pauses, **left/right
+  arrows** jump 5 seconds (hold Shift for 10), **Home** goes back to the
+  start.
 
 ## Putting your own house in the picture
 
@@ -70,6 +80,13 @@ A few more tricks in the Layout screen:
 - **Select several at once:** drag a box around them with your mouse. A bar
   appears saying how many you grabbed, with a Delete button if you want to
   clear them out and re-place them.
+- **Nothing here is permanent.** There are **Undo** and **Redo** buttons in
+  the toolbar at the top (Ctrl+Z and Ctrl+Shift+Z also work). They go grey
+  when there's nothing to undo, so they never mislead you. And right after a
+  big change — deleting a batch, or placing a whole row — a message appears
+  at the bottom of the photo telling you what happened, with an **"Undo
+  that"** button sitting right there. Placing forty stakes and taking it
+  back is one click, not forty.
 - **Night Preview** (top-left toggle) shows your darkened house with every
   bulb glowing in its own color — trees green, stars gold, roof strings
   mustard — so you can check placement the way it will actually look.
@@ -90,7 +107,51 @@ moves. At the top is a live picture of your house that plays along.
 - Click anywhere on the time numbers at the top of the rows to jump the
   music to that spot.
 - Drag the colored bars to move a light's moves; drag effects in from the
-  left panel to add new ones. Right-click bars to copy or delete them.
+  left panel to add new ones.
+
+### Moving a whole batch of lights at once
+
+You almost never want to set eight arches one at a time. Above the rows
+there's a strip called **Sets of lights** with a **Make a set** button.
+Click it and pick one of the ready-made sets — **All Mini Trees**, **All
+Arches**, **All Yard Stakes**, **All Roof Lights**, **All Singing Faces**,
+**All Tree Stars** — or choose **"Pick pieces myself…"** and tick whatever
+you like.
+
+The set gets its own coloured row at the very top of the list, labelled with
+how many pieces it drives. **Drag one effect onto that row and every piece in
+the set does it.** If you later want one piece to do something different,
+just put a move on that piece's own row — it wins over the set.
+
+To get rid of a set, click the little × on its chip. That only removes the
+set and its moves; your light pieces are untouched.
+
+### Copying and repeating
+
+Real shows are mostly repetition, so there are proper tools for it. Click a
+coloured bar to select it (hold Shift to pick several), and a toolbar appears:
+
+- **Copy** — picks up whatever you've selected. (Ctrl+C also works.)
+- **Paste at playhead** — drops the copy wherever the red line is. It always
+  lands neatly on a beat, so it stays in time with the music. (Ctrl+V.)
+- **Repeat…** — the useful one. It asks "repeat this every **1 bar** for
+  **7** more times," tells you how many moves that will add, and stamps them
+  all down the song for you. Everything lands on the beat.
+- **Duplicate** drops a single copy right after the original, and **Delete**
+  removes what you selected.
+
+Got carried away? **Ctrl+Z** undoes the whole repeat in one go, not one bar
+at a time.
+
+### What your house will really do
+
+When you click a coloured bar, look at the very bottom of the screen. Next to
+the colour and speed sliders there's a line starting **"On the house:"**. It
+tells you in plain words what that move will actually look like on your real
+lights — and, if anything won't survive the trip, what that is. For example,
+a Twinkle on your mini trees will say that Light-O-Rama has no twinkling move
+for those pieces, so it comes out as a plain colour wash. Better to find that
+out now than on the driveway in December.
 
 ## Using your own song
 
@@ -111,7 +172,7 @@ On the left side, under **Make a Show**, click **Create my light show**.
 
 A panel opens on the right. Pick a style (like "Classic Holiday"), pick
 colors, pick how wild you want it, then click **Generate from Music**. The
-computer listens to your song and writes a show for all 84 of your light
+computer listens to your song and writes a show for all 83 of your light
 pieces — every flash lands on the beat. It takes a minute or two and you
 can watch its progress.
 
@@ -126,11 +187,17 @@ When you have a show you love:
 
 1. Click **Export** at the top of the main screen.
 2. Choose **Light-O-Rama S6** (already selected) and click **Next**.
-3. It asks for one of your purchased Light-O-Rama sequence files — pick any
-   of them (they're the files that came with the sequences you bought).
-4. The app matches all 84 of your light pieces automatically — you'll see
-   "84 of 84 matched." Tick the "I've reviewed" box and click **Export**.
-5. A file downloads. That file is your show, ready for the Light-O-Rama
+3. At the top you'll see a panel: **"What will actually reach your lights."**
+   Click it open. It goes through every kind of move you've used and says, in
+   plain words, what your house will really do with it — and what won't make
+   the trip. Most things come out exactly as you see them. A few come out
+   plainer, and it says exactly which and why. **Read this before you
+   export**, not after the show is running on the driveway.
+4. Then it asks for one of your purchased Light-O-Rama sequence files — pick
+   any of them (they're the files that came with the sequences you bought).
+5. The app matches all your light pieces automatically — you'll see
+   "83 of 83 matched." Tick the "I've reviewed" box and click **Export**.
+6. A file downloads. That file is your show, ready for the Light-O-Rama
    software to put on the memory card that goes in your show player box.
 
 ## If something looks wrong

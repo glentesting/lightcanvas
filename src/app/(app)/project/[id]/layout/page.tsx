@@ -7,6 +7,7 @@ import LayoutEditor from "@/components/LayoutEditor";
 import LoreditImportDialog from "@/components/LoreditImportDialog";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { useAutosave } from "@/lib/store/use-autosave";
+import { useUndoRedo, useUndoShortcuts } from "@/lib/store/use-undo";
 import { projectFromRow } from "@/types/domain";
 import { createDefaultFixtures } from "@/lib/fixtures/defaults";
 
@@ -37,6 +38,8 @@ export default function LayoutPage() {
   }, [fixtures]);
 
   useAutosave(projectId);
+  useUndoShortcuts();
+  const { canUndo, canRedo, undo, redo } = useUndoRedo();
 
   useEffect(() => {
     if (loadedRef.current) return;
@@ -203,6 +206,49 @@ export default function LayoutPage() {
               </svg>
               {uploadingPhoto ? "Uploading..." : houseCustomSvg ? "Replace Photo" : "Upload Photo"}
             </button>
+
+            <div className="w-px h-5" style={{ background: "var(--line)" }} />
+
+            {/* Undo / Redo — nothing you do here is permanent */}
+            <div className="flex h-8 rounded-lg overflow-hidden" style={{ border: "1px solid var(--line)" }}>
+              <button
+                onClick={undo}
+                disabled={!canUndo}
+                title={canUndo ? "Undo the last change (Ctrl+Z)" : "Nothing to undo yet"}
+                className="px-3 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                style={{
+                  background: "#FFFFFF",
+                  color: canUndo ? "var(--ink)" : "var(--ink-4)",
+                  cursor: canUndo ? "pointer" : "default",
+                  opacity: canUndo ? 1 : 0.6,
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="9 14 4 9 9 4" />
+                  <path d="M20 20v-7a4 4 0 0 0-4-4H4" />
+                </svg>
+                Undo
+              </button>
+              <button
+                onClick={redo}
+                disabled={!canRedo}
+                title={canRedo ? "Redo (Ctrl+Shift+Z)" : "Nothing to redo"}
+                className="px-3 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                style={{
+                  background: "#FFFFFF",
+                  color: canRedo ? "var(--ink)" : "var(--ink-4)",
+                  borderLeft: "1px solid var(--line)",
+                  cursor: canRedo ? "pointer" : "default",
+                  opacity: canRedo ? 1 : 0.6,
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="15 14 20 9 15 4" />
+                  <path d="M4 20v-7a4 4 0 0 1 4-4h12" />
+                </svg>
+                Redo
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 relative">

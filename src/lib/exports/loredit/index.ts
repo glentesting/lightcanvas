@@ -28,6 +28,7 @@ export type { LoreditTemplate, TemplateProp, LorStringType } from "./template";
 export { seedDefaultMapping } from "./mapping";
 export type { LoreditPropMap } from "./mapping";
 export * from "./effects";
+export * from "./fidelity";
 export { parseXml, generateXml, serializeXml } from "./xml";
 
 export const LIGHTCANVAS_BEAT_GRID_NAME = "LightCanvas Beats";

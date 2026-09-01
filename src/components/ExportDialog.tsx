@@ -8,6 +8,14 @@ import { validateFixtures } from "@/lib/exports/validation";
 import type { ValidationIssue } from "@/lib/exports/validation";
 import { exportLoredit, parseTemplate, seedDefaultMapping, serializeXml } from "@/lib/exports/loredit";
 import type { LoreditTemplate, LoreditPropMap, LoreditExportReport } from "@/lib/exports/loredit";
+import {
+  summariseExportFidelity,
+  FIDELITY_COLOR,
+  FIDELITY_LABEL,
+  WIRE_KIND_LABEL,
+} from "@/lib/exports/loredit/fidelity";
+import type { FidelityRow } from "@/lib/exports/loredit/fidelity";
+import { EFFECT_NAMES } from "@/lib/timeline/constants";
 import type { Project } from "@/types/domain";
 
 type ExportFormat = "loredit" | "lightcanvas-json" | "video";
@@ -40,7 +48,17 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
 
   const state = useEditorStore.getState();
   const fixtures = useEditorStore((s) => s.fixtures);
+  const groups = useEditorStore((s) => s.groups);
+  const blocks = useEditorStore((s) => s.sequence.blocks);
   const storedPropMap = useEditorStore((s) => s.sequence.loreditPropMap);
+
+  // What the hardware will really do with each lighting move in this sequence.
+  // Once a template is chosen, only pieces that are actually mapped count —
+  // unmapped ones are reported separately as skipped.
+  const fidelityRows = useMemo(() => {
+    const inPlay = template ? fixtures.filter((f) => propMap[f.id]) : fixtures;
+    return summariseExportFidelity(blocks, inPlay, groups);
+  }, [blocks, fixtures, groups, template, propMap]);
 
   // Reset when dialog opens
   useEffect(() => {
@@ -264,14 +282,16 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
     const unmappedCount = fixtures.filter((f) => !propMap[f.id]).length;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(248, 247, 244, 0.72)", backdropFilter: "blur(8px)" }} onClick={onClose}>
-        <div className="rounded-xl overflow-hidden w-full max-w-lg" style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow-lg)" }} onClick={(e) => e.stopPropagation()}>
-          <div className="px-5 pt-5 pb-3">
+        <div className="rounded-xl overflow-hidden w-full max-w-2xl flex flex-col" style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow-lg)", maxHeight: "88vh" }} onClick={(e) => e.stopPropagation()}>
+          <div className="px-5 pt-5 pb-3 overflow-y-auto">
             <h3 className="text-sm font-semibold mb-1">Export for Light-O-Rama S6</h3>
             <p className="text-xs mb-4" style={{ color: "var(--ink-4)" }}>
               Pick a template .loredit that already contains your S6 Preview (any of your purchased
               sequences works). Its layout and timing grids are kept; its effects are replaced with
               this project&apos;s sequence.
             </p>
+
+            <FidelityPanel rows={fidelityRows} />
 
             {/* Template picker */}
             <div className="mb-4">
@@ -667,6 +687,107 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─── "What will actually reach your lights" ─────────────────
+   The app can draw more than Light-O-Rama can be told to do. This says which
+   of your lighting moves survive the trip, and what gets simplified — before
+   you export, not after the show runs. Everything here comes from
+   src/lib/exports/loredit/fidelity.ts, the same table the exporter follows. */
+function FidelityPanel({ rows }: { rows: FidelityRow[] }) {
+  const plainer = rows.filter((r) => r.fidelity === "approximate");
+  const [open, setOpen] = useState(false);
+
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-lg px-3 py-2 mb-4 text-xs" style={{ background: "var(--panel)", border: "1px solid var(--line)", color: "var(--ink-4)" }}>
+        This project has no lighting moves yet, so the exported file will be empty.
+      </div>
+    );
+  }
+
+  const headline =
+    plainer.length === 0
+      ? "Every lighting move in this show survives the trip to your lights."
+      : `${plainer.length} of your ${rows.length} lighting move${rows.length !== 1 ? "s" : ""} will come out plainer on the house than they look here.`;
+
+  return (
+    <div
+      className="rounded-lg mb-4 overflow-hidden"
+      style={{
+        border: `1px solid ${plainer.length ? FIDELITY_COLOR.approximate.border : FIDELITY_COLOR.exact.border}`,
+        background: plainer.length ? FIDELITY_COLOR.approximate.bg : FIDELITY_COLOR.exact.bg,
+      }}
+    >
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-start gap-2 px-3 py-2.5 text-left"
+        style={{ background: "transparent", border: "none", cursor: "pointer" }}
+      >
+        <svg
+          width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+          style={{
+            marginTop: 2,
+            transform: open ? "rotate(0)" : "rotate(-90deg)",
+            transition: "transform .15s",
+            color: plainer.length ? FIDELITY_COLOR.approximate.ink : FIDELITY_COLOR.exact.ink,
+          }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+        <span className="flex-1">
+          <span className="block text-xs font-semibold" style={{ color: plainer.length ? FIDELITY_COLOR.approximate.ink : FIDELITY_COLOR.exact.ink }}>
+            What will actually reach your lights
+          </span>
+          <span className="block text-xs mt-0.5" style={{ color: "var(--ink-3)" }}>
+            {headline} {open ? "" : "Click to see each one."}
+          </span>
+        </span>
+      </button>
+
+      {open && (
+        <div className="px-3 pb-3 flex flex-col gap-1.5">
+          {rows.map((row) => {
+            const c = FIDELITY_COLOR[row.fidelity];
+            return (
+              <div
+                key={`${row.effectId}:${row.wire}`}
+                className="rounded-md px-2.5 py-2"
+                style={{ background: "var(--surface)", border: `1px solid ${c.border}` }}
+              >
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-semibold" style={{ color: "var(--ink)" }}>
+                    {EFFECT_NAMES[row.effectId]}
+                  </span>
+                  <span className="text-xs" style={{ color: "var(--ink-4)" }}>
+                    on {WIRE_KIND_LABEL[row.wire].toLowerCase()}
+                  </span>
+                  <span
+                    className="inline-flex items-center h-4 px-1.5 rounded text-xs font-medium ml-auto"
+                    style={{ background: c.bg, color: c.ink, border: `1px solid ${c.border}`, fontSize: 10 }}
+                  >
+                    {FIDELITY_LABEL[row.fidelity]}
+                  </span>
+                </div>
+                <p className="text-xs mt-1" style={{ color: "var(--ink-2)" }}>
+                  On the house: {row.asExported}
+                </p>
+                {row.loses && (
+                  <p className="text-xs mt-0.5" style={{ color: c.ink }}>
+                    Won&apos;t carry over: {row.loses}
+                  </p>
+                )}
+                <p className="text-xs mt-1" style={{ color: "var(--ink-4)", fontSize: 10 }}>
+                  {row.blockCount.toLocaleString()} move{row.blockCount !== 1 ? "s" : ""} across{" "}
+                  {row.fixtureCount} light piece{row.fixtureCount !== 1 ? "s" : ""}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -46,7 +46,13 @@ export interface EditorState {
    *  replace the whole layout — which also removes the old fixtures' blocks. */
   importFixtures: (fixtures: Fixture[], mode: "replace" | "add") => void;
   updateFixture: (id: string, patch: Partial<Fixture>) => void;
+  /** Bulk placement in ONE undo step — see the note on deleteFixtures. */
+  updateFixtures: (patches: Array<{ id: string; patch: Partial<Fixture> }>) => void;
   deleteFixture: (id: string) => void;
+  /** Bulk delete in ONE undo step. Calling deleteFixture in a loop records one
+   *  history entry per prop, so a single Ctrl+Z would bring back only one of
+   *  forty — which is exactly what made bulk edits feel permanent. */
+  deleteFixtures: (ids: string[]) => void;
   reorderTracks: (fromIndex: number, toIndex: number) => void;
 
   setLoreditPropMap: (map: Record<string, string>) => void;
@@ -95,6 +101,11 @@ export const useEditorStore = create<EditorState>()(
             state.houseCustomSvg = project.houseCustomSvg;
             state.selectedBlockIds = [];
             state.selectedFixtureIds = [];
+            // Loading a project is itself a state change, so without this the
+            // first Undo after opening a project would roll the whole display
+            // back to empty — and autosave would then persist that. History
+            // starts at the freshly loaded project.
+            queueMicrotask(() => useEditorStore.temporal.getState().clear());
           }),
 
         setName: (name: string) =>
@@ -206,11 +217,30 @@ export const useEditorStore = create<EditorState>()(
             if (fixture) Object.assign(fixture, patch);
           }),
 
+        updateFixtures: (patches: Array<{ id: string; patch: Partial<Fixture> }>) =>
+          set((state) => {
+            const byId = new Map(patches.map((p) => [p.id, p.patch]));
+            for (const fixture of state.fixtures) {
+              const patch = byId.get(fixture.id);
+              if (patch) Object.assign(fixture, patch);
+            }
+          }),
+
         deleteFixture: (id: string) =>
           set((state) => {
             state.fixtures = state.fixtures.filter((f) => f.id !== id);
             state.sequence.tracks = state.sequence.tracks.filter((t) => t.id !== id);
             state.sequence.blocks = state.sequence.blocks.filter((b) => b.trackId !== id);
+          }),
+
+        deleteFixtures: (ids: string[]) =>
+          set((state) => {
+            const gone = new Set(ids);
+            state.fixtures = state.fixtures.filter((f) => !gone.has(f.id));
+            state.sequence.tracks = state.sequence.tracks.filter((t) => !gone.has(t.id));
+            state.sequence.blocks = state.sequence.blocks.filter((b) => !gone.has(b.trackId));
+            // a group that lost members keeps working; drop the dead ids
+            for (const g of state.groups) g.fixtureIds = g.fixtureIds.filter((id) => !gone.has(id));
           }),
 
         reorderTracks: (fromIndex: number, toIndex: number) =>
@@ -278,7 +308,12 @@ export const useEditorStore = create<EditorState>()(
           }),
       })),
       {
-        // Only track project-data mutations for undo/redo (not selection or save status)
+        // Only track project-data mutations for undo/redo (not selection or
+        // save status). `partialize` alone decides WHAT gets stored, not
+        // WHETHER a step is recorded — without the `equality` check below,
+        // every autosave status flip ("saving" → "saved" → "idle") pushed a
+        // history step, so Undo would burn itself on a save notification
+        // instead of undoing the edit you just made.
         partialize: (state) => ({
           name: state.name,
           audioUrl: state.audioUrl,
@@ -289,6 +324,17 @@ export const useEditorStore = create<EditorState>()(
           sequence: state.sequence,
           houseTemplate: state.houseTemplate,
         }),
+        // immer keeps references stable for slices it did not touch, so
+        // identity comparison is exactly "did any project data change?"
+        equality: (past, current) =>
+          past.name === current.name &&
+          past.audioUrl === current.audioUrl &&
+          past.audioFile === current.audioFile &&
+          past.audio === current.audio &&
+          past.fixtures === current.fixtures &&
+          past.groups === current.groups &&
+          past.sequence === current.sequence &&
+          past.houseTemplate === current.houseTemplate,
         limit: 100,
       }
     )

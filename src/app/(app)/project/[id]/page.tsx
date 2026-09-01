@@ -8,7 +8,7 @@ import PreviewPanel from "@/components/PreviewPanel";
 import AIPanel from "@/components/AIPanel";
 import ExportDialog from "@/components/ExportDialog";
 import { useEditorStore } from "@/lib/store/editor-store";
-import { useTransportStore } from "@/lib/store/transport-store";
+import { useTransportStore, registerSeekHandler } from "@/lib/store/transport-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { projectFromRow } from "@/types/domain";
 import { createDefaultFixtures } from "@/lib/fixtures/defaults";
@@ -176,7 +176,7 @@ export default function DesignerPage() {
             Your Light Show
           </h1>
           <p className="text-sm" style={{ color: "var(--ink-4)" }}>
-            Press ▶ below to watch the show. When you like it, click Export to put it on your light controller.
+            Press ▶ below to watch the show — click or drag the song bar to jump to any moment. When you like it, click Export to put it on your light controller.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -578,6 +578,62 @@ function SequenceOverview({
 
   useEffect(() => () => stopTicking(), [stopTicking]);
 
+  // ── scrubbing: move the real audio, which then republishes the clock so
+  //    the preview lights redraw at the moment you land on ──
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const [scrubbing, setScrubbing] = useState(false);
+  const [hoverTime, setHoverTime] = useState<number | null>(null);
+
+  const seekTo = useCallback(
+    (t: number) => {
+      const clamped = Math.max(0, Math.min(duration, t));
+      const el = audioRef.current;
+      if (el) el.currentTime = clamped;
+      // paused or playing, the preview follows the clock
+      useTransportStore.getState().setCurrentTime(clamped);
+    },
+    [duration]
+  );
+
+  // this page owns the audio while it is open — let any surface seek it
+  useEffect(() => {
+    if (!audioSrc) return;
+    registerSeekHandler(seekTo);
+    return () => registerSeekHandler(null);
+  }, [audioSrc, seekTo]);
+
+  const timeAtClientX = useCallback(
+    (clientX: number) => {
+      const rect = trackRef.current?.getBoundingClientRect();
+      if (!rect || rect.width === 0) return 0;
+      return ((clientX - rect.left) / rect.width) * duration;
+    },
+    [duration]
+  );
+
+  const startScrub = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!audioSrc) return;
+      e.preventDefault();
+      setScrubbing(true);
+      seekTo(timeAtClientX(e.clientX));
+    },
+    [audioSrc, seekTo, timeAtClientX]
+  );
+
+  // drag continues even when the pointer leaves the bar
+  useEffect(() => {
+    if (!scrubbing) return;
+    const onMove = (e: PointerEvent) => seekTo(timeAtClientX(e.clientX));
+    const onUp = () => setScrubbing(false);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [scrubbing, seekTo, timeAtClientX]);
+
   const togglePlay = useCallback(() => {
     const el = audioRef.current;
     if (!el) return;
@@ -593,7 +649,33 @@ function SequenceOverview({
     }
   }, [duration, startTicking, stopTicking]);
 
+  // Space plays/pauses, arrows nudge, Home jumps to the start
+  useEffect(() => {
+    if (!audioSrc) return;
+    function onKey(e: KeyboardEvent) {
+      const tag = document.activeElement?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.key === " ") {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        seekTo(useTransportStore.getState().currentTime + (e.shiftKey ? 10 : 5));
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        seekTo(useTransportStore.getState().currentTime - (e.shiftKey ? 10 : 5));
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        seekTo(0);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [audioSrc, seekTo, togglePlay]);
+
   const timeStr = `${Math.floor(currentTime / 60)}:${String(Math.floor(currentTime % 60)).padStart(2, "0")}`;
+  const progressPct = duration > 0 ? Math.max(0, Math.min(100, (currentTime / duration) * 100)) : 0;
+  const fmt = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
 
   return (
     <div
@@ -645,34 +727,88 @@ function SequenceOverview({
         </div>
       </div>
 
-      {/* Section blocks */}
-      <div className="flex-1 flex items-center gap-1 min-w-0 px-2">
-        {sections && sections.length > 0 ? (
-          sections.map((sec, i) => {
-            const widthPct = duration > 0 ? ((sec.endTime - sec.startTime) / duration) * 100 : 0;
-            return (
-              <div
-                key={i}
-                className="h-8 rounded-md flex items-center justify-center text-xs font-medium capitalize"
-                style={{
-                  width: `${widthPct}%`,
-                  minWidth: 40,
-                  background: SECTION_COLORS[sec.label] ?? "#e5e7eb",
-                  color: "#1e293b",
-                }}
-              >
-                {sec.label}
+      {/* Song bar — click or drag anywhere on it to jump around the song */}
+      <div className="flex-1 min-w-0 px-2">
+        <div
+          ref={trackRef}
+          onPointerDown={startScrub}
+          onPointerMove={(e) => audioSrc && setHoverTime(timeAtClientX(e.clientX))}
+          onPointerLeave={() => setHoverTime(null)}
+          className="relative w-full select-none"
+          style={{ height: 34, cursor: audioSrc ? "pointer" : "default", touchAction: "none" }}
+          title={audioSrc ? "Click or drag to jump to a moment in the song" : undefined}
+        >
+          {/* Sections (or one plain bar when the song hasn't been analysed) */}
+          <div className="absolute inset-0 rounded-md overflow-hidden flex" style={{ background: "#e0e7ef" }}>
+            {sections && sections.length > 0 && duration > 0 ? (
+              sections.map((sec, i) => (
+                <div
+                  key={i}
+                  className="h-full flex items-center justify-center text-xs font-medium capitalize overflow-hidden"
+                  style={{
+                    width: `${((sec.endTime - sec.startTime) / duration) * 100}%`,
+                    background: SECTION_COLORS[sec.label] ?? "#e5e7eb",
+                    color: "#1e293b",
+                    borderRight: i < sections.length - 1 ? "1px solid rgba(255,255,255,0.7)" : undefined,
+                  }}
+                >
+                  <span className="truncate px-1">{sec.label}</span>
+                </div>
+              ))
+            ) : (
+              <div className="flex-1 h-full flex items-center justify-center text-xs font-medium" style={{ color: "var(--ink-3)" }}>
+                {duration > 0 ? "Full Song" : "No audio loaded"}
               </div>
-            );
-          })
-        ) : (
-          <div
-            className="flex-1 h-8 rounded-md flex items-center justify-center text-xs font-medium"
-            style={{ background: "#e0e7ef", color: "var(--ink-3)" }}
-          >
-            {duration > 0 ? "Full Song" : "No audio loaded"}
+            )}
           </div>
-        )}
+
+          {audioSrc && (
+            <>
+              {/* played-so-far shading */}
+              <div
+                className="absolute top-0 bottom-0 left-0 rounded-l-md pointer-events-none"
+                style={{ width: `${progressPct}%`, background: "rgba(16,20,34,0.20)" }}
+              />
+              {/* playhead + grab handle */}
+              <div
+                className="absolute top-0 bottom-0 pointer-events-none"
+                style={{ left: `${progressPct}%`, width: 2, background: "oklch(60% 0.18 25)", transform: "translateX(-1px)" }}
+              />
+              <div
+                className="absolute rounded-full pointer-events-none"
+                style={{
+                  left: `${progressPct}%`,
+                  top: "50%",
+                  width: scrubbing ? 16 : 12,
+                  height: scrubbing ? 16 : 12,
+                  transform: "translate(-50%, -50%)",
+                  background: "oklch(60% 0.18 25)",
+                  border: "2px solid #fff",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+                  transition: "width .1s, height .1s",
+                }}
+              />
+              {/* hover time readout */}
+              {hoverTime !== null && !scrubbing && (
+                <div
+                  className="absolute pointer-events-none text-xs font-mono px-1.5 py-0.5 rounded"
+                  style={{
+                    left: `${duration > 0 ? Math.max(0, Math.min(100, (hoverTime / duration) * 100)) : 0}%`,
+                    bottom: "100%",
+                    marginBottom: 4,
+                    transform: "translateX(-50%)",
+                    background: "rgba(16,20,34,0.9)",
+                    color: "#fff",
+                    fontSize: 10,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {fmt(Math.max(0, Math.min(duration, hoverTime)))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       {/* Effect count + Edit Timeline link */}
