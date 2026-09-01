@@ -14,6 +14,9 @@ G4-MP3 Director plays.
 - `LIGHTCANVAS-HARDWARE-REFERENCE.md` — the physical show: controllers, unit
   IDs, port→prop map, the `.loredit` format, file locations. If it isn't in
   there, it isn't settled.
+- `BENCH-TEST-CHECKLIST.md` — plain-English first power-up procedure for the
+  owner to follow at the bench. **Not yet run.** Keep it truthful and keep the
+  Desktop text copy ("LightCanvas - Bench Test.txt") in step with it.
 - `AUDIT-2026-08.md` — the honest audit that set the current direction.
 - `LOREDIT-EXPORT-STATUS.md` — exporter: what works, what's unverified.
 - `AI-PIPELINE-STATUS.md` — AI sequencer: architecture, measured density.
