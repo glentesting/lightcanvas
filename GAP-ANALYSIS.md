@@ -96,10 +96,15 @@ timing marks. That is the bar a "finished show" sits at.
     Repeat-every-N-bars with a live count. Bar length comes from the
     detected downbeats; each repeat is measured from the original anchor and
     re-snapped, so it cannot drift.
-14. **The manual S6 acceptance test** — STILL OUTSTANDING, and now the
-    single most valuable thing left. Three exported files have never been
-    opened in the real Light-O-Rama program, and the export grammar just
-    grew two new effect types. Not code; someone must double-click S6.
+14. ~~**The manual S6 acceptance test**~~ — **DONE 2026-08-31.** The owner
+    exported his real show and opened it in S6 v6.6.12: clean open, 4,385
+    effects on all 83 props, 1,246 of the new `bars` effects rendering as a
+    staggered arch chase, AC intensity pulses, the beat grid present, his
+    song's filename carried through. **One caveat: the `curtain` grammar was
+    not exercised** — his show contains zero curtains (center-out chases and
+    fireworks only). Close that by adding a Fireworks effect, re-exporting,
+    and opening in S6. The manual torch now passes to the hardware bench
+    test (`BENCH-TEST-CHECKLIST.md`).
 
 ### NICE TO HAVE (genuinely optional this season)
 

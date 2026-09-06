@@ -1,6 +1,6 @@
 # LightCanvas
 
-AI-assisted Christmas light show designer. Upload a song, sync effects to the beat, preview your house lighting up, export to xLights or Light-O-Rama.
+AI-assisted Christmas light show designer. Upload a song, sync effects to the beat, preview your house lighting up, export a `.loredit` file for Light-O-Rama S6.
 
 ## Quick Start
 

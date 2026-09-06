@@ -9,8 +9,35 @@ sequence effects (by hand on the timeline or with the AI sequencer), preview
 on a photo of the house, export a `.loredit` file that LOR S6 opens and the
 G4-MP3 Director plays.
 
+## Where it stands (verified against the repo 2026-09-05)
+
+- **THE ACCEPTANCE TEST PASSED.** On **August 31, 2026** the owner exported
+  his real show from the app and opened it in **LOR S6 v6.6.12**: opened
+  clean, no errors; total time 3:39.84 matching his song; **4,385 effects
+  across all 83 of his props**, including **1,246 `bars` motion effects**;
+  arches showing a proper staggered chase 01→08; real intensity pulses on
+  the AC roof strings; 473 "LightCanvas Beats" timing marks alongside the
+  template's 1,478; `musicFilename` carrying his song, not the template's.
+  This closed the largest technical risk in the project. Details and the
+  session-to-session context: `HANDOFF.md`.
+- **Colorwash and bars are therefore S6-proven. The `curtain` grammar is
+  NOT** — his show happens to contain zero curtains (they are emitted only
+  for center-out/in chases and fireworks). That is a separate, still-open
+  gap; do not describe it as closed. The way to close it: drop a Fireworks
+  effect into a sequence, re-export, open in S6.
+- **The hardware bench test has NOT been run** — now the largest remaining
+  unknown (see the Hardware state section below).
+- **Deadline:** the show must run this season. The Sept 3 honesty checkpoint
+  on whether this path was working: it is. Fallback remains the 8 purchased
+  sequences (their MP3s still need buying — LOR sells sequences without
+  audio).
+
 ## Authoritative docs (read the relevant one before working)
 
+- `HANDOFF.md` — the owner's own conversation-handoff notes (Aug 31): how he
+  works, the S6 acceptance-test result, priorities. **Untracked by git, by
+  his choice** — it lives in the repo root on his machine and may be absent
+  from a fresh clone.
 - `LIGHTCANVAS-HARDWARE-REFERENCE.md` — the physical show: controllers, unit
   IDs, port→prop map, the `.loredit` format, file locations. If it isn't in
   there, it isn't settled.
@@ -153,7 +180,10 @@ channel/track grammar rule is absolute (see the hardware doc §6). Pixel props
 use three motion grammars — **colorwash, curtain, bars** (94% of the
 reference file's 50,695 effects) — chosen per effect+direction; every string
 is verbatim-observed LOR grammar with ONLY the six ARGB colour slots
-substituted. Never invent a parameter value or a mix/speed token. Verify with
+substituted. Never invent a parameter value or a mix/speed token.
+**S6 verification state (2026-08-31): colorwash and bars proven in S6 by the
+owner's real-show open; curtain still unverified in S6** (his show contains
+none — see Where it stands). Verify with
 `npx tsx scripts/loredit/verify-roundtrip.mts`, `verify-export.mts`, and
 `verify-effect-grammar.mts` (learns LOR's vocabulary from the reference and
 rejects anything the app emits that LOR would not write).
@@ -188,7 +218,9 @@ dev mock). Verify with `npx tsx scripts/ai/verify-pipeline.mts`.
   render. This confusion is why the project stalled once.
 - **Show a plan before touching the DB.**
 - The acceptance test for anything export-related is: LOR S6 v6.6.12 opens
-  the file.
+  the file. **Passed once on the owner's real show, Aug 31, 2026** — that
+  pass covers the exporter as it was that day, not future changes; re-earn
+  it after any change to what the exporter emits.
 
 ## Commands
 
@@ -206,10 +238,31 @@ whether his server already holds port 3000 before starting your own**. His
 guide is WALKTHROUGH.md (plain English — keep it truthful when the UI
 changes), with a text copy on his Desktop ("LightCanvas - How To.txt";
 regenerate it when WALKTHROUGH.md changes). The one DB project is
-"My Christmas Show 2026" (his imported 84-prop display, his house photo,
-his music, a real AI-generated show) — treat it as his real data, not test
+"My Christmas Show 2026" (his imported display — 83 of the 84 importable
+props, see Known Gaps — his house photo, his music, a real AI-generated
+show) — treat it as his real data, not test
 data. UI copy is deliberately jargon-free: "Your Lights", "Make a Show",
 "lighting moves" — keep new UI text in that register.
+
+## Hardware state (brief — detail lives in the hardware doc + checklist)
+
+- The **USB485-HS adapter has arrived** (Aug 31). **The bench test has NOT
+  been run.** Nothing physical has ever been powered on; this is the largest
+  remaining unknown. Procedure: `BENCH-TEST-CHECKLIST.md`.
+- Each Pixie16D enclosure contains its own **MeanWell RSP-500-12 (12V /
+  41.7A)** internal supply — each box is self-contained and powers from a
+  wall outlet. Live mains sits on the supply's N/L terminals inside the box.
+- A Pixie16 occupies **16 consecutive unit IDs**, one per port, counting up
+  from the DIP base: **Box 4 base `09`** (trees/arches/stakes, so `09`–`18`),
+  **Box 1 base `30`** (faces, so `30`–`3F`). Sixteen units reading back is
+  the PASS condition, not a fault.
+- LOR unit IDs are **hexadecimal**; the Hardware Utility can display hex OR
+  decimal, so the same boards can read 9–24 and 48–63. Check the mode before
+  concluding anything is misaddressed.
+- The **CTB16PCG3's unit ID is software-set and has never been read back** —
+  `01` is what the sequences expect, not a measured value. That controller
+  is deferred: it appears hardwired into conduit. If it turns out not to be
+  `01`, change the controller, not the sequences.
 
 ## Git
 
@@ -231,18 +284,22 @@ once broke env parsing here.
 
 ## Known gaps (honest list)
 
-- `.loredit` output not yet opened in S6 (THE manual acceptance test, still
-  outstanding) — the files to open sit in
-  `scripts/loredit-spike/test-fixtures/output/`
-  (`lightcanvas-export-test.loredit`, `ai-pipeline-export.loredit`,
-  `layout-import-export.loredit`); details in the matching status docs.
+- ~~`.loredit` output not yet opened in S6~~ — **CLOSED 2026-08-31**: the
+  owner's real-show export opened clean in S6 v6.6.12 (see Where it stands).
+  What that pass did NOT cover: the **`curtain` grammar** (zero curtains in
+  his show — emitted only for center-out/in chases and fireworks). Close it
+  by adding a Fireworks effect, re-exporting, opening in S6. The three
+  synthetic test files in `scripts/loredit-spike/test-fixtures/output/`
+  remain available for that.
+- **The hardware bench test has not been run.** Adapter arrived Aug 31;
+  nothing has ever been powered on. `BENCH-TEST-CHECKLIST.md` is the
+  procedure. Largest remaining unknown.
 - No scale/rotate on prop shapes; the tree silhouette is stylized, not a
   photo-match of the coro cutout (pixel positions are the accurate part).
-- Pixel props export as colorwash, curtain or bars (grammar shape verified
-  against the reference file by `verify-effect-grammar.mts`, but still
-  unverified IN S6 — that is the manual test above). Twinkle/sparkle have no
-  LOR motion-effect equivalent and stay colorwash by design; the app says so
-  before export via `fidelity.ts`.
+- Pixel props export as colorwash, curtain or bars. **Colorwash and bars are
+  now S6-verified (2026-08-31); curtain is not** — see above. Twinkle/sparkle
+  have no LOR motion-effect equivalent and stay colorwash by design; the app
+  says so before export via `fidelity.ts`.
 - A chase on a traced AC roof string animates per-bulb in the preview but
   exports as a single dim envelope (one channel on the wire — the Wiring
   tab says so).
@@ -251,9 +308,15 @@ once broke env parsing here.
 - The beat analysis after audio upload blocks the page for a minute or two
   (naive DFT on the main thread); WALKTHROUGH.md warns him.
 - ANTHROPIC_API_KEY + `maxDuration` not yet set in Vercel prod (the key IS
-  in local `.env.local`; live Opus 5 generation verified locally).
+  in local `.env.local`; live Opus 5 generation verified locally, most
+  recently 2026-09-05 — key present, suite passed on the real API).
+  Re-checked 2026-09-05: `maxDuration` is confirmed absent from
+  `src/app/api/ai/generate/route.ts`; the Vercel-side env state cannot be
+  confirmed from the repo (no `.vercel/` link exists), so treat the Vercel
+  half as last-known, not verified.
 - The owner's project holds 83 of the 84 imported props — he deleted
   "Roof Light String 15" himself; re-import with "Add alongside" restores it.
+  (Re-verified against the live DB 2026-09-05: 83 fixtures, string 15 absent.)
 - Meteor's fading tail and fireworks' random burst points do not survive
   export (they become a hard-edged bar / centre bursts); twinkle and sparkle
   flatten to a wash on pixel props. All of this is stated in the app before

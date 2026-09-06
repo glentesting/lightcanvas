@@ -5,7 +5,24 @@
 data onto the owner's actual props. Success = LOR S6 v6.6.12 opens the file and shows
 effects on the right props at the right times.
 
-## The file to open in S6 (do this next)
+## ✅ THE ACCEPTANCE TEST PASSED — 2026-08-31
+
+The owner exported his **real show** from the app and opened it in
+**LOR S6 v6.6.12**: opened clean, no errors; total time 3:39.84 matching his
+song; 4,385 effects across all 83 props, including 1,246 `bars` motion
+effects; arches showing a staggered chase 01→08; real intensity pulses on the
+AC channels; the 473-mark "LightCanvas Beats" grid present alongside the
+template's 1,478; `musicFilename` carrying his song. Of the "still
+unverified" list below, this closes items 1–3 (item 2 at least for channel
+ramps and for motion-effect output rendering as intended overall). **Item 4
+is superseded** — since 2026-08-31 the exporter always writes the six-slot
+palette form, the shape LOR itself writes. **Still genuinely unverified in
+S6: the `curtain` grammar** (his show contained zero curtains) **and item 5,
+real-hardware playback** (bench test not yet run). The section below is kept
+as the original test plan for reference — the synthetic files remain useful
+for the curtain check.
+
+## The file to open in S6 (original plan, superseded by the pass above)
 
 ```
 C:\Users\glenh\Documents\LightCanvas\AppRepo\scripts\loredit-spike\test-fixtures\output\lightcanvas-export-test.loredit
