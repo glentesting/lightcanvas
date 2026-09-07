@@ -13,8 +13,16 @@ off. Next time, just double-click the icon again.
 
 ## What you'll see first
 
-A page called **Projects** with one item on it: **My Christmas Show 2026**.
-That is your show. Click **Open**.
+A page called **Projects**. Your show — **My Christmas Show 2026** — is
+there. Click **Open**.
+
+Above it there's a yellow card: **"Test your light boxes."** That's the
+guided walkthrough for the first power-up of your two controller boxes —
+one step per screen, big buttons, and it remembers exactly where you
+stopped, even if you close the browser or restart the computer. When you're
+ready to do the bench test, that card is where you start. At the end it
+gives you a **Copy my results** button — paste the whole thing into your
+chat with Claude and that's your report.
 
 ## Your show
 

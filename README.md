@@ -6,13 +6,13 @@ AI-assisted Christmas light show designer. Upload a song, sync effects to the be
 
 ```bash
 npm install
-cp .env.local.example .env.local  # Fill in Clerk + Supabase keys
+cp .env.local.example .env.local  # Fill in Supabase + Anthropic keys
 npm run dev
 ```
 
 ## Stack
 
-Next.js 16 · React 19 · TypeScript · Tailwind CSS 4 · Clerk · Supabase · Zustand · WaveSurfer.js · Vercel
+Next.js 16 · React 19 · TypeScript · Tailwind CSS 4 · Supabase · Zustand · WaveSurfer.js
 
 ## Docs
 

@@ -10,6 +10,13 @@ This is the plain-English version of Section 9 of
 do with your hands, something you click in a program, or something you look
 at and tell me about. There are no commands to type and no files to open.
 
+> **There is now a guided version of this test inside the app** (added
+> Sept 7, 2026): open LightCanvas and click **"Test your light boxes"** on
+> the Projects page. It walks you through these same steps one screen at a
+> time, remembers where you stopped, and gives you a copy-paste summary of
+> your answers at the end. **That is the easier way to run this test.**
+> This document stays as the full reference — same procedure, same facts.
+
 Print this. Take it to the table with the hardware.
 
 ---

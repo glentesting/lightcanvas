@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { TOTAL_STEPS } from "@/lib/bench-test/steps";
 
 interface ProjectRow {
   id: string;
@@ -158,6 +160,8 @@ export default function ProjectsPage() {
         </div>
       )}
 
+      <BenchTestCard />
+
       {projects && projects.length > 0 && (
         <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--line)" }}>
           {projects.map((p, i) => (
@@ -198,6 +202,68 @@ export default function ProjectsPage() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─── Bench test entry card ────────────────────────────────
+   The guided first-power-up walkthrough lives at /bench-test; this is its
+   front door. Progress state is read from the same saved answers the
+   walkthrough uses, after mount, so the server render never disagrees. */
+function BenchTestCard() {
+  const [state, setState] = useState<{ stepIndex: number; answered: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // localStorage exists only on the client; read it once after mount
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+    try {
+      const raw = localStorage.getItem("lightcanvas-bench-test-v1");
+      if (raw) {
+        const parsed = JSON.parse(raw) as { state?: { stepIndex?: number; answers?: Record<string, unknown> } };
+        setState({
+          stepIndex: parsed.state?.stepIndex ?? 0,
+          answered: Object.keys(parsed.state?.answers ?? {}).length,
+        });
+      }
+    } catch {
+      /* unreadable saved state = treat as not started */
+    }
+  }, []);
+
+  const started = state !== null && state.answered > 0;
+  const finished = state !== null && state.stepIndex >= TOTAL_STEPS;
+  const label = !mounted
+    ? "Open"
+    : finished
+    ? "See my results"
+    : started
+    ? `Continue — step ${Math.min(state!.stepIndex + 1, TOTAL_STEPS)} of ${TOTAL_STEPS}`
+    : "Start the walkthrough";
+
+  return (
+    <div
+      className="flex items-center gap-4 px-4 py-4 mb-5 rounded-xl"
+      style={{ background: "#fffbeb", border: "1px solid #fde68a" }}
+    >
+      <span style={{ fontSize: 26 }} aria-hidden>
+        🔌
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">Test your light boxes</p>
+        <p className="text-xs mt-0.5" style={{ color: "var(--ink-3)" }}>
+          A step-by-step walkthrough for the first power-up of your two controller boxes.
+          One thing per screen, and you can stop and come back any time — it remembers where you were.
+        </p>
+      </div>
+      <Link
+        href="/bench-test"
+        className="h-9 px-4 rounded-lg text-xs font-semibold flex items-center shrink-0"
+        style={{ background: "#1e3a5f", color: "#fff" }}
+      >
+        {label}
+      </Link>
     </div>
   );
 }

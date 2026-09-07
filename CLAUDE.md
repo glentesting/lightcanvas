@@ -44,6 +44,14 @@ G4-MP3 Director plays.
 - `BENCH-TEST-CHECKLIST.md` — plain-English first power-up procedure for the
   owner to follow at the bench. **Not yet run.** Keep it truthful and keep the
   Desktop text copy ("LightCanvas - Bench Test.txt") in step with it.
+- `BENCH-WALKTHROUGH-STATUS.md` — the guided in-app version of that test
+  (`/bench-test`, 2026-09-07): what it does, where answers live, how it was
+  verified. The checklist stays the content source; the walkthrough's steps
+  live in `src/lib/bench-test/steps.ts` and must stay faithful to it —
+  `scripts/verify-bench-test.mts` enforces the numbers.
+- `BENCH-TEST-DIRECT-CONTROL-FEASIBILITY.md` — honest answer to "could the
+  app drive the USB adapter itself?" (short: partly possible, not before the
+  season; the Hardware Utility stays the tool).
 - `AUDIT-2026-08.md` — the honest audit that set the current direction.
 - `LOREDIT-EXPORT-STATUS.md` — exporter: what works, what's unverified.
 - `AI-PIPELINE-STATUS.md` — AI sequencer: architecture, measured density.
@@ -79,6 +87,7 @@ Beat detection is hand-rolled (`src/lib/audio/beat-detector.ts`).
 | `/project/[id]/layout` | Layout editor: photo upload, exact coro prop shapes, identity colors, marquee multi-select + bulk delete, click-to-trace roof strings, "Place a Row", visible Undo/Redo + post-action undo toast, real Night Preview (ShowCanvas) |
 | `/timeline?project=` | Timeline editor: live show preview strip, playhead + follow-scroll + ruler seek, effect blocks, beat snap, undo/redo, group ("set") tracks, copy / paste-at-beat / repeat-every-bar |
 | `/designer` | Redirects into the loaded project |
+| `/bench-test` | Guided hardware bench test: one step per screen, five safety rules first, hex/decimal matching, port write-in tables, copyable results. Progress persists in localStorage (`lightcanvas-bench-test-v1`); entry card on `/projects` |
 | `/dev/stage`, `/dev/visualizer-v2` | Dev harnesses (404 in prod) |
 
 API: `projects` (list/create/get/patch/delete/duplicate), `autosave`,
@@ -209,7 +218,9 @@ dev mock). Verify with `npx tsx scripts/ai/verify-pipeline.mts`.
   observed vocabulary, plus the honesty table),
   `scripts/verify-undo.mts` (undo steps + bulk actions),
   `scripts/verify-timeline-edit.mts` (paste-at-beat, repeat-every-bar, drift,
-  song-end clamping), and
+  song-end clamping),
+  `scripts/verify-bench-test.mts` (guided bench test: unit numbers vs the
+  hardware doc, step order, escape hatches, port predictions, report), and
   `scripts/ai/verify-pipeline.mts` (AI sequencer end-to-end, real audio;
   uses the real API when ANTHROPIC_API_KEY is present). The .loredit ones need
   the gitignored reference file in `scripts/loredit-spike/test-fixtures/`.
@@ -248,7 +259,9 @@ data. UI copy is deliberately jargon-free: "Your Lights", "Make a Show",
 
 - The **USB485-HS adapter has arrived** (Aug 31). **The bench test has NOT
   been run.** Nothing physical has ever been powered on; this is the largest
-  remaining unknown. Procedure: `BENCH-TEST-CHECKLIST.md`.
+  remaining unknown. Procedure: `BENCH-TEST-CHECKLIST.md`, or the guided
+  in-app walkthrough at `/bench-test` (added 2026-09-07 — same steps, one
+  screen at a time, built for the owner to actually follow).
 - Each Pixie16D enclosure contains its own **MeanWell RSP-500-12 (12V /
   41.7A)** internal supply — each box is self-contained and powers from a
   wall outlet. Live mains sits on the supply's N/L terminals inside the box.

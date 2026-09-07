@@ -129,18 +129,30 @@ npx tsx scripts/loredit/verify-export.mts
   `RgbAggregates`, `Subsequences`, `BeatChannels` — untouched/empty, exactly as the
   template carries them.
 
-## What's still unverified
+## What's still unverified — and what is not (rewritten 2026-09-07 to stand alone)
 
-1. **S6 opening a LightCanvas-exported file with this exporter's output.** The spike's
-   simpler file proved the pipeline on Aug 21; this exporter's output (above) has not
-   yet been opened. This is the acceptance test.
-2. **Whether S6 honors `startIntensity`/`endIntensity` ramps on motion-effect track
-   rows** the way the reference file suggests (used for pixel "fade" blocks).
-3. **The "LightCanvas Beats" timing grid appearing correctly** in S6's grid picker.
-4. **Colorwash with two enabled colors** (reference file shows 1, 2, and 6-color lists;
-   we emit 1 or 2).
-5. **Real-hardware playback** — depends on the USB485 adapter arriving and the bench
-   test in the hardware doc §9.
+**Genuinely still unverified:**
+
+1. **The `curtain` grammar in S6.** The owner's real show contained zero
+   curtains (they are emitted only for center-out/in chases and fireworks),
+   so the Aug 31 pass never exercised it. Close it by adding a Fireworks
+   effect, re-exporting, and opening in S6.
+2. **Real-hardware playback** — the bench test has not been run
+   (`BENCH-TEST-CHECKLIST.md`, or the guided version at `/bench-test` in the
+   app), and nothing has ever played on the Director + controllers.
+
+**Closed by the Aug 31, 2026 acceptance pass** (kept here as history; see the
+banner at the top of this doc for the full result):
+
+- ~~S6 opening a LightCanvas-exported file~~ — the owner's real-show export
+  opened clean in S6 v6.6.12.
+- ~~The "LightCanvas Beats" timing grid appearing in S6~~ — all 473 marks
+  present alongside the template's grids.
+- ~~Intensity ramps~~ — real intensity pulses confirmed on the AC channels;
+  motion-effect output rendered as intended overall.
+- ~~Colorwash color-list shape~~ — superseded before the pass: since Aug 31
+  the exporter always writes LOR's own six-slot palette form, which is what
+  the opened file contained.
 
 ## Where things live
 
