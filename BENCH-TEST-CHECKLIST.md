@@ -17,6 +17,12 @@ at and tell me about. There are no commands to type and no files to open.
 > your answers at the end. **That is the easier way to run this test.**
 > This document stays as the full reference — same procedure, same facts.
 
+> **Do this once before you start (Sept 10, 2026).** Your Light-O-Rama folder
+> moved to `C:\dev\light-o-rama`, and LOR has not been told. Open the **Light-O-Rama
+> Control Panel → Settings → "Change Light-O-Rama Folder Location"** and point it
+> at `C:\dev\light-o-rama`. Until you do, the Hardware Utility used all through
+> this test may open with your settings missing.
+
 Print this. Take it to the table with the hardware.
 
 ---

@@ -107,7 +107,7 @@ live result to 1,907.
 ## The file to open in S6
 
 ```
-C:\Users\glenh\Documents\LightCanvas\AppRepo\scripts\loredit-spike\test-fixtures\output\ai-pipeline-export.loredit
+C:\dev\lightcanvas\AppRepo\scripts\loredit-spike\test-fixtures\output\ai-pipeline-export.loredit
 ```
 
 A full **live-Opus-5-planned** show on the RGBPlus layout: mini trees, arches,

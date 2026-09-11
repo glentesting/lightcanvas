@@ -408,6 +408,8 @@ export const STEPS: Step[] = [
     expect: [
       "No power supplies to fetch — each box has its own inside and plugs straight into the wall.",
     ],
+    fineprint:
+      "One software thing first: your Light-O-Rama folder moved to C:\\dev\\light-o-rama on Sept 10 and LOR hasn't been told. Open the Light-O-Rama Control Panel, go to Settings, click \"Change Light-O-Rama Folder Location\" and pick that folder. Otherwise the Hardware Utility you use later may open with your settings missing.",
     options: [
       { id: "ok", label: "It's all on the table", tone: "good" },
       {

@@ -228,7 +228,7 @@ export default function ExportDialog({ open, onClose }: ExportDialogProps) {
           "Open LOR S6 Sequencer",
           "File > Open > select the downloaded .loredit file",
           "Confirm the layout loads and effects sit on the right props",
-          "Verify the audio file name matches an MP3 in Documents\\Light-O-Rama\\Audio",
+          "Verify the audio file name matches an MP3 in your Light-O-Rama Audio folder",
           "Play it against the audio, then save from S6",
         ]
       : ["Your file has been downloaded", "Open it in the appropriate application"];

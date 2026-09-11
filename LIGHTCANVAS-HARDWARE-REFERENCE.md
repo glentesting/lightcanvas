@@ -290,24 +290,37 @@ zero benefit.
 ## 7. File locations
 
 ```
-C:\Users\glenh\Documents\Light-O-Rama\        ← LOR's data folder. Do not move.
-├── Sequences\                                ← the 8 purchased sequences
-├── Audio\                                    ← MP3s go here
+C:\dev\light-o-rama\                          ← LOR's data folder (moved 2026-09-10)
+├── Sequences\                                ← the 8 purchased sequences (all 8 present)
+├── Audio\                                    ← MP3s go here (holds only the LOR
+│                                                sample as of 2026-09-10 — the
+│                                                show's own song is NOT in here)
 ├── CommonData\                               ← previews, palettes
 ├── Hardware\  Network\  Logs\  ...
 
-C:\Users\glenh\Documents\LightCanvas\
+C:\dev\lightcanvas\
 ├── AppRepo\                                  ← the code (GitHub: glentesting/lightcanvas)
-├── Songs\                                    ← Glen's own music
-├── LOR-6.6.12\                               ← installer
-└── Light-O-Rama – Full Setup Overview
+├── Songs\                                    ← Glen's own music (5 MP3s)
+├── LOR-6.6.12.exe                            ← installer
+├── My Christmas Show 2026.loredit            ← the exported show (+ .bak)
+└── Light-O-Rama – Full Setup Overview.docx
 
-C:\Users\glenh\Documents\LightCanvas Old Stuff\   ← archived docs, ignore
+C:\dev\LightCanvas Old Stuff\                 ← archived docs, ignore
 ```
 
-Confirmed in LOR Control Panel → Settings → Folders. **Do not click "Change
-Light-O-Rama Folder Location."** Do not point LOR at OneDrive — cloud sync and
-show software don't mix.
+**Both trees moved out of `Documents\` (and out of OneDrive) on 2026-09-10.**
+Keeping show software off cloud sync is the right call — sync and show
+software don't mix.
+
+**LOR S6 has NOT been told about the move.** As of 2026-09-10 every path in
+`HKCU\Software\Light-O-Rama\Shared` still reads
+`C:\Users\glenh\Documents\Light-O-Rama\`, which no longer exists. Until the
+owner points S6 at the new folder, S6 will not find his sequences, his
+previews, his audio or his hardware config. The fix is one control: LOR
+Control Panel → Settings → **"Change Light-O-Rama Folder Location"** → choose
+`C:\dev\light-o-rama`. (The previous version of this doc said never to click
+that button — that advice is superseded; it was written when the folder was
+where LOR expected it.)
 
 ---
 
@@ -328,8 +341,13 @@ All RGBPlus layout, all matched to this prop set. Downloaded as self-extracting
 | I1916 | Universal Fanfare (YCM / Traditional) |
 
 **Audio is not included** — copyright. Buy each MP3 separately and place it in
-`Documents\Light-O-Rama\Audio\` under the exact filename the sequence requests.
+`C:\dev\light-o-rama\Audio\` under the exact filename the sequence requests.
 Carol of the Bells wants: `Carol Of The Bells-Pentatonix-SN.mp3`
+
+The same applies to the owner's own show. His project's `musicFilename` is
+`Wreaths Like Horseshoes.mp3`, which lives in `C:\dev\lightcanvas\Songs\` —
+S6 will open the exported sequence either way, but it cannot play the audio
+until a copy of that MP3 sits in `C:\dev\light-o-rama\Audio\`.
 
 Every sequence embeds the full 265-prop RGBPlus Preview. Any one of them can
 serve as an export template.

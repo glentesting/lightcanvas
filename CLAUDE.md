@@ -235,8 +235,16 @@ dev mock). Verify with `npx tsx scripts/ai/verify-pipeline.mts`.
 
 ## Commands
 
+**The whole project moved out of OneDrive on 2026-09-10.** The repo root is
+`C:\dev\lightcanvas\AppRepo` (note: still one level down, inside
+`C:\dev\lightcanvas`, which also holds `Songs\` and the exported show).
+LOR's data folder moved too, to `C:\dev\light-o-rama`. `Documents\LightCanvas`
+and `Documents\Light-O-Rama` no longer exist — any path you find pointing
+there is stale. Keep absolute paths out of scripts; `verify-pipeline.mts`
+resolves the owner's MP3 relative to the repo for this reason.
+
 ```bash
-cd "C:/Users/glenh/Documents/LightCanvas/AppRepo"
+cd "C:/dev/lightcanvas/AppRepo"
 npm run dev      # Dev server (or .claude/launch.json "dev")
 npm run build    # Production build
 npx tsc --noEmit # Type check
@@ -257,6 +265,13 @@ data. UI copy is deliberately jargon-free: "Your Lights", "Make a Show",
 
 ## Hardware state (brief — detail lives in the hardware doc + checklist)
 
+- **LOR S6 has not been told its data folder moved** (as of 2026-09-10).
+  Every path under `HKCU\Software\Light-O-Rama\Shared` still reads
+  `C:\Users\glenh\Documents\Light-O-Rama\`, which no longer exists. The owner
+  must repoint it (Control Panel → Settings → "Change Light-O-Rama Folder
+  Location" → `C:\dev\light-o-rama`) before the bench test, because that test
+  runs entirely through the Hardware Utility. Nothing in this repo depends on
+  that folder — it is purely S6's business.
 - The **USB485-HS adapter has arrived** (Aug 31). **The bench test has NOT
   been run.** Nothing physical has ever been powered on; this is the largest
   remaining unknown. Procedure: `BENCH-TEST-CHECKLIST.md`, or the guided
@@ -279,7 +294,8 @@ data. UI copy is deliberately jargon-free: "Your Lights", "Make a Show",
 
 ## Git
 
-- Remote: https://github.com/glentesting/lightcanvas (old `lightshow` URL redirects)
+- Remote: https://github.com/glentesting/lightcanvas (set to this canonical URL
+  2026-09-10; the old `lightshow` URL redirects and resolves to the same repo)
 - Branch: main
 
 ## Environment (.env.local)

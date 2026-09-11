@@ -25,7 +25,7 @@ for the curtain check.
 ## The file to open in S6 (original plan, superseded by the pass above)
 
 ```
-C:\Users\glenh\Documents\LightCanvas\AppRepo\scripts\loredit-spike\test-fixtures\output\lightcanvas-export-test.loredit
+C:\dev\lightcanvas\AppRepo\scripts\loredit-spike\test-fixtures\output\lightcanvas-export-test.loredit
 ```
 
 S6 Sequencer → File → Open. Expected: the full 265-prop RGBPlus layout, the template's
@@ -99,7 +99,8 @@ npx tsx scripts/loredit/verify-export.mts
   "LightCanvas Beats" alongside the template's untouched grids.
 - **Metadata.** Fresh sequence GUID, `author="LightCanvas"`, `createdAt` in LOR's
   date format, `totalCentiseconds` from the audio duration, `musicFilename` from the
-  project's audio file name (S6 resolves it against `Documents\Light-O-Rama\Audio`).
+  project's audio file name (S6 resolves it against LOR's own Audio folder —
+  `C:\dev\light-o-rama\Audio` since the 2026-09-10 move; see the hardware doc §7).
 - **UI door.** The editor header (`/project/[id]`) now has an **Export** button →
   ExportDialog → "Light-O-Rama S6 (.loredit)" (default format) → template file picker →
   mapping table with per-fixture dropdowns → download. `.lms` and `.xsq` options are

@@ -37,9 +37,11 @@ import type { Fixture } from "../../src/lib/fixtures/types";
 import type { Project } from "../../src/types/domain";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+// Songs\ sits beside the repo root (AppRepo\..\Songs) — kept relative so the
+// whole tree can be moved without editing this file.
 const MP3 =
   process.argv[2] ??
-  "C:/Users/glenh/Documents/LightCanvas/Songs/Christmas Lights And Zero Regrets.mp3";
+  path.join(here, "..", "..", "..", "Songs", "Christmas Lights And Zero Regrets.mp3");
 const TEMPLATE = path.join(here, "..", "loredit-spike", "test-fixtures", "Carol Of The Bells-Pentatonix-LOR-RGBPlus.loredit");
 const OUT = path.join(here, "..", "loredit-spike", "test-fixtures", "output", "ai-pipeline-export.loredit");
 

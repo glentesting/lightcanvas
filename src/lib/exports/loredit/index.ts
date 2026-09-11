@@ -104,7 +104,8 @@ export function exportLoredit(project: Project, options: LoreditExportOptions): 
   setAttr(sequence, "author", "LightCanvas");
   setAttr(sequence, "createdAt", formatLorDate(options.now ?? new Date()));
   if (project.audioFile) {
-    // S6 resolves this against its Audio folder (Documents\Light-O-Rama\Audio)
+    // S6 resolves this against LOR's own Audio folder, wherever LOR's data
+    // folder is set to (C:\dev\light-o-rama\Audio as of 2026-09-10)
     setAttr(sequence, "musicFilename", project.audioFile);
   }
   if (project.name) setAttr(sequence, "musicTitle", project.name);
