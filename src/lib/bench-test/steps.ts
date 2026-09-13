@@ -360,7 +360,7 @@ function boxSteps(box: BoxDef): Step[] {
         "The stake should light again, same as before.",
       ],
       fineprint:
-        "This step checks the far half of the board: the sixteen ports come in two halves (1–8 and 9–16), fed from one internal supply. Both halves of both boxes passed this on September 12, 2026 — so a dark Port 9 now would mean something has changed.",
+        "This step checks the far half of the board: the sixteen ports come in two halves (1–8 and 9–16), fed from one internal supply. Both halves of both boxes passed this on September 12, 2026, and the whole display ran a season before that — so a dark Port 9 now would point at something you have just changed, not at a board that was never any good.",
       options: [
         { id: "lit", label: "It lit on Port 9 too", tone: "good" },
         {
@@ -393,9 +393,10 @@ export const STEPS: Step[] = [
     kind: "safety",
     title: "Five rules before anything gets plugged in",
     action: [
+      "Worth saying before anything else: this equipment works. Your whole display ran a full season — these boxes, these props, this wiring. Someone else set it up and ran it; you are learning to run it yourself. Nothing here is being switched on and hoped over.",
       "Box 4 and Box 1 both passed on September 12, 2026 — you have run this before and your answers are still saved.",
-      "What is left is Box 3, the controller for your plug-in roof and ridge lights. It has never been switched on. The last few screens are about that one.",
-      "These five rules apply to any controller, including Box 3. They have not changed.",
+      "What is left is Box 3, the controller for your plug-in roof and ridge lights. It ran your AC lights last season, but you have never powered it up. The last few screens are about that one.",
+      "These five rules apply to any controller, including Box 3. They are about what your hands are doing, and they have not changed.",
     ],
     options: [
       { id: "ack", label: "I've read all five and I'll follow them", tone: "good" },
@@ -493,15 +494,15 @@ export const STEPS: Step[] = [
     kind: "action",
     title: "Box 3: the one still to do",
     action: [
-      "Box 3 is the controller that runs your plug-in AC lights — the roofline, the ridges and the peaks.",
-      "It has never been powered on and never been tested. Unlike Boxes 4 and 1, it looks like it is wired straight into conduit rather than plugged into an outlet.",
+      "Box 3 is the controller that runs your plug-in AC lights — the roofline, the ridges and the peaks. It ran them all last season, so it is not a suspect box.",
+      "What is true is that YOU have never powered it up, and nobody has ever read its controller number off the board. Unlike Boxes 4 and 1, it looks wired straight into conduit rather than plugged into an outlet.",
       "So the next move is NOT to test it. It is to find out how it is fed with power, safely, from a distance.",
     ],
     expect: [
       "Nothing to do at the bench for this one today. The next three screens are about looking, not touching.",
     ],
     fineprint:
-      "Its controller number has never been read back either. The sequences expect it to be 01. That is what they expect, not what it is — and if it turns out to be something else, the controller gets changed, never the sequences.",
+      "The sequences expect its number to be 01, and your AC lights worked last season, so it very probably is. But nobody has actually read it off the board, so it stays a good guess rather than a fact. If it does turn out to be something else, the controller gets changed, never the sequences.",
     options: [
       { id: "ready", label: "Understood — show me what to look for", tone: "good" },
       { id: "later", label: "Not now — I'll come back to Box 3", tone: "neutral" },

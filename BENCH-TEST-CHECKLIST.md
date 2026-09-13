@@ -1,6 +1,14 @@
-# Bench Test Checklist — First Power-Up
+# Bench Test Checklist — Powering It Up Yourself
 
 **For:** Glen &nbsp;·&nbsp; **Written:** August 31, 2026
+
+> **First, the thing that matters most: this equipment works.** Your whole
+> display — these controllers, these props, this wiring, the Director and its
+> SD card — was set up and run for a full season by someone else, and it ran.
+> Nothing here is a pile of dubious gear being switched on for the first time
+> and hoped over. **What is new is you running it**, and that is what this
+> document is for. Where something below is described as untested, it means
+> untested *by you*, and it says so.
 
 **Status: RUN 12 SEPTEMBER 2026 — BOTH BOXES PASSED.** Box 4 and Box 1 both
 powered up, both answered the software, and both lit a stake on Port 1 and on
@@ -8,8 +16,9 @@ Port 9. What came off the boards that night is recorded in
 `LIGHTCANVAS-HARDWARE-REFERENCE.md` §3. **Box 3, the AC controller, was not
 tested** — that is still ahead of you, and §10 below is why.
 
-Keep this document. It is still the procedure for any controller you power up
-for the first time, including Box 3 and anything you touch at the house.
+Keep this document. It is still the procedure for any controller **you** are
+bringing up for the first time, including Box 3 and anything you touch at the
+house.
 
 This is the plain-English version of Section 9 of
 `LIGHTCANVAS-HARDWARE-REFERENCE.md`. Everything here is either something you
@@ -272,16 +281,17 @@ The rule in one line: **power goes on last and comes off first.**
 
 ---
 
-## 6. First power-up uses the smallest possible load — one stake
+## 6. Start with the smallest possible load — one stake
 
-For the very first power-on, connect **a single pixel stake — 5 pixels**.
-Not a mini tree (100 pixels). Not an arch (25).
+The first time you power a board up yourself, connect **a single pixel stake
+— 5 pixels**. Not a mini tree (100 pixels). Not an arch (25).
 
-**Why:** if a connection is wrong somewhere, you would far rather find that
-out with 5 pixels on the line than with 100. The supply has plenty of
-capacity — 41.7 amps is enormous for this — so **this is not about running
-out of power. It is purely about limiting the damage if something is
-miswired.**
+**Why:** the boards are fine — they ran a season. But *you* are doing the
+plugging now, and if you get a connection wrong you would far rather find out
+with 5 pixels on the line than 100. The supply has plenty of capacity — 41.7
+amps is enormous for this — so **this is not about running out of power. It
+is purely about limiting the damage from a wiring mistake while you are
+learning.**
 
 Once a stake lights correctly on a port, the board and that port are proven,
 and you can move on to bigger props with confidence.
@@ -563,9 +573,16 @@ PORT | UNIT ID     | REFERENCE DOC SAYS         | WHAT LIT UP        | OK?
 
 ## 10. The CTB16PCG3 (Box 3) — the one still to do
 
-**This is now the only untested controller you own**, and it is the reason
-this document is still live rather than finished. Box 4 and Box 1 passed on
-12 September 2026. Box 3 has never been switched on.
+**This is the only controller you have not powered up yourself**, and it is
+the reason this document is still live rather than finished. Box 4 and Box 1
+passed on 12 September 2026.
+
+Be clear about what is and is not unknown here. Box 3 **ran your AC lights
+all last season** — the roofline, the ridges, the peaks. It is not suspect
+equipment. Two things are genuinely open: you have never powered it, and
+**nobody has ever read its unit ID off the board.** The sequences expect `01`
+and the lights did work, so `01` is a reasonable bet — but a bet is not a
+reading.
 
 **It was deliberately left out of that test, and it stays left out until it
 can be done safely.** This is a decision, not an oversight. Two solid
@@ -573,15 +590,17 @@ reasons:
 
 **1. It appears to be hardwired into conduit rather than plugged in.**
 Bench testing it would mean either dismounting it from the wall, or working
-right next to live AC mains. Neither is a sensible thing to do on the first
-day you have ever powered any of this equipment on. There is no upside to
-rushing it.
+right next to live AC mains. Neither is a sensible thing to do while you are
+still getting your hands used to this gear. There is no upside to rushing
+it.
 
-**2. Its unit ID has never been confirmed.** Unlike the two Pixie boxes,
-this controller's unit ID is **not set by DIP switches** — it is set in
-software. Your reference doc lists it as `01`, but that is what your
-*sequences expect*, not something anyone has ever read back off the
-hardware. It is a prediction, not a known value.
+**2. Its unit ID has never been read off the board.** Unlike the two Pixie
+boxes, this controller's unit ID is **not set by DIP switches** — it is set
+in software. Your reference doc lists it as `01`, but that is what your
+*sequences expect*. Your AC lights ran last season, which strongly suggests
+it already is `01` — but "it must be, because the lights worked" is a
+deduction, not a number anyone has seen. It stays an assumption until
+somebody reads it.
 
 ### What has to happen before Box 3 can be tested at all
 

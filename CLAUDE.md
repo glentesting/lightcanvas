@@ -25,17 +25,34 @@ G4-MP3 Director plays.
   for center-out/in chases and fireworks). That is a separate, still-open
   gap; do not describe it as closed. The way to close it: drop a Fireworks
   effect into a sequence, re-export, open in S6.
-- **THE BENCH TEST PASSED.** On **September 12, 2026** both Pixie16 boards
-  were powered up and read back over the USB485-HS: correct unit ID ranges
+- **THIS DISPLAY ALREADY RAN A FULL SEASON.** Same controllers, same props,
+  same wiring, same Director and SD-card workflow — set up and operated
+  successfully by someone else. **The hardware is proven.** What is being
+  rebuilt is the *operator* knowledge: Glen doing himself what that person
+  used to do. Never write these docs as though the gear is of unknown
+  condition; where something is untested, say **untested by him**, and say so
+  explicitly. The genuinely open hardware questions are listed under Known
+  gaps and in the hardware doc §9, and they are smaller than they used to
+  read.
+- **GLEN'S BENCH TEST PASSED.** On **September 12, 2026** — the first time he
+  had powered this gear up himself — both Pixie16 boards
+  were read back over the USB485-HS: correct unit ID ranges
   (`09`–`18` and `30`–`3F`), firmware 1.10, both power halves live, pixels
   lighting in the colour asked for. It also settled the face port topology
   (each face spans two ports) and recorded the pixel ICs (WS2811 on Box 4,
   UCS1903 on Box 1 — different by design). Full record: the hardware doc §3,
   and §11 for the PC-side procedure that worked.
-- **The remaining hardware unknown is Box 3**, the CTB16 AC controller — it
-  was deliberately not tested (hardwired into conduit) and its unit ID has
-  still never been read back. The Director and FM transmitter have also
-  still never been powered on.
+- **The real remaining unknown is the software, not the gear: a
+  LightCanvas-generated sequence has never played on this hardware.**
+  Purchased sequences ran on it all last season; a file this app wrote has
+  opened cleanly in S6 but has never gone onto the SD card and out to the
+  props. That is the risk worth tracking.
+- **Box 3**, the CTB16 AC controller, is the one box **Glen has not powered
+  up** — deliberately skipped (it appears hardwired into conduit). Its unit
+  ID has **never been read back by anyone**; the AC lights ran last season so
+  `01` is a fair assumption, but an assumption is not a reading. The Director
+  and FM transmitter likewise ran the show last season; **he** has just not
+  driven them yet.
 - **Deadline:** the show must run this season. The Sept 3 honesty checkpoint
   on whether this path was working: it is. Fallback remains the 8 purchased
   sequences (their MP3s still need buying — LOR sells sequences without
@@ -50,8 +67,9 @@ G4-MP3 Director plays.
 - `LIGHTCANVAS-HARDWARE-REFERENCE.md` — the physical show: controllers, unit
   IDs, port→prop map, the `.loredit` format, file locations. If it isn't in
   there, it isn't settled.
-- `BENCH-TEST-CHECKLIST.md` — plain-English first power-up procedure for the
-  owner to follow at the bench. **Run 2026-09-12; both Pixie boards passed.**
+- `BENCH-TEST-CHECKLIST.md` — plain-English power-up procedure for the owner
+  to follow at the bench: his first time driving this gear, not the gear's
+  first time running. **Run 2026-09-12; both Pixie boards passed.**
   It stays as the procedure for Box 3 and anything powered up at the house.
   Keep it truthful and keep the Desktop text copy ("LightCanvas - Bench
   Test.txt") in step with it.
@@ -301,12 +319,17 @@ data. UI copy is deliberately jargon-free: "Your Lights", "Make a Show",
 
 ## Hardware state (brief — detail lives in the hardware doc + checklist)
 
+- **Start from this: the display ran a full season and worked.** Controllers,
+  props, wiring, Director, SD-card workflow — all previously operated
+  successfully by someone else. Treat the equipment as proven and the
+  operator experience as the thing being rebuilt.
 - **LOR S6 has been repointed at the moved data folder.** Verified in the
   registry 2026-09-12: `HKCU\Software\Light-O-Rama\Shared` now reads
   `C:\dev\light-o-rama\`. Nothing in this repo depends on that folder — it is
   purely S6's business. If it ever moves again: Control Panel → Settings →
   "Change Light-O-Rama Folder Location".
-- **The bench test was run 2026-09-12 and both Pixie16 boards passed.** The
+- **Glen's bench test ran 2026-09-12 and both Pixie16 boards passed** — his
+  first time bringing them up himself. The
   USB485-HS works — but note **Windows does not supply its driver**; the FTDI
   VCP driver had to be installed by hand, and the adapter came up as COM3.
   The Hardware Utility lives at Control Panel → Controller Setup → Hardware
@@ -324,10 +347,12 @@ data. UI copy is deliberately jargon-free: "Your Lights", "Make a Show",
 - LOR unit IDs are **hexadecimal**; the Hardware Utility can display hex OR
   decimal, so the same boards can read 9–24 and 48–63. Check the mode before
   concluding anything is misaddressed.
-- The **CTB16PCG3's unit ID is software-set and has never been read back** —
-  `01` is what the sequences expect, not a measured value. Still true after
-  the 2026-09-12 bench test: Box 3 was deliberately skipped because it
-  appears hardwired into conduit. Before it can be tested safely, work out
+- The **CTB16PCG3's unit ID is software-set and has never been read back by
+  anyone** — `01` is what the sequences expect, and the AC lights ran fine
+  last season, so it was very probably already `01`. That is inference from
+  behaviour, not a number off the board. Still true after the 2026-09-12
+  bench test: Box 3 was deliberately skipped because it appears hardwired
+  into conduit. Before it can be tested safely, work out
   how it is actually powered, find its breaker, and ideally have someone fit
   it with a cord and plug. Nothing needs connecting to its AC outputs just
   to read the ID. If it turns out not to be `01`, change the controller, not
@@ -361,12 +386,19 @@ once broke env parsing here.
   by adding a Fireworks effect, re-exporting, opening in S6. The three
   synthetic test files in `scripts/loredit-spike/test-fixtures/output/`
   remain available for that.
+- **No LightCanvas-generated sequence has ever played on the hardware.** The
+  largest genuinely open item, and it is about this app rather than the gear
+  — the gear ran a whole season on purchased sequences. Export opens cleanly
+  in S6 (2026-08-31); SD card → Director → props has never been done with a
+  file this app wrote.
 - ~~The hardware bench test has not been run~~ — **CLOSED 2026-09-12**: both
-  Pixie16 boards passed (see Where it stands). What it did NOT cover:
-  **Box 3**, the CTB16 AC controller — never powered, unit ID never read
-  back, and it appears hardwired into conduit, so testing it means sorting
-  out how it is fed first. **The Director and the FM transmitter have also
-  never been powered on**, and nobody knows whether the Director's SD card
+  Pixie16 boards passed, the first time Glen powered them up himself (see
+  Where it stands). What it did NOT cover: **Box 3**, the CTB16 AC
+  controller — *he* has not powered it, its unit ID has never been read back
+  by anyone, and it appears hardwired into conduit, so testing it means
+  sorting out how it is fed first. **The Director and the FM transmitter he
+  has not driven yet** either — they ran last season, so this is unfamiliarity
+  rather than doubt — and nobody has checked whether the Director's SD card
   still holds last season's show.
 - **The ELOR network setting is undecided.** The Control Panel's Networks
   screen had "Use Enhanced LOR (ELOR)" switched on, Regular network on COM3

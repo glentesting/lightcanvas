@@ -18,11 +18,12 @@ ramps and for motion-effect output rendering as intended overall). **Item 4
 is superseded** — since 2026-08-31 the exporter always writes the six-slot
 palette form, the shape LOR itself writes. **Still genuinely unverified in
 S6: the `curtain` grammar** (his show contained zero curtains) **and item 5,
-real-hardware playback** — the 2026-09-12 bench test proved the controllers
-answer and pixels light, but no sequence has ever been played through them.
-The section below is kept
-as the original test plan for reference — the synthetic files remain useful
-for the curtain check.
+a LightCanvas sequence actually playing on the hardware** — the 2026-09-12
+bench test proved the controllers answer and pixels light for Glen, and the
+gear itself ran a full season on purchased sequences, but nothing this app
+wrote has ever gone out to the props. The section below is kept as the
+original test plan for reference — the synthetic files remain useful for the
+curtain check.
 
 ## The file to open in S6 (original plan, superseded by the pass above)
 
@@ -140,11 +141,15 @@ npx tsx scripts/loredit/verify-export.mts
    curtains (they are emitted only for center-out/in chases and fireworks),
    so the Aug 31 pass never exercised it. Close it by adding a Fireworks
    effect, re-exporting, and opening in S6.
-2. **Real-hardware playback** — still open, but narrower than it was. The
-   bench test **was** run on 2026-09-12 and both Pixie16 boards passed: they
-   answer on the network and light pixels in the right colour. What has
-   still never happened is a **sequence playing** — the Director has never
-   been powered on, and Box 3 (AC) has never been tested at all.
+2. **A LightCanvas-generated sequence has never played on the hardware.**
+   This is the biggest genuinely open item in the project, and it is a
+   question about *this software*, not the equipment. The display ran a full
+   season on purchased sequences — controllers, props, Director and SD-card
+   workflow all demonstrably work. What has never been done is taking a file
+   **this app wrote**, putting it on the SD card, and letting the Director
+   play it onto the props. Glen's 12 Sept bench test narrowed the path to it
+   (both Pixie16 boards answer and light pixels for him), but did not touch
+   it. Box 3 (AC) is also still a box *he* has not powered up.
 
 **Closed by the Aug 31, 2026 acceptance pass** (kept here as history; see the
 banner at the top of this doc for the full result):

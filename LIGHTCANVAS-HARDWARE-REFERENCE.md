@@ -10,9 +10,13 @@ file locations, and the `.loredit` format. If it isn't in here, it isn't settled
 > **Bench testing?** The step-by-step procedure lives in
 > **`BENCH-TEST-CHECKLIST.md`** — written in plain English for the owner to
 > follow at a table with the hardware in front of him.
-> **It was run on 12 September 2026 and both Pixie16 boards passed.** What
+> **Glen ran it on 12 September 2026 and both Pixie16 boards passed.** What
 > came off the hardware that night is recorded in §3; the PC-side procedure
-> that worked is §11. Box 3 (the AC controller) was deliberately not tested.
+> that worked is §11. Box 3 (the AC controller) was deliberately skipped.
+>
+> To be clear about what that test was: **this display ran a full season
+> already**, set up and operated by someone else. The gear is proven. The
+> bench test was Glen driving it himself for the first time.
 
 ---
 
@@ -23,9 +27,16 @@ file locations, and the `.loredit` format. If it isn't in here, it isn't settled
 - Export target is **`.loredit`** (S6, saveFileVersion 15). Not `.lms`. Not `.fseq`.
 - Props are **RGBPlus layout** and match the purchased sequences exactly.
 - **Both Pixie16 unit IDs are already set correctly.** Nothing to change.
-- **Both Pixie16 boards were bench-tested 12 Sept 2026 and passed** — they
-  answer on the network, both power halves work, and pixels light in the
-  colour asked for. The AC controller (Box 3) is still untested.
+- **This gear ran a full season.** The whole display — these controllers,
+  these props, this wiring, the Director and its SD card workflow — was set
+  up and run successfully for a previous season by the previous operator.
+  **The equipment is proven. What is new is Glen running it himself.**
+  Nothing in these docs should read as "nobody knows whether this works" —
+  it worked. Where something is untested, say untested *by him*.
+- **Both Pixie16 boards were bench-tested 12 Sept 2026 and passed** — first
+  time Glen had powered them up himself: they answer on the network, both
+  power halves work, pixels light in the colour asked for. The AC controller
+  (Box 3) is the one he has not powered up yet.
 - Fallback show = 8 purchased sequences, playable as-is once audio is sourced.
 
 ---
@@ -121,15 +132,18 @@ hex.** This doc is written in hex throughout, matching the `.loredit` files.
 |---|---|---|---|
 | **Box 4** (Pixie16 — trees/arches/stakes) | `09` | 5 and 8 | ✅ **read back off the board 12 Sept 2026** (`09`–`18`) |
 | **Box 1** (Pixie16 — faces) | `30` | 3 and 4 | ✅ **read back off the board 12 Sept 2026** (`30`–`3F`) |
-| **Box 3** (CTB16PCG3 — AC) | `01` — **expected, never confirmed** | n/a — **software-set, not DIP** | ❌ never read back |
+| **Box 3** (CTB16PCG3 — AC) | `01` — **assumed, never read** | n/a — **software-set, not DIP** | ⚠️ never read back by anyone; the AC lights ran last season, so `01` is a fair assumption, not a measurement |
 
 > **Both Pixie16 boards were already set correctly.** Do not change them.
-> The previous owner addressed this gear to match RGBPlus.
+> The previous operator addressed this gear to match RGBPlus and ran a full
+> season on it.
 
-> ⚠️ **Box 3's unit ID is a prediction, not a fact.** Unlike the Pixie boards it
-> has no DIP switches — its ID is set in software and has **never been read
-> back off the hardware.** `01` is what the purchased sequences expect, which
-> is not the same as knowing what the controller answers to.
+> ⚠️ **Box 3's unit ID is an assumption, not a reading.** Unlike the Pixie
+> boards it has no DIP switches — its ID is set in software and has **never
+> been read back off the hardware by anyone.** `01` is what the purchased
+> sequences expect, and the AC lights did run last season, so it was very
+> probably already `01` — but "it must have been, because the lights worked"
+> is inference, not a number anyone has seen.
 > **If it turns out to be something else, change the controller to `01` — do
 > not change the sequences.** That is one setting in the Hardware Utility
 > versus editing the embedded Preview inside all eight purchased sequences
@@ -143,8 +157,10 @@ reapply power. Changes are not read until power cycle.
 ### Controller settings — read off the hardware
 
 These were read directly off each board on **12 September 2026** using the
-Hardware Utility. Before that night nobody knew what they were. **This is the
-authoritative record** — it replaces every prediction about these boards.
+Hardware Utility. Nobody had written them down before — the boards have been
+running correctly for a season, but their settings existed only on the boards
+themselves. **This is the authoritative record** — it replaces every
+prediction about them.
 
 **Box 4 — mini trees, arches, stakes**
 
@@ -414,17 +430,33 @@ serve as an export template.
 
 ## 9. Not yet verified
 
+**Read the distinction first.** This equipment ran a full season
+successfully — same controllers, same props, same wiring, same Director.
+Nothing below questions whether the gear works; it worked. What is being
+rebuilt is the **operator knowledge**: Glen doing himself what someone else
+used to do. Each item says whose unknown it is.
+
 Ordered by risk.
 
-1. **CTB16 unit ID** — software-set, never read back. Box 3 was deliberately
-   not tested on 12 Sept (it appears hardwired into conduit). Still the
-   largest hardware unknown. **Before it can be tested safely:** work out how
-   it is actually powered (truly hardwired, or is there a plug out of
-   sight?); identify which breaker feeds it and confirm the controller goes
-   dead when that breaker is off; ideally have someone comfortable with mains
-   fit it with a cord and plug so it can be tested like the Pixie boxes.
-   Nothing needs to be connected to its AC outputs just to read its ID.
-2. **The ELOR network setting.** The Control Panel's Networks screen had
+1. **A LightCanvas-generated sequence has never played on this hardware.**
+   This is the real remaining unknown, and it is about the software, not the
+   gear. Purchased sequences ran on these controllers for a whole season. A
+   file this app wrote has opened cleanly in S6 (2026-08-31) but has never
+   been put on the SD card and played through the Director onto the props.
+   Nothing else on this list carries as much risk as this one.
+2. **CTB16 unit ID** — software-set, and **never read back by anyone**.
+   `01` is what the purchased sequences expect. It was presumably correct
+   last season, since the AC lights ran — but presumed-from-behaviour is not
+   the same as read off the board, and it stays an assumption until someone
+   reads it. Box 3 is also **the one controller Glen has not powered up**:
+   deliberately skipped on 12 Sept because it appears hardwired into conduit.
+   **Before he can test it safely:** work out how it is actually powered
+   (truly hardwired, or is there a plug out of sight?); identify which
+   breaker feeds it and confirm the controller goes dead when that breaker is
+   off; ideally have someone comfortable with mains fit it with a cord and
+   plug so it can be tested like the Pixie boxes. Nothing needs to be
+   connected to its AC outputs just to read its ID.
+3. **The ELOR network setting.** The Control Panel's Networks screen had
    **"Use Enhanced LOR (ELOR)" switched on** when first opened, with the
    Regular network on COM3 at 500K. ELOR is a faster protocol only some
    controllers support. It was left untouched during the bench test because
@@ -432,21 +464,25 @@ Ordered by risk.
    did not apply. **Before wiring the house, confirm whether these boards
    support ELOR and set it deliberately** — a controller that does not
    support it simply goes quiet, which looks identical to dead hardware.
-3. **The Director and the FM transmitter have still never been powered on.**
-   The 12 Sept bench test covered the two Pixie16 boards and the USB adapter
-   only.
-4. **Whether the Director's SD card still holds last season's show.**
-5. **Which numbered dongle drives which physical prop** — *low priority*: the
+   Genuinely untested, by anyone.
+4. **The Director and the FM transmitter — Glen has not powered them up.**
+   They ran the show last season, so they are not suspect equipment; he has
+   simply not driven them himself yet. The 12 Sept bench test covered the two
+   Pixie16 boards and the USB adapter only.
+5. **Whether the Director's SD card still holds last season's show** — an
+   unopened question, not a doubt about the card working.
+6. **Which numbered dongle drives which physical prop** — *low priority*: the
    dongles are already band-labelled, so this is a job for deployment day in
    the yard, not the bench (§5).
-6. **AC circuit naming mismatch** (§5).
+7. **AC circuit naming mismatch** (§5).
 
-Resolved by the 12 Sept 2026 bench test, and no longer open: whether anything
-powers on at all; whether both power halves run off the single internal
-supply; colour order on both boards; and the face port topology — each face
-spans two ports (§3, §5).
+Settled by the 12 Sept 2026 bench test and no longer open: both power halves
+run off the single internal supply; colour order on both boards; and the face
+port topology — each face spans two ports (§3, §5). Note that "whether
+anything powers on at all" was never genuinely open — the display ran a full
+season. What Glen settled was that he can bring it up himself.
 
-### First bench test — RUN 12 SEPTEMBER 2026, BOTH PIXIE BOARDS PASSED
+### Glen's first bench test — RUN 12 SEPTEMBER 2026, BOTH PIXIE BOARDS PASSED
 
 The USB485-HS arrived **August 31, 2026**; the test was run **12 September
 2026**. Results are in §3 ("Controller settings — read off the hardware" and
@@ -466,9 +502,10 @@ that was followed:
 3. Confirm the internal supply label (§2), **lid closed**, then mains.
 4. CAT5 from the adapter to either RJ45 on **Box 4**. One controller at a
    time — no daisy chains for this test.
-5. First power-up carries the **smallest possible load: one pixel stake
-   (5 pixels)**, not a tree or an arch. This limits damage if a connection is
-   wrong; it is not a power-headroom question.
+5. Start with the **smallest possible load: one pixel stake (5 pixels)**,
+   not a tree or an arch. This limits damage if *he* miswires something while
+   learning; it is not a power-headroom question and not a doubt about the
+   boards.
 6. **Start → Light-O-Rama Control Panel → Controller Setup → Hardware
    Utility**, pick the COM port under *Ports to Scan*, Scan For =
    **Unit ID range**, Scan. (Menu wording confirmed on 6.6.12, 12 Sept 2026
@@ -477,8 +514,8 @@ that was followed:
    that: `Pixie16, firmware 1.10, Unit ID 09 - 18, COM3`.
 8. Repeat on **Box 1** — expect `30`–`3F` hex / 48–63 decimal. ✅ Confirmed.
 9. **Box 3 is deliberately deferred** — it appears hardwired into conduit and
-   its unit ID has never been confirmed. See the checklist §10 for why and
-   for what must be in place first.
+   its unit ID has never been read back by anyone. See the checklist §10 for
+   why and for what must be in place first.
 10. Fire one port at a time to test. **It is the Configure → Test Pixels tab,
     not the greyed-out "Test Lights" sidebar item** — see §11. Ports 1 and 9
     were tested on each board to cover both power halves.
