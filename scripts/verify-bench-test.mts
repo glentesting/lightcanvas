@@ -51,10 +51,14 @@ check("Box 4 port 9 predicts Arch 01 + Arch 02", BOX_4_PORTS[8].expected === "Ar
 check("Box 4 port 13 predicts Pixel Stakes 01–10", BOX_4_PORTS[12].expected === "Pixel Stakes 01–10");
 check("Box 4 port 16 predicts Pixel Stakes 31–40", BOX_4_PORTS[15].expected === "Pixel Stakes 31–40");
 check("Box 1 table covers ports 1–8", BOX_1_PORTS.length === 8);
-check("Box 1 faces sit on the odd ports", ["Elden", "Felix", "Ralphie", "Zuzu"].every(
-  (face, i) => BOX_1_PORTS[i * 2].expected === face));
-check("Box 1 even ports say unknown", [1, 3, 5, 7].every(
-  (i) => BOX_1_PORTS[i].expected.startsWith("unknown")));
+// Each face spans two consecutive ports — confirmed off the board 12 Sept
+// 2026, so the table must now state that rather than guess at it.
+check("Box 1 faces each span two consecutive ports", ["Elden", "Felix", "Ralphie", "Zuzu"].every(
+  (face, i) =>
+    BOX_1_PORTS[i * 2].expected === `${face} (first half)` &&
+    BOX_1_PORTS[i * 2 + 1].expected === `${face} (second half)`));
+check("Box 1 port table no longer calls any port unknown",
+  BOX_1_PORTS.every((r) => !r.expected.toLowerCase().includes("unknown")));
 
 /* ── step structure ── */
 console.log("\n── step structure ──");

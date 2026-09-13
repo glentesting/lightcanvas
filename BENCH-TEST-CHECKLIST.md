@@ -118,40 +118,37 @@ to be bought.
 
 **The Light-O-Rama Hardware Utility.**
 
-📖 **GENERAL LOR KNOWLEDGE** — two ways to find it:
+✅ **CONFIRMED on your PC, 12 September 2026.** It is **not** its own
+program and it does **not** appear in the Start menu on its own. It lives
+inside the Control Panel:
 
-- Look at the bottom-right of your screen near the clock for a small
-  Light-O-Rama icon. It may be hidden behind a small **^** arrow — click
-  that to show hidden icons. Right-click the LOR icon and look for
-  **Hardware Utility** in the menu.
-- Or click Start, type `Light-O-Rama`, and look for **Light-O-Rama Hardware
-  Utility** in the results.
+**Start → Light-O-Rama Control Panel → Controller Setup → Hardware Utility**
 
-❓ **OPEN QUESTION** — your reference doc describes a slightly different
-route (Control Panel → Networks, then Control Panel → Controller Setup).
-Version 6.6.12 may name these menus differently from what I expect. **Do not
-hunt for exact wording.** Open whichever of these you can find, take a photo
-of what you see, and tell me. I will guide you from your actual screen
-rather than from a guess.
+The Control Panel also sits in the system tray near the clock, possibly
+behind the small **^** arrow — right-clicking that icon offers the Hardware
+Utility directly.
+
+⚠️ Closing the Control Panel window does **not** exit it. If you need it to
+restart and re-scan for adapters, use **Exit** from the tray icon.
 
 ### Does the adapter need a driver?
 
-📖 **GENERAL LOR KNOWLEDGE.** The USB485-HS uses a common USB-to-serial chip.
-Windows 11 normally installs the driver by itself within a minute of you
-plugging it in.
+✅ **YES — and Windows will not do it for you.** This was the first thing
+that went wrong on 12 September 2026. Without the driver the adapter never
+becomes a COM port and the Hardware Utility reports that no ports were
+found, which looks exactly like broken hardware.
 
-**How you will know it worked:** when you open the Hardware Utility, there is
-a list or dropdown of **COM ports**. Plug the adapter in, then open that list.
-If a COM port is there that was not there before (COM3, COM4, COM5 — the
-number does not matter), the driver installed and you are fine.
+It is already installed on your PC. You only need this again on a different
+computer, or if the adapter stops being seen:
 
-**If no COM port appears:**
-
-1. Unplug the adapter, wait ten seconds, plug it into a *different* USB
-   socket on the PC. Give it a minute.
-2. If still nothing — **stop and tell me.** The fix involves running the
-   Light-O-Rama driver installer, and I would rather walk you through that
-   step by step than have you guess at it.
+1. Plug the adapter in. Right-click Start → **Device Manager**. With no
+   driver it shows under **Other devices** as `FT232R USB UART` with a
+   yellow warning triangle.
+2. Get the **FTDI VCP driver** from <https://ftdichip.com/drivers/vcp-drivers/>
+   — take the Windows **setup executable**, not the zip.
+3. Run it, then unplug and replug the adapter.
+4. Check Device Manager now has a **Ports (COM & LPT)** section with a
+   **USB Serial Port** under it. On your PC it came up as **COM3**.
 
 *(Optional, only if you are curious: right-click the Start button → Device
 Manager → expand **Ports (COM & LPT)**. The adapter shows up there as a USB
@@ -564,10 +561,15 @@ PORT | UNIT ID     | REFERENCE DOC SAYS         | WHAT LIT UP        | OK?
 
 ---
 
-## 10. The CTB16PCG3 (Box 3) — deliberately NOT part of today's test
+## 10. The CTB16PCG3 (Box 3) — the one still to do
 
-**Do not bench test Box 3 today.** This is a deliberate decision, not an
-oversight. Two solid reasons:
+**This is now the only untested controller you own**, and it is the reason
+this document is still live rather than finished. Box 4 and Box 1 passed on
+12 September 2026. Box 3 has never been switched on.
+
+**It was deliberately left out of that test, and it stays left out until it
+can be done safely.** This is a decision, not an oversight. Two solid
+reasons:
 
 **1. It appears to be hardwired into conduit rather than plugged in.**
 Bench testing it would mean either dismounting it from the wall, or working
@@ -575,11 +577,33 @@ right next to live AC mains. Neither is a sensible thing to do on the first
 day you have ever powered any of this equipment on. There is no upside to
 rushing it.
 
-**2. Its unit ID has never been confirmed.** ✅ Unlike the two Pixie boxes,
+**2. Its unit ID has never been confirmed.** Unlike the two Pixie boxes,
 this controller's unit ID is **not set by DIP switches** — it is set in
 software. Your reference doc lists it as `01`, but that is what your
 *sequences expect*, not something anyone has ever read back off the
 hardware. It is a prediction, not a known value.
+
+### What has to happen before Box 3 can be tested at all
+
+None of this involves powering it up, and none of it should put you near
+live mains. The guided walkthrough in the app now ends on these same three
+questions.
+
+- [ ] **Work out how it is actually fed.** Look — do not open it, do not
+      unscrew anything. Follow the cable with your eyes. Is there a plug on
+      the end of it tucked out of sight, or does it vanish into conduit with
+      no plug at all? Photograph the box and where its cable goes.
+- [ ] **Find the breaker that kills it.** Switch off the breaker you think
+      feeds it, confirm Box 3 has actually gone dead, switch it back on, and
+      write down which breaker it was. This is worth doing even if you never
+      touch the box.
+- [ ] **If it is hardwired: stop there.** Someone comfortable with mains
+      fits it with a cord and plug. Then it can be tested exactly the way
+      Boxes 4 and 1 were — unplug, connect the adapter, lid on, plug in,
+      scan.
+
+Nothing needs to be connected to Box 3's light outputs just to read its
+unit ID.
 
 ### What happens if it eventually reads back something other than 01
 

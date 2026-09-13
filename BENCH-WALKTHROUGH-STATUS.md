@@ -7,19 +7,44 @@ failure. This session built the same test into the app as a one-step-at-a-time
 walkthrough. Written for you, plain English.
 
 > **The test has since been run — 12 September 2026, both Pixie boards
-> passed.** The walkthrough stays in the app for re-runs (Box 3, or setting
-> up at the house) and its copy has been corrected against what actually
-> happened that night: the Hardware Utility's real menu path, the fact that
-> testing a port is the **Configure → Test Pixels** tab rather than the
-> greyed-out "Test Lights" sidebar item, and the FTDI driver step Windows
-> does not do for you. The Projects-page card now says both boxes passed.
+> passed.** Its copy has been corrected against what actually happened that
+> night: the Hardware Utility's real menu path, the fact that testing a port
+> is the **Configure → Test Pixels** tab rather than the greyed-out "Test
+> Lights" sidebar item, and the FTDI driver step Windows does not do for you.
+>
+> **Reframed around Box 3 on 13 September 2026.** The walkthrough is not
+> "done" — Box 4 and Box 1 are done, and Box 3 has never been switched on.
+> It is now 23 steps: the same safety rules and the same connection
+> procedure (both apply to any controller), then three new Box 3 screens.
+>
+> **The Box 3 screens deliberately do not test anything.** Box 3 looks wired
+> straight into conduit rather than plugged in, so the honest next move is
+> finding out how it is fed — not powering it up. The screens ask him to
+> look at how the cable leaves the box, and to find and confirm the breaker
+> that kills it. Both are eyes-only. If it turns out to be hardwired, the
+> guidance says an electrician fits a cord and plug before anything else
+> happens. Nothing on these screens puts him near live mains.
+>
+> **His September answers are preserved.** Answers live in localStorage
+> keyed by step id, so adding steps cannot lose them — but the saved
+> *position* would have pointed at the wrong screen, and could have skipped
+> past the new Box 3 work. `store.ts` is therefore persist **version 2**
+> with a `migrate` that keeps every answer, port note and start time, and
+> recomputes the position to the first step with no answer — which lands him
+> on "Box 3: the one still to do". Verified by seeding a v1 twenty-answer
+> run and reloading: 20/20 answers kept, port notes kept, position 18.
+>
+> Also corrected: the Box 1 port table used to say ports 2, 4, 6 and 8 were
+> "unknown". Each face spans two consecutive ports — read off the board on
+> 12 September — so the table now says so, and the verification suite
+> asserts no port is described as unknown.
 
 ## What you get
 
 Open LightCanvas → Projects page → the yellow card that says **"Test your
 light boxes."** (Or go straight to `/bench-test`.) Then:
 
-- **One step per screen.** 20 steps. Never two things at once, never step 7
+- **One step per screen.** 23 steps (20 through Box 4 and Box 1, then 3 for Box 3). Never two things at once, never step 7
   visible while you're on step 3. Big text, big buttons, made to be read
   from a step back while your hands are on a controller.
 - **Every screen tells you three things:** what to physically do, what

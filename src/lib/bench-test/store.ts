@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { TOTAL_STEPS } from "./steps";
+import { STEPS, TOTAL_STEPS } from "./steps";
 
 /**
  * Bench-test progress, saved in the browser on every tap.
@@ -70,6 +70,29 @@ export const useBenchTestStore = create<BenchTestState>()(
     {
       name: "lightcanvas-bench-test-v1",
       storage: createJSONStorage(() => localStorage),
+      /**
+       * v2 (2026-09-13): three Box 3 screens were added before the two port
+       * tables, which shifted every index after them. A saved stepIndex from
+       * the September 12 run would now point at the wrong screen — possibly
+       * past the new work, which is the one thing we must not do.
+       *
+       * Answers are keyed by step id, never by index, so they are carried
+       * over untouched. Only the position is recomputed: land on the first
+       * screen that has no answer yet, which is where the remaining work
+       * actually starts.
+       */
+      version: 2,
+      migrate: (persisted, fromVersion) => {
+        const state = persisted as Partial<BenchTestState> | undefined;
+        if (!state || fromVersion >= 2) return state as BenchTestState;
+        const answers = state.answers ?? {};
+        const firstUnanswered = STEPS.findIndex((step) => !answers[step.id]);
+        return {
+          ...(state as BenchTestState),
+          answers,
+          stepIndex: firstUnanswered === -1 ? TOTAL_STEPS : firstUnanswered,
+        };
+      },
     }
   )
 );

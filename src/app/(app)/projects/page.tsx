@@ -251,12 +251,12 @@ function BenchTestCard() {
         🔌
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold">Test your light boxes — both passed</p>
+        <p className="text-sm font-semibold">Your light boxes — Box 4 and Box 1 passed, Box 3 still to do</p>
         <p className="text-xs mt-0.5" style={{ color: "var(--ink-3)" }}>
-          You powered up both controller boxes on September 12 and both came through clean.
-          The walkthrough is still here if you want to run it again — on a box you have
-          worked on, or when you set up at the house. One thing per screen, and it
-          remembers where you were.
+          You powered up both pixel boxes on September 12 and both came through clean. Box 3,
+          the one that runs your plug-in roof and ridge lights, has never been switched on —
+          it looks wired straight into conduit, so the walkthrough now ends by working out how
+          it is fed before anyone touches it. Your answers from September are still saved.
         </p>
       </div>
       <Link

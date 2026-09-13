@@ -56,10 +56,15 @@ G4-MP3 Director plays.
   Keep it truthful and keep the Desktop text copy ("LightCanvas - Bench
   Test.txt") in step with it.
 - `BENCH-WALKTHROUGH-STATUS.md` — the guided in-app version of that test
-  (`/bench-test`, 2026-09-07): what it does, where answers live, how it was
-  verified. The checklist stays the content source; the walkthrough's steps
-  live in `src/lib/bench-test/steps.ts` and must stay faithful to it —
-  `scripts/verify-bench-test.mts` enforces the numbers.
+  (`/bench-test`, 2026-09-07; reframed around Box 3 on 2026-09-13): what it
+  does, where answers live, how it was verified. The checklist stays the
+  content source; the walkthrough's steps live in
+  `src/lib/bench-test/steps.ts` and must stay faithful to it —
+  `scripts/verify-bench-test.mts` enforces the numbers. **Never renumber or
+  rename a step id**: the owner's answers are keyed by id in his browser, and
+  changing one silently orphans his record of the 12 Sept run. Adding steps
+  needs a persist `version` bump plus a `migrate` in
+  `src/lib/bench-test/store.ts` (v2 does this).
 - `BENCH-TEST-DIRECT-CONTROL-FEASIBILITY.md` — honest answer to "could the
   app drive the USB adapter itself?" (short: partly possible, not before the
   season; the Hardware Utility stays the tool).
@@ -98,7 +103,7 @@ Beat detection is hand-rolled (`src/lib/audio/beat-detector.ts`).
 | `/project/[id]/layout` | Layout editor: photo upload, exact coro prop shapes, identity colors, marquee multi-select + bulk delete, click-to-trace roof strings, "Place a Row", visible Undo/Redo + post-action undo toast, real Night Preview (ShowCanvas) |
 | `/timeline?project=` | Timeline editor: live show preview strip, playhead + follow-scroll + ruler seek, effect blocks, beat snap, undo/redo, group ("set") tracks, copy / paste-at-beat / repeat-every-bar |
 | `/designer` | Redirects into the loaded project |
-| `/bench-test` | Guided hardware bench test: one step per screen, five safety rules first, hex/decimal matching, port write-in tables, copyable results. Progress persists in localStorage (`lightcanvas-bench-test-v1`); entry card on `/projects` |
+| `/bench-test` | Guided hardware bench test, 23 steps: one step per screen, five safety rules first, hex/decimal matching, port write-in tables, copyable results. **Box 4 and Box 1 passed 2026-09-12; the walkthrough now ends on three Box 3 screens** — Box 3 is look-don't-touch (find how it is powered, find its breaker), never a live-mains instruction. Progress persists in localStorage (`lightcanvas-bench-test-v1`, persist version 2 — answers are keyed by step id and migrate forward, never wiped); entry card on `/projects` |
 | `/dev/stage`, `/dev/visualizer-v2` | Dev harnesses (404 in prod) |
 
 API: `projects` (list/create/get/patch/delete/duplicate), `autosave`,
@@ -114,6 +119,16 @@ API: `projects` (list/create/get/patch/delete/duplicate), `autosave`,
   The three.js photo night-stage reads the same `expandFixturePixels`.
   Idle = identity colors (`src/lib/fixtures/identity.ts` — the ONLY prop
   color table); playing = engine colors. Never add another draw path.
+- **ONE project loader.** `src/lib/store/use-project-load.ts` is the only
+  way a page pulls a project into the store — the designer, the layout
+  editor and the timeline all use it, and all render
+  `src/components/ProjectLoadGate.tsx`. Before 2026-09-13 each page did its
+  own fetch and they had drifted: the layout editor had no `.catch` at all,
+  so a failed load span the spinner forever. **A load that does not finish
+  must become a visible error.** The hook enforces that three ways — a
+  failed response, a 20s timeout, and a loop guard (more than 5 loads of the
+  same project in 10s) — and every error screen offers Try again plus a way
+  back to Projects. Never add a fourth hand-rolled fetch-and-spin.
 - **Transport is shared.** WaveSurfer (timeline) and the designer play bar
   publish to `useTransportStore`; `registerSeekHandler`/`requestSeek` route
   seeks to whoever owns the audio. The timeline has a playhead,
@@ -256,11 +271,21 @@ resolves the owner's MP3 relative to the repo for this reason.
 
 ```bash
 cd "C:/dev/lightcanvas/AppRepo"
-npm run dev      # Dev server (or .claude/launch.json "dev")
-npm run build    # Production build
+npm run dev      # Dev server (or .claude/launch.json "dev") — owns .next
+npm run build    # Production build — writes .next-build, never .next
 npx tsc --noEmit # Type check
 npm run lint     # ESLint (baseline: 3 warnings in scripts/loredit-spike)
 ```
+
+⚠️ **Always build through `npm run build`, never bare `npx next build`.**
+A production build and a running dev server must not share a build
+directory. On 2026-09-12 a verification `npx next build` ran while the
+owner's dev server was live; it overwrote `.next` underneath the dev server,
+which then rebuilt in a loop for two days while his project page sat on
+"Loading project..." and refetched 1.3 MB every 8 ms. He lost two days of
+the app. `npm run build` now sets `NEXT_BUILD_DIR=.next-build`
+(`scripts/build.mjs` → `next.config.ts`), so builds and the dev server can
+run at the same time. `npm run start` uses the same directory.
 
 The owner starts the app via `Start LightCanvas.bat` on his Desktop (starts
 the dev server, opens the browser; handles a busy port 3000) — **check

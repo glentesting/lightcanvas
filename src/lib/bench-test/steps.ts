@@ -106,14 +106,16 @@ export const BOX_4_PORTS: PortRow[] = [
 }));
 
 export const BOX_1_PORTS: PortRow[] = [
-  "Elden",
-  "unknown — possibly the second half of Elden",
-  "Felix",
-  "unknown — possibly the second half of Felix",
-  "Ralphie",
-  "unknown — possibly the second half of Ralphie",
-  "Zuzu",
-  "unknown — possibly the second half of Zuzu",
+  // Confirmed 12 Sept 2026 by reading Box 1's own configuration: each face
+  // spans two consecutive ports. These are no longer predictions.
+  "Elden (first half)",
+  "Elden (second half)",
+  "Felix (first half)",
+  "Felix (second half)",
+  "Ralphie (first half)",
+  "Ralphie (second half)",
+  "Zuzu (first half)",
+  "Zuzu (second half)",
 ].map((expected, i) => ({
   port: i + 1,
   unitHex: BOX_1.hexList[i],
@@ -390,7 +392,11 @@ export const STEPS: Step[] = [
     id: "safety",
     kind: "safety",
     title: "Five rules before anything gets plugged in",
-    action: [],
+    action: [
+      "Box 4 and Box 1 both passed on September 12, 2026 — you have run this before and your answers are still saved.",
+      "What is left is Box 3, the controller for your plug-in roof and ridge lights. It has never been switched on. The last few screens are about that one.",
+      "These five rules apply to any controller, including Box 3. They have not changed.",
+    ],
     options: [
       { id: "ack", label: "I've read all five and I'll follow them", tone: "good" },
     ],
@@ -412,7 +418,7 @@ export const STEPS: Step[] = [
       "No power supplies to fetch — each box has its own inside and plugs straight into the wall.",
     ],
     fineprint:
-      "You have done this before — both boxes passed on September 12, 2026. Nothing below has changed; run it again the same way.",
+      "Only needed if you are re-running Box 4 or Box 1 — both already passed on September 12, 2026. If you are only here for Box 3, skip ahead; nothing below gets plugged in for that one.",
     options: [
       { id: "ok", label: "It's all on the table", tone: "good" },
       {
@@ -478,6 +484,76 @@ export const STEPS: Step[] = [
     ],
   },
   ...boxSteps(BOX_1),
+  /* ── Box 3: the one that is still ahead of him ──────────────────────
+   * Deliberately not a test. Box 3 appears hardwired into conduit, so the
+   * honest next move is working out how it is powered — not powering it up.
+   * These screens capture that, and nothing here asks him near live mains. */
+  {
+    id: "box3-intro",
+    kind: "action",
+    title: "Box 3: the one still to do",
+    action: [
+      "Box 3 is the controller that runs your plug-in AC lights — the roofline, the ridges and the peaks.",
+      "It has never been powered on and never been tested. Unlike Boxes 4 and 1, it looks like it is wired straight into conduit rather than plugged into an outlet.",
+      "So the next move is NOT to test it. It is to find out how it is fed with power, safely, from a distance.",
+    ],
+    expect: [
+      "Nothing to do at the bench for this one today. The next three screens are about looking, not touching.",
+    ],
+    fineprint:
+      "Its controller number has never been read back either. The sequences expect it to be 01. That is what they expect, not what it is — and if it turns out to be something else, the controller gets changed, never the sequences.",
+    options: [
+      { id: "ready", label: "Understood — show me what to look for", tone: "good" },
+      { id: "later", label: "Not now — I'll come back to Box 3", tone: "neutral" },
+      UNSURE,
+    ],
+  },
+  {
+    id: "box3-power",
+    kind: "observe",
+    title: "Box 3: how is it actually fed?",
+    action: [
+      "Look at Box 3 where it sits. Do not open it, do not unscrew anything, do not touch the wiring.",
+      "Follow the cable leaving it with your eyes only. Is there a plug on the end of it hiding behind something — or does it disappear into conduit with no plug at all?",
+      "Take a photo of the box and of where its cable goes.",
+    ],
+    expect: [
+      "Either answer is useful. A hidden plug makes this easy. No plug means an electrician fits a cord before anything else happens.",
+    ],
+    alwaysNote: true,
+    notePrompt: "What did you see? A plug, or wired straight in?",
+    options: [
+      { id: "plug", label: "There IS a plug — it comes out of an outlet", tone: "good",
+        guidance: "That is the good outcome. It can then be tested exactly like Boxes 4 and 1 were: unplug it, connect the adapter, lid on, plug in, scan." },
+      { id: "hardwired", label: "No plug — it goes straight into conduit", tone: "warn",
+        guidance: "Expected, and not a problem to solve tonight. It means someone comfortable with mains fits it with a cord and plug first. Note it and stop there." },
+      UNSURE,
+    ],
+  },
+  {
+    id: "box3-breaker",
+    kind: "observe",
+    title: "Box 3: which breaker kills it?",
+    action: [
+      "At your breaker panel, find the breaker you believe feeds the outside lights or that part of the house.",
+      "Switch it off, then check that Box 3 really has gone dead — no lights on it, nothing humming.",
+      "Switch it back on. Write down which breaker it was and how it is labelled.",
+    ],
+    expect: [
+      "Knowing the breaker by name is what makes any later work on Box 3 safe. This is worth doing even if you never touch the box.",
+    ],
+    fineprint:
+      "Nothing needs to be connected to Box 3's light outputs just to read its controller number later. Finding the breaker is the useful part today.",
+    alwaysNote: true,
+    notePrompt: "Which breaker, and did Box 3 go dead when you switched it off?",
+    options: [
+      { id: "found", label: "Found it — Box 3 goes dead when it's off", tone: "good" },
+      { id: "notsure", label: "Couldn't tell which breaker it is", tone: "warn", wantsNote: true,
+        notePrompt: "What did you try?",
+        guidance: "Leave it. Do not guess your way around live mains — an electrician can identify it in minutes when they fit the cord." },
+      UNSURE,
+    ],
+  },
   {
     id: "box4-ports",
     kind: "porttable",
@@ -502,13 +578,13 @@ export const STEPS: Step[] = [
     kind: "porttable",
     title: "Box 1: which face is on which port?",
     action: [
-      "Same idea, optional today. Cord out, plug a face in, cord in, Test Lights on that port's number, write down what lit.",
-      "There's a real mystery here: the papers say the faces sit on every OTHER port, and nobody knows what the in-between ports do. If a face lights half on one number and half on the next, that solves it — write it down.",
+      "Same idea, optional today. Cord out, plug a face in, cord in, run the Test Pixels tab on that port, write down what lit.",
+      "The old mystery here is solved: each face spans TWO ports, so Elden is ports 1 and 2 together, Felix is 3 and 4, and so on. That was confirmed off the board on September 12, 2026.",
     ],
     table: {
       boxLabel: "Box 1",
       rows: BOX_1_PORTS,
-      footnote: "Ports 9–16 exist on this box too, but nothing is known to be plugged into them.",
+      footnote: "Ports 9–16 exist on this box too, but nothing is plugged into them.",
     },
     options: [
       { id: "done", label: "I've filled in what I tested", tone: "good" },
@@ -521,8 +597,9 @@ export const STEPS: Step[] = [
 export const TOTAL_STEPS = STEPS.length;
 
 /** Which box a step belongs to, for the summary grouping. */
-export function stepBox(id: string): "Box 4" | "Box 1" | null {
+export function stepBox(id: string): "Box 4" | "Box 1" | "Box 3" | null {
   if (id.startsWith("box4")) return "Box 4";
   if (id.startsWith("box1")) return "Box 1";
+  if (id.startsWith("box3")) return "Box 3";
   return null;
 }
