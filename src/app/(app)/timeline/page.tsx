@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useRef } from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import WaveformViewer from "@/components/WaveformViewer";
@@ -8,8 +8,8 @@ import Timeline, { PaletteEffectChip, TimelineDndProvider, useTimelineShortcuts 
 import ShowCanvas from "@/components/stage/ShowCanvas";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { useAutosave } from "@/lib/store/use-autosave";
-import { projectFromRow } from "@/types/domain";
-import { createDefaultFixtures } from "@/lib/fixtures/defaults";
+import { useProjectLoad } from "@/lib/store/use-project-load";
+import { ProjectLoading, ProjectLoadError } from "@/components/ProjectLoadGate";
 import { EFFECT_COLORS, EFFECT_NAMES } from "@/lib/timeline/constants";
 import type { EffectId } from "@/lib/timeline/types";
 
@@ -17,54 +17,22 @@ function TimelineContent() {
   const searchParams = useSearchParams();
   const projectId = searchParams.get("project");
 
-  const [loaded, setLoaded] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const loadedRef = useRef(false);
+  // Shared loader — owns the timeout, loop guard and error text.
+  const { loaded, error: loadError, retry: retryLoad } = useProjectLoad(projectId);
 
   // Store selectors
   const name = useEditorStore((s) => s.name);
-  const storeProjectId = useEditorStore((s) => s.projectId);
   const audioUrl = useEditorStore((s) => s.audioUrl);
   const audioAnalysis = useEditorStore((s) => s.audio);
   const housePhoto = useEditorStore((s) => s.houseCustomSvg);
   const saveStatus = useEditorStore((s) => s.saveStatus);
-  const loadProject = useEditorStore((s) => s.loadProject);
 
   // Autosave + keyboard shortcuts
   useAutosave(projectId ?? "");
   useTimelineShortcuts();
 
   // If the project is already loaded in the store (navigated from Designer), skip fetch
-  const alreadyLoaded = storeProjectId === projectId && storeProjectId !== "";
 
-  // Load project from API if needed
-  useEffect(() => {
-    if (!projectId || loadedRef.current || alreadyLoaded) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (alreadyLoaded) setLoaded(true);
-      return;
-    }
-    loadedRef.current = true;
-    fetch(`/api/projects/${projectId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error(res.status === 404 ? "Project not found" : "Failed to load project");
-        return res.json();
-      })
-      .then((row) => {
-        const project = projectFromRow(row);
-        if (project.fixtures.length < 6) {
-          const defaults = createDefaultFixtures();
-          project.fixtures = defaults;
-          project.sequence = {
-            ...project.sequence,
-            tracks: defaults.map((f) => ({ id: f.id, kind: "fixture" as const })),
-          };
-        }
-        loadProject(project);
-        setLoaded(true);
-      })
-      .catch((err) => setLoadError(err.message));
-  }, [projectId, loadProject, alreadyLoaded]);
 
   if (!projectId) {
     return (
@@ -85,32 +53,8 @@ function TimelineContent() {
     );
   }
 
-  if (loadError) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center gap-4" style={{ background: "var(--bg)" }}>
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "var(--panel)", color: "var(--ink-3)" }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-        </div>
-        <p className="text-sm font-medium">{loadError}</p>
-        <Link href="/projects" className="text-sm px-4 py-2 rounded-md" style={{ background: "var(--accent)", color: "#fff" }}>
-          Back to Projects
-        </Link>
-      </div>
-    );
-  }
-
-  if (!loaded) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center gap-3" style={{ background: "var(--bg)" }}>
-        <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--line)", borderTopColor: "transparent" }} />
-        <p className="text-sm" style={{ color: "var(--ink-3)" }}>Loading project...</p>
-      </div>
-    );
-  }
+  if (loadError) return <ProjectLoadError message={loadError} onRetry={retryLoad} />;
+  if (!loaded) return <ProjectLoading />;
 
   const audioApiUrl = audioUrl ? `/api/audio/${projectId}` : null;
 

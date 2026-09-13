@@ -2,21 +2,21 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useRef, useState, useCallback, useMemo } from "react";
 import LayoutEditor from "@/components/LayoutEditor";
 import LoreditImportDialog from "@/components/LoreditImportDialog";
 import { useEditorStore } from "@/lib/store/editor-store";
 import { useAutosave } from "@/lib/store/use-autosave";
 import { useUndoRedo, useUndoShortcuts } from "@/lib/store/use-undo";
-import { projectFromRow } from "@/types/domain";
-import { createDefaultFixtures } from "@/lib/fixtures/defaults";
+import { useProjectLoad } from "@/lib/store/use-project-load";
+import { ProjectLoading, ProjectLoadError } from "@/components/ProjectLoadGate";
 
 export default function LayoutPage() {
   const params = useParams();
   const projectId = params.id as string;
-  const [loaded, setLoaded] = useState(false);
-  const loadedRef = useRef(false);
-  const loadProject = useEditorStore((s) => s.loadProject);
+  // Shared loader — owns the timeout, loop guard and error text. This page
+  // previously had no .catch at all: a failed load span the spinner forever.
+  const { loaded, error: loadError, retry: retryLoad } = useProjectLoad(projectId);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
   const houseCustomSvg = useEditorStore((s) => s.houseCustomSvg);
@@ -41,30 +41,7 @@ export default function LayoutPage() {
   useUndoShortcuts();
   const { canUndo, canRedo, undo, redo } = useUndoRedo();
 
-  useEffect(() => {
-    if (loadedRef.current) return;
-    loadedRef.current = true;
-    if (useEditorStore.getState().projectId === projectId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLoaded(true);
-      return;
-    }
-    fetch(`/api/projects/${projectId}`)
-      .then((res) => res.json())
-      .then((row) => {
-        const project = projectFromRow(row);
-        if (project.fixtures.length < 6) {
-          const defaults = createDefaultFixtures();
-          project.fixtures = defaults;
-          project.sequence = {
-            ...project.sequence,
-            tracks: defaults.map((f) => ({ id: f.id, kind: "fixture" as const })),
-          };
-        }
-        loadProject(project);
-        setLoaded(true);
-      });
-  }, [projectId, loadProject]);
+
 
   const handlePhotoUpload = useCallback(async (file: File) => {
     setUploadingPhoto(true);
@@ -82,16 +59,8 @@ export default function LayoutPage() {
     }
   }, [projectId, setHousePhoto]);
 
-  if (!loaded) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div
-          className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin"
-          style={{ borderColor: "var(--line)", borderTopColor: "transparent" }}
-        />
-      </div>
-    );
-  }
+  if (loadError) return <ProjectLoadError message={loadError} onRetry={retryLoad} />;
+  if (!loaded) return <ProjectLoading />;
 
   return (
     <div className="flex flex-col h-full" style={{ background: "#FFFFFF" }}>
