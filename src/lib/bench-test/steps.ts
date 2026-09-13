@@ -251,16 +251,16 @@ function boxSteps(box: BoxDef): Step[] {
       kind: "action",
       title: `${box.name}: make the software find it`,
       action: [
-        "On your computer, open the Light-O-Rama Hardware Utility. (Look near the clock at the bottom-right for the LOR icon — it may hide behind the little ^ arrow. Right-click it. Or click Start and type Light-O-Rama.)",
-        "Pick the COM port for the adapter — it's the one that appeared after you plugged the adapter in.",
-        "If there's a box for the highest number to search, set it to at least 64.",
-        "Click Refresh (it may be called Search, Scan, or Auto Configure).",
+        "Open the Hardware Utility. It isn't its own program — go Start → Light-O-Rama Control Panel → Controller Setup → Hardware Utility. (Or right-click the LOR icon near the clock, behind the little ^ arrow, and pick it from there.)",
+        "Under Ports to Scan, pick the COM port for the adapter — it's the one that appeared after you plugged the adapter in. Last time it was COM3. If it says no ports were found, press the refresh icon, the circle with an arrow.",
+        "Under Scan For, choose the option that searches a range of controller numbers.",
+        "Click Scan.",
       ],
       expect: [
-        "A list of numbered controllers should appear. Don't worry yet about what the numbers are — that's the next screen.",
+        "One line should come back describing the whole board at once — the kind of board, its firmware, and a range of numbers, like: Pixie16, firmware 1.10, 09 - 18, COM3. Don't worry yet about what the numbers are — that's the next screen.",
       ],
       fineprint:
-        "The exact menu names in your version haven't been checked by anyone, so if yours are worded differently, that's expected — go by the closest match.",
+        "If nothing appears at all and the COM port is missing entirely, the adapter's driver may need reinstalling — that's the FTDI driver from ftdichip.com. It was installed on this computer on September 12, so it should already be there.",
       options: [
         { id: "found", label: "A list appeared", tone: "good" },
         {
@@ -313,10 +313,13 @@ function boxSteps(box: BoxDef): Step[] {
       kind: "action",
       title: `${box.name}: light the stake on Port 1`,
       action: [
-        "In the Hardware Utility, find the Test Lights section (its layout varies — you generally pick a controller number, a colour, and turn the test on).",
-        `Pick controller number ${box.port1Hex} — or ${box.port1Dec} if your list was the numbers-only kind.`,
-        "Pick a colour you'll recognise, like red, and turn the test on.",
+        "Click Configure next to your controller in the list, then the Test Pixels tab along the top. (Test Lights in the left sidebar will be greyed out — that's normal and not a problem.)",
+        "Under Select Strings to Test, click Select None, then tick only Port 1.",
+        "Under Color Cycle, click Select None, then tick one colour you'll recognise, like red. One steady colour is much easier to judge than a cycle.",
+        "Flip Run Test to On. Flip it back off when you're done looking.",
       ],
+      fineprint:
+        "Don't touch Update Config, Change or Update on that screen — those write to the board, and nothing on it needs changing.",
       expect: [
         "The 5 lights on your stake should come on in the colour you picked.",
       ],
@@ -349,13 +352,13 @@ function boxSteps(box: BoxDef): Step[] {
         "Pull the cord OUT of the wall first. Count to five.",
         "Move the stake from Port 1 to Port 9.",
         "Plug the cord back into the wall.",
-        `In Test Lights, pick controller number ${box.port9Hex} — or ${box.port9Dec} on a numbers-only list — and turn the test on.`,
+        "On the Test Pixels tab, Select None again, then tick only Port 9. Same single colour. Run Test on.",
       ],
       expect: [
         "The stake should light again, same as before.",
       ],
       fineprint:
-        "This step matters: the board's sixteen ports come in two halves (1–8 and 9–16), and nobody has confirmed both halves of your boxes are fed with power. This is the test that answers it.",
+        "This step checks the far half of the board: the sixteen ports come in two halves (1–8 and 9–16), fed from one internal supply. Both halves of both boxes passed this on September 12, 2026 — so a dark Port 9 now would mean something has changed.",
       options: [
         { id: "lit", label: "It lit on Port 9 too", tone: "good" },
         {
@@ -409,7 +412,7 @@ export const STEPS: Step[] = [
       "No power supplies to fetch — each box has its own inside and plugs straight into the wall.",
     ],
     fineprint:
-      "One software thing first: your Light-O-Rama folder moved to C:\\dev\\light-o-rama on Sept 10 and LOR hasn't been told. Open the Light-O-Rama Control Panel, go to Settings, click \"Change Light-O-Rama Folder Location\" and pick that folder. Otherwise the Hardware Utility you use later may open with your settings missing.",
+      "You have done this before — both boxes passed on September 12, 2026. Nothing below has changed; run it again the same way.",
     options: [
       { id: "ok", label: "It's all on the table", tone: "good" },
       {

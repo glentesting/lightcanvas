@@ -18,7 +18,9 @@ ramps and for motion-effect output rendering as intended overall). **Item 4
 is superseded** — since 2026-08-31 the exporter always writes the six-slot
 palette form, the shape LOR itself writes. **Still genuinely unverified in
 S6: the `curtain` grammar** (his show contained zero curtains) **and item 5,
-real-hardware playback** (bench test not yet run). The section below is kept
+real-hardware playback** — the 2026-09-12 bench test proved the controllers
+answer and pixels light, but no sequence has ever been played through them.
+The section below is kept
 as the original test plan for reference — the synthetic files remain useful
 for the curtain check.
 
@@ -138,9 +140,11 @@ npx tsx scripts/loredit/verify-export.mts
    curtains (they are emitted only for center-out/in chases and fireworks),
    so the Aug 31 pass never exercised it. Close it by adding a Fireworks
    effect, re-exporting, and opening in S6.
-2. **Real-hardware playback** — the bench test has not been run
-   (`BENCH-TEST-CHECKLIST.md`, or the guided version at `/bench-test` in the
-   app), and nothing has ever played on the Director + controllers.
+2. **Real-hardware playback** — still open, but narrower than it was. The
+   bench test **was** run on 2026-09-12 and both Pixie16 boards passed: they
+   answer on the network and light pixels in the right colour. What has
+   still never happened is a **sequence playing** — the Director has never
+   been powered on, and Box 3 (AC) has never been tested at all.
 
 **Closed by the Aug 31, 2026 acceptance pass** (kept here as history; see the
 banner at the top of this doc for the full result):

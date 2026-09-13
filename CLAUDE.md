@@ -25,8 +25,17 @@ G4-MP3 Director plays.
   for center-out/in chases and fireworks). That is a separate, still-open
   gap; do not describe it as closed. The way to close it: drop a Fireworks
   effect into a sequence, re-export, open in S6.
-- **The hardware bench test has NOT been run** — now the largest remaining
-  unknown (see the Hardware state section below).
+- **THE BENCH TEST PASSED.** On **September 12, 2026** both Pixie16 boards
+  were powered up and read back over the USB485-HS: correct unit ID ranges
+  (`09`–`18` and `30`–`3F`), firmware 1.10, both power halves live, pixels
+  lighting in the colour asked for. It also settled the face port topology
+  (each face spans two ports) and recorded the pixel ICs (WS2811 on Box 4,
+  UCS1903 on Box 1 — different by design). Full record: the hardware doc §3,
+  and §11 for the PC-side procedure that worked.
+- **The remaining hardware unknown is Box 3**, the CTB16 AC controller — it
+  was deliberately not tested (hardwired into conduit) and its unit ID has
+  still never been read back. The Director and FM transmitter have also
+  still never been powered on.
 - **Deadline:** the show must run this season. The Sept 3 honesty checkpoint
   on whether this path was working: it is. Fallback remains the 8 purchased
   sequences (their MP3s still need buying — LOR sells sequences without
@@ -42,8 +51,10 @@ G4-MP3 Director plays.
   IDs, port→prop map, the `.loredit` format, file locations. If it isn't in
   there, it isn't settled.
 - `BENCH-TEST-CHECKLIST.md` — plain-English first power-up procedure for the
-  owner to follow at the bench. **Not yet run.** Keep it truthful and keep the
-  Desktop text copy ("LightCanvas - Bench Test.txt") in step with it.
+  owner to follow at the bench. **Run 2026-09-12; both Pixie boards passed.**
+  It stays as the procedure for Box 3 and anything powered up at the house.
+  Keep it truthful and keep the Desktop text copy ("LightCanvas - Bench
+  Test.txt") in step with it.
 - `BENCH-WALKTHROUGH-STATUS.md` — the guided in-app version of that test
   (`/bench-test`, 2026-09-07): what it does, where answers live, how it was
   verified. The checklist stays the content source; the walkthrough's steps
@@ -265,18 +276,19 @@ data. UI copy is deliberately jargon-free: "Your Lights", "Make a Show",
 
 ## Hardware state (brief — detail lives in the hardware doc + checklist)
 
-- **LOR S6 has not been told its data folder moved** (as of 2026-09-10).
-  Every path under `HKCU\Software\Light-O-Rama\Shared` still reads
-  `C:\Users\glenh\Documents\Light-O-Rama\`, which no longer exists. The owner
-  must repoint it (Control Panel → Settings → "Change Light-O-Rama Folder
-  Location" → `C:\dev\light-o-rama`) before the bench test, because that test
-  runs entirely through the Hardware Utility. Nothing in this repo depends on
-  that folder — it is purely S6's business.
-- The **USB485-HS adapter has arrived** (Aug 31). **The bench test has NOT
-  been run.** Nothing physical has ever been powered on; this is the largest
-  remaining unknown. Procedure: `BENCH-TEST-CHECKLIST.md`, or the guided
-  in-app walkthrough at `/bench-test` (added 2026-09-07 — same steps, one
-  screen at a time, built for the owner to actually follow).
+- **LOR S6 has been repointed at the moved data folder.** Verified in the
+  registry 2026-09-12: `HKCU\Software\Light-O-Rama\Shared` now reads
+  `C:\dev\light-o-rama\`. Nothing in this repo depends on that folder — it is
+  purely S6's business. If it ever moves again: Control Panel → Settings →
+  "Change Light-O-Rama Folder Location".
+- **The bench test was run 2026-09-12 and both Pixie16 boards passed.** The
+  USB485-HS works — but note **Windows does not supply its driver**; the FTDI
+  VCP driver had to be installed by hand, and the adapter came up as COM3.
+  The Hardware Utility lives at Control Panel → Controller Setup → Hardware
+  Utility, and testing a port is the **Configure → Test Pixels** tab (the
+  sidebar's "Test Lights" is greyed out while the utility holds the port).
+  Procedure and results: hardware doc §3 and §11; `BENCH-TEST-CHECKLIST.md`
+  or the guided walkthrough at `/bench-test` for re-runs.
 - Each Pixie16D enclosure contains its own **MeanWell RSP-500-12 (12V /
   41.7A)** internal supply — each box is self-contained and powers from a
   wall outlet. Live mains sits on the supply's N/L terminals inside the box.
@@ -288,9 +300,13 @@ data. UI copy is deliberately jargon-free: "Your Lights", "Make a Show",
   decimal, so the same boards can read 9–24 and 48–63. Check the mode before
   concluding anything is misaddressed.
 - The **CTB16PCG3's unit ID is software-set and has never been read back** —
-  `01` is what the sequences expect, not a measured value. That controller
-  is deferred: it appears hardwired into conduit. If it turns out not to be
-  `01`, change the controller, not the sequences.
+  `01` is what the sequences expect, not a measured value. Still true after
+  the 2026-09-12 bench test: Box 3 was deliberately skipped because it
+  appears hardwired into conduit. Before it can be tested safely, work out
+  how it is actually powered, find its breaker, and ideally have someone fit
+  it with a cord and plug. Nothing needs connecting to its AC outputs just
+  to read the ID. If it turns out not to be `01`, change the controller, not
+  the sequences.
 
 ## Git
 
@@ -320,9 +336,19 @@ once broke env parsing here.
   by adding a Fireworks effect, re-exporting, opening in S6. The three
   synthetic test files in `scripts/loredit-spike/test-fixtures/output/`
   remain available for that.
-- **The hardware bench test has not been run.** Adapter arrived Aug 31;
-  nothing has ever been powered on. `BENCH-TEST-CHECKLIST.md` is the
-  procedure. Largest remaining unknown.
+- ~~The hardware bench test has not been run~~ — **CLOSED 2026-09-12**: both
+  Pixie16 boards passed (see Where it stands). What it did NOT cover:
+  **Box 3**, the CTB16 AC controller — never powered, unit ID never read
+  back, and it appears hardwired into conduit, so testing it means sorting
+  out how it is fed first. **The Director and the FM transmitter have also
+  never been powered on**, and nobody knows whether the Director's SD card
+  still holds last season's show.
+- **The ELOR network setting is undecided.** The Control Panel's Networks
+  screen had "Use Enhanced LOR (ELOR)" switched on, Regular network on COM3
+  at 500K. It did not matter for the bench test (the adapter was plugged
+  straight into each controller), but it must be set deliberately before the
+  house is wired: **a controller that does not support ELOR simply goes
+  quiet, which looks exactly like dead hardware.**
 - No scale/rotate on prop shapes; the tree silhouette is stylized, not a
   photo-match of the coro cutout (pixel positions are the accurate part).
 - Pixel props export as colorwash, curtain or bars. **Colorwash and bars are

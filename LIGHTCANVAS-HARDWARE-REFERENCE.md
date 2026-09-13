@@ -350,9 +350,10 @@ zero benefit.
 ```
 C:\dev\light-o-rama\                          ← LOR's data folder (moved 2026-09-10)
 ├── Sequences\                                ← the 8 purchased sequences (all 8 present)
-├── Audio\                                    ← MP3s go here (holds only the LOR
-│                                                sample as of 2026-09-10 — the
-│                                                show's own song is NOT in here)
+├── Audio\                                    ← MP3s go here. ✅ Holds the show's
+│                                                song as of 2026-09-12
+├── Songs\                                    ← working copies of Glen's 5 MP3s
+│                                                (duplicated from C:\dev\lightcanvas\Songs)
 ├── CommonData\                               ← previews, palettes
 ├── Hardware\  Network\  Logs\  ...
 
@@ -370,15 +371,14 @@ C:\dev\LightCanvas Old Stuff\                 ← archived docs, ignore
 Keeping show software off cloud sync is the right call — sync and show
 software don't mix.
 
-**LOR S6 has NOT been told about the move.** As of 2026-09-10 every path in
-`HKCU\Software\Light-O-Rama\Shared` still reads
-`C:\Users\glenh\Documents\Light-O-Rama\`, which no longer exists. Until the
-owner points S6 at the new folder, S6 will not find his sequences, his
-previews, his audio or his hardware config. The fix is one control: LOR
-Control Panel → Settings → **"Change Light-O-Rama Folder Location"** → choose
-`C:\dev\light-o-rama`. (The previous version of this doc said never to click
-that button — that advice is superseded; it was written when the folder was
-where LOR expected it.)
+✅ **S6 has been repointed.** Verified in the registry 2026-09-12:
+`HKCU\Software\Light-O-Rama\Shared` now reads `C:\dev\light-o-rama\`
+throughout. S6 finds its own sequences, previews, audio and hardware config.
+**If the folder ever moves again, S6 must be told** — LOR Control Panel →
+Settings → **"Change Light-O-Rama Folder Location"**. It will not find
+anything until that is done. (An earlier version of this doc said never to
+click that button; that was written when the folder was where LOR expected
+it, and no longer applies.)
 
 ---
 
@@ -403,9 +403,9 @@ All RGBPlus layout, all matched to this prop set. Downloaded as self-extracting
 Carol of the Bells wants: `Carol Of The Bells-Pentatonix-SN.mp3`
 
 The same applies to the owner's own show. His project's `musicFilename` is
-`Wreaths Like Horseshoes.mp3`, which lives in `C:\dev\lightcanvas\Songs\` —
-S6 will open the exported sequence either way, but it cannot play the audio
-until a copy of that MP3 sits in `C:\dev\light-o-rama\Audio\`.
+`Wreaths Like Horseshoes.mp3` — ✅ a copy is now in
+`C:\dev\light-o-rama\Audio\` (confirmed 2026-09-12), so S6 can play it.
+A sequence opens fine without its MP3; it just plays silent.
 
 Every sequence embeds the full 265-prop RGBPlus Preview. Any one of them can
 serve as an export template.
@@ -418,15 +418,28 @@ Ordered by risk.
 
 1. **CTB16 unit ID** — software-set, never read back. Box 3 was deliberately
    not tested on 12 Sept (it appears hardwired into conduit). Still the
-   largest hardware unknown.
-2. **The Director and the FM transmitter have still never been powered on.**
+   largest hardware unknown. **Before it can be tested safely:** work out how
+   it is actually powered (truly hardwired, or is there a plug out of
+   sight?); identify which breaker feeds it and confirm the controller goes
+   dead when that breaker is off; ideally have someone comfortable with mains
+   fit it with a cord and plug so it can be tested like the Pixie boxes.
+   Nothing needs to be connected to its AC outputs just to read its ID.
+2. **The ELOR network setting.** The Control Panel's Networks screen had
+   **"Use Enhanced LOR (ELOR)" switched on** when first opened, with the
+   Regular network on COM3 at 500K. ELOR is a faster protocol only some
+   controllers support. It was left untouched during the bench test because
+   the adapter was plugged straight into each controller, so network settings
+   did not apply. **Before wiring the house, confirm whether these boards
+   support ELOR and set it deliberately** — a controller that does not
+   support it simply goes quiet, which looks identical to dead hardware.
+3. **The Director and the FM transmitter have still never been powered on.**
    The 12 Sept bench test covered the two Pixie16 boards and the USB adapter
    only.
-3. **Whether the Director's SD card still holds last season's show.**
-4. **Which numbered dongle drives which physical prop** — *low priority*: the
+4. **Whether the Director's SD card still holds last season's show.**
+5. **Which numbered dongle drives which physical prop** — *low priority*: the
    dongles are already band-labelled, so this is a job for deployment day in
    the yard, not the bench (§5).
-5. **AC circuit naming mismatch** (§5).
+6. **AC circuit naming mismatch** (§5).
 
 Resolved by the 12 Sept 2026 bench test, and no longer open: whether anything
 powers on at all; whether both power halves run off the single internal

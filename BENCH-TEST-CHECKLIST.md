@@ -2,8 +2,14 @@
 
 **For:** Glen &nbsp;·&nbsp; **Written:** August 31, 2026
 
-**Status: NOT YET RUN.** Nothing in this document has been done. Nothing in
-your show has ever been powered on.
+**Status: RUN 12 SEPTEMBER 2026 — BOTH BOXES PASSED.** Box 4 and Box 1 both
+powered up, both answered the software, and both lit a stake on Port 1 and on
+Port 9. What came off the boards that night is recorded in
+`LIGHTCANVAS-HARDWARE-REFERENCE.md` §3. **Box 3, the AC controller, was not
+tested** — that is still ahead of you, and §10 below is why.
+
+Keep this document. It is still the procedure for any controller you power up
+for the first time, including Box 3 and anything you touch at the house.
 
 This is the plain-English version of Section 9 of
 `LIGHTCANVAS-HARDWARE-REFERENCE.md`. Everything here is either something you
@@ -17,11 +23,13 @@ at and tell me about. There are no commands to type and no files to open.
 > your answers at the end. **That is the easier way to run this test.**
 > This document stays as the full reference — same procedure, same facts.
 
-> **Do this once before you start (Sept 10, 2026).** Your Light-O-Rama folder
-> moved to `C:\dev\light-o-rama`, and LOR has not been told. Open the **Light-O-Rama
-> Control Panel → Settings → "Change Light-O-Rama Folder Location"** and point it
-> at `C:\dev\light-o-rama`. Until you do, the Hardware Utility used all through
-> this test may open with your settings missing.
+> **Two things that caught you out the first time, so they don't again.**
+> Windows does **not** install a driver for the USB adapter by itself — if the
+> Hardware Utility says it found no ports, that's the cause, and the fix is the
+> FTDI driver from <https://ftdichip.com/drivers/vcp-drivers/>. And the
+> Hardware Utility isn't its own program: it's **Start → Light-O-Rama Control
+> Panel → Controller Setup → Hardware Utility**. Both are written up in full in
+> the hardware reference, §11.
 
 Print this. Take it to the table with the hardware.
 
@@ -402,16 +410,23 @@ Whichever you get, write it down exactly and photograph the screen.
 
 Once the unit IDs read back correctly:
 
-- [ ] Go to the **Test Lights** section of the Hardware Utility.
-- [ ] 📖 Choose the controller/unit for **Port 1** — that is unit `09` (hex)
-      or `9` (decimal) — pick a colour, and turn the test on.
+- [ ] ✅ Click **Configure** next to the controller in the scan results, then
+      the **Test Pixels** tab along the top. **"Test Lights" in the left
+      sidebar will be greyed out — that is normal**, not a fault; the
+      Hardware Utility is holding the port.
+- [ ] ✅ Under **Select Strings to Test**, click **Select None**, then tick
+      only **Port 1**.
+- [ ] ✅ Under **Color Cycle**, click **Select None**, then tick **one**
+      colour. A single steady colour is far easier to judge than a cycle.
+- [ ] ✅ Flip **Run Test** to **On**. Flip it back off when done.
 - [ ] **Expected: the 5 pixels on your stake light up in the colour you
       chose.**
 
-📖 The exact controls in Test Lights vary by version — you generally pick a
-unit, a channel range or "all channels", and a mode such as a fixed colour or
-a slow chase. If the layout does not match what I have described, photograph
-it and I will talk you through your actual screen.
+⚠️ **Do not touch the Update Config, Change or Update buttons** on the
+Configure tab. Those write to the board, and nothing on it needs changing.
+
+✅ This is the exact sequence that worked on 12 September 2026 — it is no
+longer a guess about where the controls are.
 
 **If the pixels light but the colour is wrong** (you asked for red and got
 green, say) — 📖 that is a colour-order setting, not a fault. Pixels come in
@@ -452,31 +467,23 @@ Sixteen unit IDs again — same rule, same reason.
 **FAIL:** nothing found; a range starting at any number other than
 `30`/`48`; or fewer than sixteen with no Pixie16 summary entry.
 
-### While you are here — one mystery to solve
+### While you are here — the mystery that got solved
 
-❓ **OPEN QUESTION** carried over from your reference doc (§5). Your four
-faces are recorded as living on units `30`, `32`, `34`, `36` — the doc notes
-that this **skips** `31`, `33`, `35`, `37` and nobody knows why.
+✅ **CLOSED 12 September 2026.** Your four faces were recorded on units `30`,
+`32`, `34`, `36`, and nobody knew why that **skipped** `31`, `33`, `35`,
+`37`. Reading Box 1's own configuration answered it: **each face spans two
+consecutive ports.** The skipped numbers are the second half of each
+character.
 
-Working out the port numbers from the base gives this prediction:
-
-| Port | Unit (hex / dec) | Expected |
+| Ports | Units (hex / dec) | Character |
 |---|---|---|
-| 1 | `30` / 48 | Elden |
-| 2 | `31` / 49 | **unknown — possibly the second half of Elden** |
-| 3 | `32` / 50 | Felix |
-| 4 | `33` / 51 | **unknown — possibly the second half of Felix** |
-| 5 | `34` / 52 | Ralphie |
-| 6 | `35` / 53 | **unknown — possibly the second half of Ralphie** |
-| 7 | `36` / 54 | Zuzu |
-| 8 | `37` / 55 | **unknown — possibly the second half of Zuzu** |
+| 1 and 2 | `30`, `31` / 48, 49 | Elden |
+| 3 and 4 | `32`, `33` / 50, 51 | Felix |
+| 5 and 6 | `34`, `35` / 52, 53 | Ralphie |
+| 7 and 8 | `36`, `37` / 54, 55 | Zuzu |
+| 9–16 | `38`–`3F` / 56–63 | nothing connected |
 
-**The likely answer** is that each face spans two ports. If, when you
-eventually connect a face and run Test Lights, unit `30` lights part of Elden
-and unit `31` lights the rest of him, that confirms it. Note down what you
-see — this would close a real open question in the documentation.
-
-This is a "when you get to it" item, not required for today's pass/fail.
+Nothing to do here any more — it is written into the reference doc (§5).
 
 ---
 
@@ -486,9 +493,13 @@ Do this **after** both boxes have passed their unit ID readback. It is the
 slow, satisfying part: proving that the map in your reference doc is actually
 true of your physical gear.
 
-**How it works:** connect one prop, run Test Lights on that port's unit ID,
+**How it works:** connect one prop, run the Test Pixels tab on that port,
 walk over and see what lit up, write it down. Then power down, move to the
 next prop.
+
+✅ **Low priority now.** Your dongles are labelled with white bands, so this
+is far quicker to confirm once the props are out in the yard than by dragging
+each one out of storage. Leave it for deployment day.
 
 **Remember: cord out of the wall every time you change a prop.**
 

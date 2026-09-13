@@ -1,10 +1,18 @@
 # Guided Bench Test — Status
 
-**Date:** September 7, 2026
+**Date:** September 7, 2026 · **Updated:** September 12, 2026
 **Why this exists:** BENCH-TEST-CHECKLIST.md is accurate but 750 lines, and
 you opened it, got lost, and didn't run the test. That was the document's
 failure. This session built the same test into the app as a one-step-at-a-time
 walkthrough. Written for you, plain English.
+
+> **The test has since been run — 12 September 2026, both Pixie boards
+> passed.** The walkthrough stays in the app for re-runs (Box 3, or setting
+> up at the house) and its copy has been corrected against what actually
+> happened that night: the Hardware Utility's real menu path, the fact that
+> testing a port is the **Configure → Test Pixels** tab rather than the
+> greyed-out "Test Lights" sidebar item, and the FTDI driver step Windows
+> does not do for you. The Projects-page card now says both boxes passed.
 
 ## What you get
 

@@ -251,10 +251,12 @@ function BenchTestCard() {
         🔌
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold">Test your light boxes</p>
+        <p className="text-sm font-semibold">Test your light boxes — both passed</p>
         <p className="text-xs mt-0.5" style={{ color: "var(--ink-3)" }}>
-          A step-by-step walkthrough for the first power-up of your two controller boxes.
-          One thing per screen, and you can stop and come back any time — it remembers where you were.
+          You powered up both controller boxes on September 12 and both came through clean.
+          The walkthrough is still here if you want to run it again — on a box you have
+          worked on, or when you set up at the house. One thing per screen, and it
+          remembers where you were.
         </p>
       </div>
       <Link
