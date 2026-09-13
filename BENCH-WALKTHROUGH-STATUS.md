@@ -12,13 +12,13 @@ walkthrough. Written for you, plain English.
 > is the **Configure → Test Pixels** tab rather than the greyed-out "Test
 > Lights" sidebar item, and the FTDI driver step Windows does not do for you.
 >
-> **Reframed around Box 3 on 13 September 2026.** The walkthrough is not
+> **Reframed around Box 3 on 12 September 2026.** The walkthrough is not
 > "done" — Box 4 and Box 1 are done, and Box 3 is the box Glen has not
 > powered up himself. It is now 23 steps: the same safety rules and the same
 > connection procedure (both apply to any controller), then three new Box 3
 > screens.
 >
-> **Framing corrected 13 September 2026.** The copy used to imply this gear
+> **Framing corrected 12 September 2026.** The copy used to imply this gear
 > had never run. It had — a full season, operated by someone else. The
 > walkthrough now opens by saying so, because the difference matters to how
 > nervous he is standing at the bench: the equipment is proven and he is the

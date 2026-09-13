@@ -1,5 +1,19 @@
 # .loredit Export Spike — Findings
 
+> ## ⏳ HISTORICAL — superseded. Read as history, not guidance.
+>
+> **Written:** 21 August 2026. **Header added:** 12 September 2026.
+>
+> The throwaway spike that proved the `.loredit` format could be written at
+> all. Its findings were correct and became the real exporter in
+> `src/lib/exports/loredit/`. **Its open question — "Not yet done: opening
+> the file in S6" — was answered on 31 August 2026**, when the owner's real
+> show opened clean in LOR S6 v6.6.12. Nothing below has been edited; the
+> standalone scripts in `scripts/loredit-spike/` still exist and still run.
+>
+> **Current docs:** `CLAUDE.md` (start here) · `HANDOFF.md` (what is still
+> open) · `LOREDIT-EXPORT-STATUS.md` · `LIGHTCANVAS-HARDWARE-REFERENCE.md`.
+
 **Date:** 2026-08-21
 **Goal:** prove LightCanvas can write a `.loredit` that LOR S6 v6.6.12 opens cleanly.
 **Code:** `scripts/loredit-spike/` (`xml.mjs`, `inventory.mjs`, `roundtrip.mjs`, `template-fill.mjs`).

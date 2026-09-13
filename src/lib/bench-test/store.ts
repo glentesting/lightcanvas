@@ -71,7 +71,7 @@ export const useBenchTestStore = create<BenchTestState>()(
       name: "lightcanvas-bench-test-v1",
       storage: createJSONStorage(() => localStorage),
       /**
-       * v2 (2026-09-13): three Box 3 screens were added before the two port
+       * v2 (2026-09-12): three Box 3 screens were added before the two port
        * tables, which shifted every index after them. A saved stepIndex from
        * the September 12 run would now point at the wrong screen — possibly
        * past the new work, which is the one thing we must not do.

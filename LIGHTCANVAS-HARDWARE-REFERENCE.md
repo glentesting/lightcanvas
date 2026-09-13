@@ -470,7 +470,9 @@ Ordered by risk.
    simply not driven them himself yet. The 12 Sept bench test covered the two
    Pixie16 boards and the USB adapter only.
 5. **Whether the Director's SD card still holds last season's show** — an
-   unopened question, not a doubt about the card working.
+   unopened question, not a doubt about the card working. Glen is checking
+   this himself with a card reader; see "Reading the Director's SD card"
+   below for what he was told to look for and what still needs confirming.
 6. **Which numbered dongle drives which physical prop** — *low priority*: the
    dongles are already band-labelled, so this is a job for deployment day in
    the yard, not the bench (§5).
@@ -481,6 +483,38 @@ run off the single internal supply; colour order on both boards; and the face
 port topology — each face spans two ports (§3, §5). Note that "whether
 anything powers on at all" was never genuinely open — the display ran a full
 season. What Glen settled was that he can bring it up himself.
+
+### Reading the Director's SD card
+
+❓ **The card's exact layout is unconfirmed.** Nothing on this machine
+documents it — not the repo, not the LOR install (no Director tool ships in
+`C:\Program Files (x86)\Light-O-Rama`; only the Sequencer, SuperStar editor,
+Assistant and diagnostics). **Do not write a card layout into this doc from
+memory.** The next person to actually look at the card fills this in.
+
+✅ **What is safe to say regardless:**
+
+- **Copy the whole card to the PC before changing anything on it.** That is
+  the entire safety story. With a copy, nothing that follows can lose last
+  season's show.
+- **If Windows offers to format the card, say no.** That prompt means
+  Windows cannot read it — which is information, not an instruction.
+- **Nothing on the card should be deleted** until we know what it is. LOR's
+  director files are opaque binaries with unhelpful names; "looks like
+  junk" is not evidence.
+
+📖 **What a loaded card should broadly contain** (general LOR knowledge, to
+be confirmed against the real card): audio — one MP3 per song, which is the
+bulk of the used space — plus compiled show/sequence files in LOR's own
+binary format, and usually a small schedule or show-list file the director
+reads first. A card holding a real season's show is **hundreds of megabytes**
+because of the audio. A few kilobytes of files means essentially nothing is
+on it.
+
+**What to bring back from the inspection** (this is what turns ❓ into ✅):
+the full file and folder listing including hidden files, the total used
+space, and the file dates. Dates from last season are the strongest single
+signal that the show is intact.
 
 ### Glen's first bench test — RUN 12 SEPTEMBER 2026, BOTH PIXIE BOARDS PASSED
 

@@ -1,5 +1,18 @@
 # Editor Upgrade — Status
 
+> ## ⏳ HISTORICAL — superseded. Read as history, not guidance.
+>
+> **Written:** 29 August 2026. **Header added:** 12 September 2026.
+>
+> A true account of the one-renderer unification and the timeline transport
+> work, and the display contracts it describes are still live (they are
+> summarised in `CLAUDE.md`). **Its "What remains" list is closed:** items
+> 1–4 were done the next day, and item 5 — "The S6 open test, still the
+> season's gate" — passed on 31 August 2026. Nothing below has been edited.
+>
+> **Current docs:** `CLAUDE.md` (start here) · `HANDOFF.md` (what is still
+> open) · `LOREDIT-EXPORT-STATUS.md` · `LIGHTCANVAS-HARDWARE-REFERENCE.md`.
+
 **Date:** 2026-08-29
 **Companion to:** GAP-ANALYSIS.md (which explains what was missing and why).
 This is what got fixed, what it looks like now, and what remains — written

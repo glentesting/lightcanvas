@@ -74,7 +74,7 @@ G4-MP3 Director plays.
   Keep it truthful and keep the Desktop text copy ("LightCanvas - Bench
   Test.txt") in step with it.
 - `BENCH-WALKTHROUGH-STATUS.md` — the guided in-app version of that test
-  (`/bench-test`, 2026-09-07; reframed around Box 3 on 2026-09-13): what it
+  (`/bench-test`, 2026-09-07; reframed around Box 3 on 2026-09-12): what it
   does, where answers live, how it was verified. The checklist stays the
   content source; the walkthrough's steps live in
   `src/lib/bench-test/steps.ts` and must stay faithful to it —
@@ -86,16 +86,32 @@ G4-MP3 Director plays.
 - `BENCH-TEST-DIRECT-CONTROL-FEASIBILITY.md` — honest answer to "could the
   app drive the USB adapter itself?" (short: partly possible, not before the
   season; the Hardware Utility stays the tool).
-- `AUDIT-2026-08.md` — the honest audit that set the current direction.
 - `LOREDIT-EXPORT-STATUS.md` — exporter: what works, what's unverified.
-- `AI-PIPELINE-STATUS.md` — AI sequencer: architecture, measured density.
-- `CLEANUP-STATUS.md` — what was deleted and what routes remain.
-- `LAYOUT-IMPORT-STATUS.md` — importing the owner's display from a .loredit.
+  (Header says 2026-08-27 but it is kept current; its top banner is the
+  2026-08-31 acceptance pass.)
 - `LAYOUT-GEOMETRY-STATUS.md` — exact coro prop shapes, tracing, bulk placement.
-- `GAP-ANALYSIS.md` — ranked gaps vs. real sequencing needs (2026-08-29).
-- `EDITOR-UPGRADE-STATUS.md` — the one-renderer unification, timeline transport, marquee.
+
+**Still the reference for their subsystem, but each carries a dated header
+flagging one overtaken section** (all of them predate the 2026-08-31 S6 pass):
+
+- `AI-PIPELINE-STATUS.md` — AI sequencer: architecture, measured density.
+- `LAYOUT-IMPORT-STATUS.md` — importing the owner's display from a .loredit.
 - `SEQUENCING-UPGRADE-STATUS.md` — designer scrub, curtain/bars export grammar +
   the export-honesty table, visible undo, group tracks, copy/paste/repeat.
+
+**Historical — read as history, not guidance.** Each opens with a dated
+superseded header explaining what has changed. Their bodies are deliberately
+never edited: they are the record of how the project got here.
+
+- `AUDIT-2026-08.md` (21 Aug) — the honest audit that set the current
+  direction. Most of what it calls broken has since been fixed.
+- `GAP-ANALYSIS.md` (29 Aug) — ranked gaps; its "blocks a working show" list
+  is entirely built.
+- `EDITOR-UPGRADE-STATUS.md` (29 Aug) — the one-renderer unification,
+  timeline transport, marquee.
+- `CLEANUP-STATUS.md` (27 Aug) — what was deleted. **Its route table is
+  stale** — the live route list is the table in this file.
+- `LOREDIT-SPIKE.md` (21 Aug) — the spike that proved the format.
 
 Keep these truthful: when a session changes what works, update the matching
 status doc in the same commit.
@@ -140,7 +156,7 @@ API: `projects` (list/create/get/patch/delete/duplicate), `autosave`,
 - **ONE project loader.** `src/lib/store/use-project-load.ts` is the only
   way a page pulls a project into the store — the designer, the layout
   editor and the timeline all use it, and all render
-  `src/components/ProjectLoadGate.tsx`. Before 2026-09-13 each page did its
+  `src/components/ProjectLoadGate.tsx`. Before 2026-09-12 each page did its
   own fetch and they had drifted: the layout editor had no `.catch` at all,
   so a failed load span the spinner forever. **A load that does not finish
   must become a visible error.** The hook enforces that three ways — a

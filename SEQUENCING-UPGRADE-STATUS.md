@@ -1,5 +1,21 @@
 # Sequencing Upgrade — Status
 
+> ## ⚠️ PARTLY SUPERSEDED — the work is current, the S6 gate has been passed.
+>
+> **Written:** 30 August 2026. **Header added:** 12 September 2026.
+>
+> **Still accurate and still the reference** for the curtain/bars export
+> grammar, the export-honesty table, visible undo, group tracks and
+> copy/paste/repeat — the "where things live" notes at the end are actively
+> relied on. **Out of date in one place:** it calls the Light-O-Rama S6 open
+> test "still the season's real gate". That gate was passed the next day,
+> 31 August 2026. The `curtain` grammar specifically remains unverified in
+> S6 (the owner's show contains none) — see `LOREDIT-EXPORT-STATUS.md`.
+> Nothing below has been edited.
+>
+> **Current docs:** `CLAUDE.md` (start here) · `HANDOFF.md` (what is still
+> open) · `LOREDIT-EXPORT-STATUS.md` · `LIGHTCANVAS-HARDWARE-REFERENCE.md`.
+
 **Date:** 2026-08-30
 **Companion to:** GAP-ANALYSIS.md (the "NEEDED SOON" list) and
 EDITOR-UPGRADE-STATUS.md (the session before this one).

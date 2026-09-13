@@ -1,5 +1,28 @@
 # Gap Analysis — What's Between This App and a Real Show
 
+> ## ⏳ HISTORICAL — superseded. Read as history, not guidance.
+>
+> **Written:** 29 August 2026. **Header added:** 12 September 2026.
+>
+> This was an honest ranking of what the app was missing at the end of
+> August, and it drove the two sessions that followed. **Every item in its
+> "BLOCKS A WORKING SHOW" list has since been built.** Read it to understand
+> why the editor is shaped the way it is — not to find out what is missing
+> now. Nothing below has been edited.
+>
+> **What has changed since it was written:**
+> - **Items 1–4 were done** in `EDITOR-UPGRADE-STATUS.md` (30 Aug): one
+>   renderer everywhere, timeline playhead and click-to-seek, the timeline
+>   show-preview strip, and the rest of that list.
+> - **The "NEEDED SOON" list was done** in `SEQUENCING-UPGRADE-STATUS.md`
+>   (30 Aug): designer scrub, export honesty, visible undo, group tracks,
+>   copy/paste-at-beat and repeat-every-bar.
+> - **The S6 open test — the gate this document was written around — passed
+>   on 31 August 2026.**
+>
+> **Current docs:** `CLAUDE.md` (start here) · `HANDOFF.md` (what is actually
+> still open) · `LOREDIT-EXPORT-STATUS.md` · `LIGHTCANVAS-HARDWARE-REFERENCE.md`.
+
 **Date:** 2026-08-29
 **Why this exists:** the owner used the app and found it is a viewer, not an
 editor. He's right. This document compares what the app does today against

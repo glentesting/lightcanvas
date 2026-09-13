@@ -1,5 +1,19 @@
 # Cleanup — Status
 
+> ## ⏳ HISTORICAL — superseded. Read as history, not guidance.
+>
+> **Written:** 27 August 2026. **Header added:** 12 September 2026.
+>
+> An accurate record of the August teardown — what was deleted and why. Keep
+> it for that. **Do not use its "Routes that remain" table as the current
+> route list:** it predates `/bench-test` (added 7 September 2026), and its
+> note that roofline tracing "remains the known gap" was fixed on 28 August.
+> The live route list is the table in `CLAUDE.md`. Nothing below has been
+> edited.
+>
+> **Current docs:** `CLAUDE.md` (start here) · `HANDOFF.md` (what is still
+> open) · `LOREDIT-EXPORT-STATUS.md` · `LIGHTCANVAS-HARDWARE-REFERENCE.md`.
+
 **Date:** 2026-08-27
 **Spec:** the kill list in AUDIT-2026-08.md. This is a personal tool for one
 user; everything that served other users, and every page that faked

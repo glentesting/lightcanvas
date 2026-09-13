@@ -1,5 +1,20 @@
 # AI Sequencer Pipeline — Status
 
+> ## ⚠️ PARTLY SUPERSEDED — architecture current, "unverified" list closed.
+>
+> **Written:** 27 August 2026. **Header added:** 12 September 2026.
+>
+> **Still accurate and still the reference** for how the AI sequencer is
+> built — the two-layer design, the prompt shape, the salvage behaviour and
+> the measured density all hold. **Out of date in one place:** its "What's
+> still unverified" section lists S6 opening the generated export. That was
+> answered on 31 August 2026 when the owner's real show opened clean in LOR
+> S6 v6.6.12, and the pipeline suite has since run repeatedly against the
+> live Opus 5 API. Nothing below has been edited.
+>
+> **Current docs:** `CLAUDE.md` (start here) · `HANDOFF.md` (what is still
+> open) · `LOREDIT-EXPORT-STATUS.md` · `LIGHTCANVAS-HARDWARE-REFERENCE.md`.
+
 **Date:** 2026-08-27
 **Goal:** close the ~30× density gap (60–100 sparse blocks → professional-scale
 sequences) by splitting generation into AI musical direction + deterministic

@@ -1,5 +1,19 @@
 # Layout Import — Status
 
+> ## ⚠️ PARTLY SUPERSEDED — the import is current, "Still unverified" is not.
+>
+> **Written:** 28 August 2026. **Header added:** 12 September 2026.
+>
+> **Still accurate and still the reference** for how "Import from
+> Light-O-Rama" works, including the auto-populated export mapping.
+> **Out of date in one place:** its "Still unverified" section says the
+> exports await a manual S6 open. That happened on 31 August 2026 — the
+> owner's real show, imported this way, opened clean in LOR S6 v6.6.12.
+> Nothing below has been edited.
+>
+> **Current docs:** `CLAUDE.md` (start here) · `HANDOFF.md` (what is still
+> open) · `LOREDIT-EXPORT-STATUS.md` · `LIGHTCANVAS-HARDWARE-REFERENCE.md`.
+
 **Date:** 2026-08-28
 **Goal:** the owner's real display exists inside LightCanvas, imported from a
 `.loredit` template, with export mapping automatic and the preview showing
