@@ -1,7 +1,7 @@
 # LightCanvas — Hardware & LOR Reference
 
 **Owner:** Glen
-**Last updated:** August 31, 2026
+**Last updated:** September 12, 2026
 **Purpose:** Single source of truth for the physical show. Hardware, addressing,
 file locations, and the `.loredit` format. If it isn't in here, it isn't settled.
 
@@ -10,7 +10,9 @@ file locations, and the `.loredit` format. If it isn't in here, it isn't settled
 > **Bench testing?** The step-by-step procedure lives in
 > **`BENCH-TEST-CHECKLIST.md`** — written in plain English for the owner to
 > follow at a table with the hardware in front of him.
-> **It has NOT been run yet.** Nothing in this show has ever been powered on.
+> **It was run on 12 September 2026 and both Pixie16 boards passed.** What
+> came off the hardware that night is recorded in §3; the PC-side procedure
+> that worked is §11. Box 3 (the AC controller) was deliberately not tested.
 
 ---
 
@@ -21,6 +23,9 @@ file locations, and the `.loredit` format. If it isn't in here, it isn't settled
 - Export target is **`.loredit`** (S6, saveFileVersion 15). Not `.lms`. Not `.fseq`.
 - Props are **RGBPlus layout** and match the purchased sequences exactly.
 - **Both Pixie16 unit IDs are already set correctly.** Nothing to change.
+- **Both Pixie16 boards were bench-tested 12 Sept 2026 and passed** — they
+  answer on the network, both power halves work, and pixels light in the
+  colour asked for. The AC controller (Box 3) is still untested.
 - Fallback show = 8 purchased sequences, playable as-is once audio is sourced.
 
 ---
@@ -36,7 +41,7 @@ Boxes numbered with sticky notes during the Aug 2026 garage inventory.
 | **3** | LOR CTB16PCG3 (Ver 5, 22055) | 16-channel AC controller |
 | **4** | LOR Pixie16D | Pixel controller — **trees, arches, stakes** |
 | — | CPT 15W buck converter (7–22V in, 5V/3A out) | Powers the FM transmitter |
-| — | USB485-HS adapter | **ARRIVED Aug 31, 2026.** Untested. |
+| — | USB485-HS adapter | Arrived Aug 31, 2026. ✅ **Working — proved 12 Sept 2026.** Needs the FTDI VCP driver (§11); came up as COM3. |
 | — | 2 × MeanWell RSP-500-12 | One **inside each Pixie16D enclosure** — see below |
 
 ### Power supplies — internal to each Pixie enclosure
@@ -66,11 +71,11 @@ controller board**. Both boxes are identical.
   must be closed before the cord goes into the wall, and the cord must be out
   of the wall before the lid is opened. See §10.
 
-❓ **Open question:** a Pixie16 has two power banks (ports 1–8 and 9–16), and
-each can take its own feed. Only a single red/black pair to the board has
-been observed. Whether that one pair feeds both banks, or only one, is
-unverified — it would show up as ports 9–16 (or 1–8) staying dark during the
-bench test.
+✅ **Settled 12 Sept 2026.** A Pixie16 has two power banks (ports 1–8 and
+9–16) and each *can* take its own feed, but only a single red/black pair to
+the board was ever observed — so it was an open question whether that one
+pair feeds both banks. It does: on both boxes, a pixel lit on **port 1 and on
+port 9** (§3, §11). One internal supply runs the whole board.
 
 ### Props
 
@@ -87,7 +92,7 @@ network at 500k.
 
 ---
 
-## 3. Unit IDs and DIP switches
+## 3. Unit IDs, DIP switches, and controller settings
 
 LOR unit IDs are **hexadecimal**. A Pixie16 consumes **16 consecutive unit IDs**,
 one per port, auto-numbering upward from whatever the DIP switches are set to.
@@ -114,8 +119,8 @@ hex.** This doc is written in hex throughout, matching the `.loredit` files.
 
 | Device | Unit ID | DIP switches ON | Verified |
 |---|---|---|---|
-| **Box 4** (Pixie16 — trees/arches/stakes) | `09` | 5 and 8 | ✅ visually confirmed Aug 2026 |
-| **Box 1** (Pixie16 — faces) | `30` | 3 and 4 | ✅ visually confirmed Aug 2026 |
+| **Box 4** (Pixie16 — trees/arches/stakes) | `09` | 5 and 8 | ✅ **read back off the board 12 Sept 2026** (`09`–`18`) |
+| **Box 1** (Pixie16 — faces) | `30` | 3 and 4 | ✅ **read back off the board 12 Sept 2026** (`30`–`3F`) |
 | **Box 3** (CTB16PCG3 — AC) | `01` — **expected, never confirmed** | n/a — **software-set, not DIP** | ❌ never read back |
 
 > **Both Pixie16 boards were already set correctly.** Do not change them.
@@ -134,6 +139,53 @@ hex.** This doc is written in hex throughout, matching the `.loredit` files.
 
 **If you ever do change a DIP switch:** unplug the controller first, flip, then
 reapply power. Changes are not read until power cycle.
+
+### Controller settings — read off the hardware
+
+These were read directly off each board on **12 September 2026** using the
+Hardware Utility. Before that night nobody knew what they were. **This is the
+authoritative record** — it replaces every prediction about these boards.
+
+**Box 4 — mini trees, arches, stakes**
+
+| Setting | Value |
+|---|---|
+| Device | Pixie16 |
+| Firmware | 1.10 |
+| Unit ID range | `09` – `18` |
+| Pixel IC | **WS2811** (800 KHz) |
+| Colour order | RGB |
+| Pixels per port | 100 |
+| Power halves | Both confirmed working — ports 1 and 9 tested |
+| Internal supply | MeanWell RSP-500-12, 12V / 41.7A |
+
+**Box 1 — the four singing faces**
+
+| Setting | Value |
+|---|---|
+| Device | Pixie16 |
+| Firmware | 1.10 |
+| Unit ID range | `30` – `3F` |
+| Pixel IC | **UCS1903** (800 KHz) |
+| Colour order | RGB |
+| Pixels per port | 100 |
+| Power halves | Both confirmed working — ports 1 and 9 tested |
+| Internal supply | MeanWell RSP-500-12, 12V / 41.7A |
+
+> ⚠️ **The two boards use different pixel chips** — WS2811 on Box 4, UCS1903
+> on Box 1. **Both are correct for what is wired to them. Do not "fix" one to
+> match the other.** LOR documentation notes that a Pixie controlling singing
+> faces must have Pixels Per Port set to 100; Box 1 is set to 100 — correct
+> as-is.
+
+### What the bench test proved
+
+- Both controllers answer on the network with the expected unit ID ranges.
+- Both halves of both boards are powered from their single internal supply.
+- Pixels light in the colour requested — colour order is correct on both boards.
+- The USB485-HS adapter, its driver, and the CAT5 path all work.
+- Each singing face occupies **two consecutive ports**, which explains the gaps
+  in the unit numbering (§5).
 
 ---
 
@@ -187,20 +239,21 @@ All 16 ports used. All 1,200 pixels accounted for.
 
 ### Box 1 — Pixie16 @ base `30`, Regular / Net 1
 
-| Unit | Face |
-|---|---|
-| `30` | Elden |
-| `32` | Felix |
-| `34` | Ralphie |
-| `36` | Zuzu |
+**Each face spans two consecutive ports.** Confirmed 12 September 2026 by
+reading the board's own configuration — and it explains why the face unit IDs
+skip `31`, `33`, `35` and `37`: those are the second half of each character.
 
-Each face uses channels 1–66. Channels 1–24 are the legacy Face V1 props;
-25–66 are FaceV2 (tree outline, star/bow, eyes open/closed, and ten phoneme
-mouths: closed, E, AI, OU, Ah, MBP, FV, L, WQ, etc).
+| Ports | Units | Character | Notes |
+|---|---|---|---|
+| 1 and 2 | `30`, `31` | Elden | Channels 1–66 |
+| 3 and 4 | `32`, `33` | Felix | Channels 1–66 |
+| 5 and 6 | `34`, `35` | Ralphie | Channels 1–66 |
+| 7 and 8 | `36`, `37` | Zuzu | Channels 1–66 |
+| 9–16 | `38`–`3F` | Unused | No prop assigned |
 
-⚠️ **Open question:** why the addressing skips `31`, `33`, `35`, `37`. Each face
-may span two ports, or the four strands may chain on one. Test Lights will
-resolve it.
+Within each face: channels 1–24 are the legacy Face V1 props; 25–66 are
+FaceV2 — tree outline, star and bow, eyes open and closed, and ten phoneme
+mouths (closed, E, AI, OU, Ah, MBP, FV, L, WQ and others).
 
 ### Box 3 — CTB16PCG3 @ unit `01`, Regular / Net 1
 
@@ -223,6 +276,11 @@ names won't match reality. Decide later whether to rename in the Preview.
 The pixel dongles coming out of Boxes 1 and 4 are **numbered with white bands**
 (1, 3, 4… observed). **Do not remove these.** They are the only surviving
 port-to-prop map. Photograph the full set during deployment.
+
+Because the dongles are already labelled, the **port-by-port physical
+verification has not been done, and is low priority** — it is far quicker to
+confirm once the props are out in the yard than to drag each one out of
+storage.
 
 ---
 
@@ -358,27 +416,38 @@ serve as an export template.
 
 Ordered by risk.
 
-1. **Nothing has been powered on** since the previous owner left. Untested:
-   power supplies, pixel strings, controllers, Director, FM transmitter.
-   **The bench test below has NOT been run.** This is still true as of
-   August 31, 2026, even though the adapter has now arrived.
-2. **CTB16 unit ID** — software-set, needs Hardware Utility to read.
-3. **Face port topology** — the `31`/`33`/`35`/`37` gap.
-4. **Which numbered dongle drives which physical prop** — Test Lights + a walk
-   outside.
-5. **Whether the Director's SD card still holds last season's show.**
-6. **AC circuit naming mismatch** (§5).
+1. **CTB16 unit ID** — software-set, never read back. Box 3 was deliberately
+   not tested on 12 Sept (it appears hardwired into conduit). Still the
+   largest hardware unknown.
+2. **The Director and the FM transmitter have still never been powered on.**
+   The 12 Sept bench test covered the two Pixie16 boards and the USB adapter
+   only.
+3. **Whether the Director's SD card still holds last season's show.**
+4. **Which numbered dongle drives which physical prop** — *low priority*: the
+   dongles are already band-labelled, so this is a job for deployment day in
+   the yard, not the bench (§5).
+5. **AC circuit naming mismatch** (§5).
 
-### First bench test — NOT YET RUN
+Resolved by the 12 Sept 2026 bench test, and no longer open: whether anything
+powers on at all; whether both power halves run off the single internal
+supply; colour order on both boards; and the face port topology — each face
+spans two ports (§3, §5).
 
-The USB485-HS arrived **August 31, 2026**. The full procedure now lives in
-**`BENCH-TEST-CHECKLIST.md`**, rewritten in plain English for the owner to
-follow physically, with safety ordering, a smallest-load first power-up, the
-hex/decimal trap, fill-in port tables, and a troubleshooting section.
-**Keep that file as the working copy** — it is the one that gets printed and
-carried to the bench. This section is the technical summary only.
+### First bench test — RUN 12 SEPTEMBER 2026, BOTH PIXIE BOARDS PASSED
 
-1. Plug USB485-HS into the PC. Let Windows install the driver, note the COM port.
+The USB485-HS arrived **August 31, 2026**; the test was run **12 September
+2026**. Results are in §3 ("Controller settings — read off the hardware" and
+"What the bench test proved"); the PC-side procedure that actually worked,
+including the driver step nobody had anticipated, is **§11**.
+
+The full plain-English procedure lives in **`BENCH-TEST-CHECKLIST.md`**, with
+safety ordering, a smallest-load first power-up, the hex/decimal trap,
+fill-in port tables, and a troubleshooting section. **Keep that file as the
+working copy** for any future controller. The technical summary of the plan
+that was followed:
+
+1. Plug USB485-HS into the PC. **Windows does not supply the driver** — install
+   the FTDI VCP driver first, then note the COM port (§11).
 2. **Unplug the Director's network cable.** A Pixie talks to a PC *or* a
    Director, never both.
 3. Confirm the internal supply label (§2), **lid closed**, then mains.
@@ -387,20 +456,23 @@ carried to the bench. This section is the technical summary only.
 5. First power-up carries the **smallest possible load: one pixel stake
    (5 pixels)**, not a tree or an arch. This limits damage if a connection is
    wrong; it is not a power-headroom question.
-6. Control Panel → Networks → add a **Light-O-Rama Adapter**, pick the COM
-   port. (❓ Exact menu wording in 6.6.12 unverified — the Hardware Utility
-   is the tool either way.)
-7. **Expected:** sixteen units, `09`–`18` hex / 9–24 decimal.
-8. Repeat on **Box 1** — expect `30`–`3F` hex / 48–63 decimal.
+6. **Start → Light-O-Rama Control Panel → Controller Setup → Hardware
+   Utility**, pick the COM port under *Ports to Scan*, Scan For =
+   **Unit ID range**, Scan. (Menu wording confirmed on 6.6.12, 12 Sept 2026
+   — full detail in §11.)
+7. **Expected:** sixteen units, `09`–`18` hex / 9–24 decimal. ✅ Got exactly
+   that: `Pixie16, firmware 1.10, Unit ID 09 - 18, COM3`.
+8. Repeat on **Box 1** — expect `30`–`3F` hex / 48–63 decimal. ✅ Confirmed.
 9. **Box 3 is deliberately deferred** — it appears hardwired into conduit and
    its unit ID has never been confirmed. See the checklist §10 for why and
    for what must be in place first.
-10. Use **Test Lights** to fire one port at a time and map dongles to props.
+10. Fire one port at a time to test. **It is the Configure → Test Pixels tab,
+    not the greyed-out "Test Lights" sidebar item** — see §11. Ports 1 and 9
+    were tested on each board to cover both power halves.
 
-**Still unverified and worth writing down when the test runs:** what the
-status LEDs on a Pixie16D actually mean, whether the single red/black pair
-feeds both power banks (§2), and whether each singing face spans one port or
-two (the `31`/`33`/`35`/`37` gap, §5).
+**Answered by the run:** both power halves do come off the single internal
+supply (§2), and each singing face spans **two** ports (§3, §5). **Still
+unwritten:** what the status LEDs on a Pixie16D actually mean.
 
 ---
 
@@ -424,3 +496,67 @@ two (the `31`/`33`/`35`/`37` gap, §5).
 - **Never connect two power supplies to the same bank.** They fight. A Pixie16
   has two independent banks; each can take its own supply.
 - Unplug before changing DIP switches.
+
+---
+
+## 11. Connecting a controller to a PC
+
+This is the procedure that worked on **12 September 2026**, start to finish.
+It is also how to test any controller in future.
+
+### First time on a new PC: install the driver
+
+Windows does **not** install a driver for the USB485-HS by itself. Without it
+the adapter never becomes a COM port, and the Hardware Utility reports that no
+ports were found.
+
+1. Plug the adapter into the PC.
+2. Right-click Start → **Device Manager**. With no driver, the adapter appears
+   under **Other devices** as `FT232R USB UART` with a yellow warning triangle.
+3. Download the **FTDI VCP driver** from
+   <https://ftdichip.com/drivers/vcp-drivers/> — take the Windows **setup
+   executable**, not the zip.
+4. Run it, then unplug and replug the adapter.
+5. Confirm a **Ports (COM & LPT)** section now exists in Device Manager with a
+   **USB Serial Port** under it. It came up as **COM3** on this PC.
+
+### Finding the Hardware Utility
+
+It is not a separate program and does not appear in the Start menu — it lives
+inside the Control Panel:
+
+**Start → Light-O-Rama Control Panel → Controller Setup → Hardware Utility**
+
+The Control Panel also runs in the system tray near the clock; right-clicking
+that icon offers the Hardware Utility directly. **Closing the Control Panel
+window does not exit it** — use **Exit** from the tray icon if you need it to
+restart and re-scan for adapters.
+
+### Scanning for a controller
+
+1. **Cord out of the wall.** Connect CAT5 from the adapter to either RJ45 jack
+   on the controller. Connect a test prop to a pigtail.
+2. **Lid on. Cord into the wall.**
+3. In the Hardware Utility the COM port should appear under **Ports to Scan**.
+   If it says no ports were found, press the refresh icon (circle with arrow).
+4. Choose **Unit ID range** under *Scan For*, and click **Scan**.
+5. A working Pixie16 reports as a **single row showing its full range** — e.g.
+   `Pixie16, firmware 1.10, Unit ID 09 - 18, COM3`. Sixteen units is the pass
+   condition, not a fault (§3).
+
+### Lighting a prop to test it
+
+1. Click **Configure** next to the controller in the scan results.
+2. Click the **Test Pixels** tab along the top. (The *Test Lights* item in the
+   left sidebar is greyed out while the Hardware Utility holds the port —
+   that is expected.)
+3. Under **Select Strings to Test**, click **Select None**, then tick only the
+   port you want.
+4. Under **Color Cycle**, click **Select None**, then tick **one** colour. A
+   single steady colour is far easier to judge than a cycle.
+5. Flip **Run Test** to **On**. Flip it back off when done.
+
+> To confirm **both power halves** of a board, test a port in each half —
+> **port 1 and port 9**. Both boards passed this on 12 September 2026.
+> ⚠️ **Do not use the Update Config, Change or Update buttons** on the
+> Configure tab. Those write to the board, and nothing on it needs changing.
