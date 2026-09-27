@@ -225,14 +225,21 @@ export mapping all present. If my show ever gets wrecked, that file is the
 way back — it goes back onto the database row, and nobody does that without
 showing me the plan first.
 
-## The AI key still does not work (Sept 27, 2026)
+## The AI key works again (Sept 27, 2026)
 
-I thought I had put a new key in. I had not — the file the app reads has not
-changed since the 22nd, and the key in it is the same dead one, which the API
-rejects outright. The whole machine was searched: no second copy of that
-file, no stray `.txt` version, nothing anywhere else holding a different key.
-So "Create my light show" stays broken until a real key goes in that one
-line. Everything else in the app works fine without it.
+Took three goes. The first key I sent turned out to be the exact same dead
+one I already had — I'd re-copied it from somewhere stale. The second was a
+real key but made at the organization level instead of inside a workspace,
+which the API rejects unless every request carries a workspace header my app
+doesn't send. The third one, made from inside a workspace, worked first try.
+
+Proved properly: the full AI pipeline test ran against the real model and
+passed — 1,706 lighting moves generated from my actual song, exported to a
+2.41 MB file with zero grammar problems. "Create my light show" is back.
+
+**If this ever happens again:** check whether the key is genuinely different
+before anything else, and make the key from inside a workspace, not at the
+org level.
 
 ## Open items, roughly in priority order
 

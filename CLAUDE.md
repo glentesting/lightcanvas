@@ -434,16 +434,24 @@ AI_USE_MOCK=1       (optional: explicit deterministic mock planner)
 Beware invisible characters when pasting keys — a U+200B in a pasted value
 once broke env parsing here.
 
-**ANTHROPIC_API_KEY is currently DEAD (checked 2026-09-27).** The key in
-`.env.local` returns `401 authentication_error: API key is invalid` against
-both `/v1/messages` and `/v1/models`. It is clean — 108 chars, correct
-`sk-ant-` shape, no stray whitespace or invisible characters — it is simply
-not a valid key. It is also byte-identical to the key that already failed on
-2026-09-22 (same SHA-256 prefix), and `.env.local` has not been modified
-since 2026-09-22. A machine-wide search found no other env file and no other
-file holding a different Anthropic key. **AI generation is down until a
-working key is pasted into that one line**, and `scripts/ai/verify-pipeline.mts`
-cannot run against the real API until then.
+**ANTHROPIC_API_KEY is WORKING again as of 2026-09-27.** It took three
+attempts and the two failures are worth remembering, because both looked
+identical from the app's side:
+
+- The first "new" key was byte-identical to the dead one already in the file
+  (same SHA-256 prefix) — it had been re-copied from a stale source. Compare
+  fingerprints before assuming a key is new.
+- The second was a valid key that failed with `400 invalid_request_error`:
+  *"This API key is not scoped to a workspace..."*. An **organization-level**
+  key needs an `anthropic-workspace-id` header on every request, and nothing
+  in `src/lib/ai/` or `scripts/ai/` sends one. **Create keys from inside a
+  workspace**, not at the org level, and no code change is needed.
+
+The third key returned `200` and `scripts/ai/verify-pipeline.mts` passed
+end-to-end against the real `claude-opus-5` (1,706 blocks, 2.41 MB export,
+zero grammar violations). Note the dev server reads `.env.local` at startup,
+so the running app needs a restart after the key changes; the suite reads the
+file directly and does not.
 
 ## Known gaps (honest list)
 
