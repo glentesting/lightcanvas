@@ -65,9 +65,20 @@ I exported my real show from the app and opened it in LOR S6 v6.6.12:
 **The export path is proven.** That was the largest technical risk in the
 project and it is now closed.
 
-**Still untested in S6:** the `curtain` grammar. My show happens to contain
-zero curtains — they only appear on center-out chases and fireworks. Dropping
-a Fireworks effect somewhere and re-exporting would close that last gap.
+**The curtain gap is closed too, as of September 27, 2026.** My show has zero
+curtains in it, so a separate test file was built — `Curtain Test.loredit`,
+my show plus one firework and two center-out/in chases dropped on Mini Tree
+01. I opened it in **LOR S6 v6.6.12 Pro** and it came up clean, with all five
+curtain blocks sitting on `RGB Mini Tree Base 01` at exactly the times and
+colours they were supposed to be: 32–38s gold and white for the firework
+(which splits into three bursts), 42–48s red and green opening from the
+middle, 52–58s blue and white closing back in.
+
+**But I have not actually watched a curtain move.** S6's preview window
+showed no props, so all I proved is that the file is right, not that the
+effect looks right. That check happens at the Director table test, on a real
+mini tree plugged into port 1 of Box 4. That file is sitting in my Sequences
+folder waiting to go on the SD card.
 
 ---
 
@@ -189,6 +200,40 @@ handling at all before this; now all three editor pages share one loader.
 If the app ever hangs like that again: close the black window, start
 LightCanvas again from the Desktop icon. That is the whole fix.
 
+## The app was saving my show every time I opened it (Sept 27, 2026)
+
+Found in the audit on the 22nd, fixed on the 27th. Every single time I opened
+my show, the app quietly wrote the whole thing back to the database about a
+second later. I never clicked save. Nothing was lost — it wrote back exactly
+what it had just read — but that is why my "last updated" date kept moving
+when I swore I had not changed anything. There was a worse version of it too:
+if a second show failed to open while the first was still loaded, the write
+went out under the wrong show's name.
+
+It is fixed and proved. Opening my show, opening the timeline, playing it,
+and running a full export were all done on the 27th and the database did not
+move once. The app also now flat refuses to save if a change would leave my
+show with no props or no effects — it puts a message in the header instead of
+writing. And the header no longer says "All changes saved" when nothing is
+even open.
+
+**Before any of that was touched, a full copy of my show was saved to**
+`C:\dev\LightCanvas Backups\My Christmas Show 2026 backup September 27 2026.json`,
+outside the app's folder on purpose. It was read back and checked: 83 pieces,
+3,455 lighting moves, 83 tracks, the beat analysis, the house outline and the
+export mapping all present. If my show ever gets wrecked, that file is the
+way back — it goes back onto the database row, and nobody does that without
+showing me the plan first.
+
+## The AI key still does not work (Sept 27, 2026)
+
+I thought I had put a new key in. I had not — the file the app reads has not
+changed since the 22nd, and the key in it is the same dead one, which the API
+rejects outright. The whole machine was searched: no second copy of that
+file, no stray `.txt` version, nothing anywhere else holding a different key.
+So "Create my light show" stays broken until a real key goes in that one
+line. Everything else in the app works fine without it.
+
 ## Open items, roughly in priority order
 
 1. **Box 3, the AC controller.** The last box I have not powered up myself. The
@@ -207,8 +252,10 @@ LightCanvas again from the Desktop icon. That is the whole fix.
    in the Control Panel. It didn't matter at the bench, but it matters when
    the house is wired — a controller that doesn't support it just goes
    quiet, which looks exactly like dead hardware.
-3. **Close the curtain-grammar gap** — add a Fireworks effect, re-export,
-   open in S6.
+3. ~~**Close the curtain-grammar gap**~~ — **done 27 Sept 2026.**
+   `Curtain Test.loredit` opened clean in S6 v6.6.12 Pro with all five
+   curtain blocks where they belonged. What is left is watching one actually
+   move, which happens at the Director table test on a real mini tree.
 4. Buy the 8 MP3s for the purchased sequences (fallback show).
 5. **Get a LightCanvas show onto the SD card and run it on the house.** This
    is the one that actually matters — it's never been done with a file my

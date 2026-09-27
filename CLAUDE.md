@@ -20,11 +20,21 @@ G4-MP3 Director plays.
   template's 1,478; `musicFilename` carrying his song, not the template's.
   This closed the largest technical risk in the project. Details and the
   session-to-session context: `HANDOFF.md`.
-- **Colorwash and bars are therefore S6-proven. The `curtain` grammar is
-  NOT** — his show happens to contain zero curtains (they are emitted only
-  for center-out/in chases and fireworks). That is a separate, still-open
-  gap; do not describe it as closed. The way to close it: drop a Fireworks
-  effect into a sequence, re-export, open in S6.
+- **Colorwash, bars AND curtain now all open in S6.** Curtain was closed on
+  **September 27, 2026**: `C:\dev\light-o-rama\Sequences\Curtain Test.loredit`
+  (built 22 Sept — the owner's show plus one firework and two center-out/in
+  chases on `RGB Mini Tree Base 01`) opened clean in **LOR S6 v6.6.12 Pro**,
+  and all five curtain blocks were on that prop at the expected times and
+  colours: 32–34s, 34–36s, 36–38s gold/white (the firework, which expands
+  into three bursts), 42–48s red/green `center,open`, 52–58s blue/white
+  `center,close`. **Nobody has watched a curtain actually move yet** — S6's
+  preview window showed no props, so this is "the file is right", not "the
+  effect looks right". That visual check happens at the Director table test,
+  on a real mini tree plugged into port 1 of Box 4.
+- **The autosave defect is fixed (2026-09-27).** Until then, *opening* a
+  project wrote the whole project back to Supabase ~1.2s later, because
+  `use-autosave.ts` started its baseline empty and `loadProject` writes the
+  whole watched slice. Details under The display model.
 - **THIS DISPLAY ALREADY RAN A FULL SEASON.** Same controllers, same props,
   same wiring, same Director and SD-card workflow — set up and operated
   successfully by someone else. **The hardware is proven.** What is being
@@ -163,6 +173,23 @@ API: `projects` (list/create/get/patch/delete/duplicate), `autosave`,
   failed response, a 20s timeout, and a loop guard (more than 5 loads of the
   same project in 10s) — and every error screen offers Try again plus a way
   back to Projects. Never add a fourth hand-rolled fetch-and-spin.
+- **Autosave never writes on load.** `src/lib/store/use-autosave.ts` is a
+  thin React wrapper; the rules and the baseline live in
+  `src/lib/store/autosave-engine.ts` (no React, no network, so they are
+  directly testable). Until 2026-09-27 the baseline started as an empty
+  string, so `loadProject` looked like an edit and simply *opening* a project
+  POSTed the whole show back to Supabase — the owner's `updated_at` moved
+  every time he opened his own file, and if a second project failed to load
+  while the first was still in the store the write went out under the wrong
+  project's id. A save now needs all of: the page reports `loaded`, no
+  `loadError`, the store holds the project the page is showing, and the slice
+  differs from the baseline seeded at load. A save that would drop fixtures
+  or blocks to zero when the loaded version had them is **refused**, and the
+  header says so (`saveStatus: "refused"` + `saveMessage`). `useAutosave`
+  takes the load gate as its second argument, so it MUST be called after
+  `useProjectLoad`. Guarded by `scripts/verify-autosave.mts`, which runs four
+  scenarios against both the shipped controller and a verbatim copy of the
+  pre-fix listener — the old arm must keep failing.
 - **Transport is shared.** WaveSurfer (timeline) and the designer play bar
   publish to `useTransportStore`; `registerSeekHandler`/`requestSeek` route
   seeks to whoever owns the audio. The timeline has a playhead,
@@ -250,9 +277,10 @@ use three motion grammars — **colorwash, curtain, bars** (94% of the
 reference file's 50,695 effects) — chosen per effect+direction; every string
 is verbatim-observed LOR grammar with ONLY the six ARGB colour slots
 substituted. Never invent a parameter value or a mix/speed token.
-**S6 verification state (2026-08-31): colorwash and bars proven in S6 by the
-owner's real-show open; curtain still unverified in S6** (his show contains
-none — see Where it stands). Verify with
+**S6 verification state: colorwash and bars proven 2026-08-31 by the owner's
+real-show open; curtain proven 2026-09-27 by `Curtain Test.loredit` opening
+clean in S6 v6.6.12 Pro.** All three grammars now open. What is still
+unwatched is a curtain *moving on a prop* — see Where it stands. Verify with
 `npx tsx scripts/loredit/verify-roundtrip.mts`, `verify-export.mts`, and
 `verify-effect-grammar.mts` (learns LOR's vocabulary from the reference and
 rejects anything the app emits that LOR would not write).
@@ -280,7 +308,10 @@ dev mock). Verify with `npx tsx scripts/ai/verify-pipeline.mts`.
   `scripts/verify-timeline-edit.mts` (paste-at-beat, repeat-every-bar, drift,
   song-end clamping),
   `scripts/verify-bench-test.mts` (guided bench test: unit numbers vs the
-  hardware doc, step order, escape hatches, port predictions, report), and
+  hardware doc, step order, escape hatches, port predictions, report),
+  `scripts/verify-autosave.mts` (autosave never fires on load, one edit = one
+  save, a failed load writes nothing, an emptying save is refused — run
+  against the fixed code AND the old code, which must still fail), and
   `scripts/ai/verify-pipeline.mts` (AI sequencer end-to-end, real audio;
   uses the real API when ANTHROPIC_API_KEY is present). The .loredit ones need
   the gitignored reference file in `scripts/loredit-spike/test-fixtures/`.
@@ -332,6 +363,16 @@ props, see Known Gaps — his house photo, his music, a real AI-generated
 show) — treat it as his real data, not test
 data. UI copy is deliberately jargon-free: "Your Lights", "Make a Show",
 "lighting moves" — keep new UI text in that register.
+
+**There is a backup of that project row** at
+`C:\dev\LightCanvas Backups\My Christmas Show 2026 backup September 27 2026.json`
+— the raw PostgREST row (1.4 MB), taken 2026-09-27 before the autosave fix
+went in, verified to hold 83 fixtures, 3,455 blocks, 83 tracks, the 473-beat
+analysis, the house outline and the 84-entry export mapping. It is outside
+the repo on purpose. Restoring it is a `PATCH` of `fixtures`, `groups`,
+`sequence`, `audio`, `audio_url`, `audio_file`, `name`, `house_template` and
+`house_custom_svg` back onto the row — never a raw row insert, and never
+without showing a plan first.
 
 ## Hardware state (brief — detail lives in the hardware doc + checklist)
 
@@ -393,15 +434,26 @@ AI_USE_MOCK=1       (optional: explicit deterministic mock planner)
 Beware invisible characters when pasting keys — a U+200B in a pasted value
 once broke env parsing here.
 
+**ANTHROPIC_API_KEY is currently DEAD (checked 2026-09-27).** The key in
+`.env.local` returns `401 authentication_error: API key is invalid` against
+both `/v1/messages` and `/v1/models`. It is clean — 108 chars, correct
+`sk-ant-` shape, no stray whitespace or invisible characters — it is simply
+not a valid key. It is also byte-identical to the key that already failed on
+2026-09-22 (same SHA-256 prefix), and `.env.local` has not been modified
+since 2026-09-22. A machine-wide search found no other env file and no other
+file holding a different Anthropic key. **AI generation is down until a
+working key is pasted into that one line**, and `scripts/ai/verify-pipeline.mts`
+cannot run against the real API until then.
+
 ## Known gaps (honest list)
 
 - ~~`.loredit` output not yet opened in S6~~ — **CLOSED 2026-08-31**: the
   owner's real-show export opened clean in S6 v6.6.12 (see Where it stands).
-  What that pass did NOT cover: the **`curtain` grammar** (zero curtains in
-  his show — emitted only for center-out/in chases and fireworks). Close it
-  by adding a Fireworks effect, re-exporting, opening in S6. The three
-  synthetic test files in `scripts/loredit-spike/test-fixtures/output/`
-  remain available for that.
+  What that pass did NOT cover was the **`curtain` grammar** — ~~still
+  open~~ **CLOSED 2026-09-27**: `Curtain Test.loredit` opened clean in S6
+  v6.6.12 Pro with all five curtain blocks on `RGB Mini Tree Base 01` at the
+  expected times and colours. Still unwatched: a curtain *moving*, since S6's
+  preview window showed no props. That is a Director-table check.
 - **No LightCanvas-generated sequence has ever played on the hardware.** The
   largest genuinely open item, and it is about this app rather than the gear
   — the gear ran a whole season on purchased sequences. Export opens cleanly
@@ -424,8 +476,9 @@ once broke env parsing here.
   quiet, which looks exactly like dead hardware.**
 - No scale/rotate on prop shapes; the tree silhouette is stylized, not a
   photo-match of the coro cutout (pixel positions are the accurate part).
-- Pixel props export as colorwash, curtain or bars. **Colorwash and bars are
-  now S6-verified (2026-08-31); curtain is not** — see above. Twinkle/sparkle
+- Pixel props export as colorwash, curtain or bars. **All three are now
+  S6-verified — colorwash and bars 2026-08-31, curtain 2026-09-27.**
+  Twinkle/sparkle
   have no LOR motion-effect equivalent and stay colorwash by design; the app
   says so before export via `fidelity.ts`.
 - A chase on a traced AC roof string animates per-bulb in the preview but
