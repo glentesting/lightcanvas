@@ -11,11 +11,21 @@ export default function AppTopBar() {
   const projectId = useEditorStore((s) => s.projectId);
   const projectName = useEditorStore((s) => s.name);
   const saveStatus = useEditorStore((s) => s.saveStatus);
+  const saveMessage = useEditorStore((s) => s.saveMessage);
 
-  const statusLabel =
-    saveStatus === "saving" ? "Saving..." :
-    saveStatus === "error" ? "Save error" :
-    "All changes saved";
+  // With no project open there is nothing to have saved, so the header says
+  // nothing rather than claiming "All changes saved" next to "No project open".
+  const statusLabel = !projectId
+    ? null
+    : saveStatus === "saving" ? "Saving..."
+    : saveStatus === "refused" ? (saveMessage ?? "Change not saved")
+    : saveStatus === "error" ? "Save error"
+    : "All changes saved";
+
+  const statusColor =
+    saveStatus === "error" ? "#b91c1c" :
+    saveStatus === "refused" ? "#b45309" :
+    "var(--ink-4)";
 
   return (
     <header
@@ -43,9 +53,11 @@ export default function AppTopBar() {
 
       {/* Right actions */}
       <div className="flex items-center gap-2.5">
-        <span className="text-xs" style={{ color: saveStatus === "error" ? "#b91c1c" : "var(--ink-4)" }} aria-label="Save status" aria-live="polite">
-          {statusLabel}
-        </span>
+        {statusLabel && (
+          <span className="text-xs" style={{ color: statusColor }} aria-label="Save status" aria-live="polite">
+            {statusLabel}
+          </span>
+        )}
 
         <Link
           href={projectId ? `/project/${projectId}` : "/projects"}

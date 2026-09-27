@@ -81,12 +81,13 @@ export default function DesignerPage() {
 
   // Transport for sequence overview (not used directly but kept for future use)
 
-  // Autosave hook
-  useAutosave(projectId);
-
   // Load project from API into store — shared loader, see use-project-load.ts.
   // It owns the timeout, the loop guard and the error text.
   const { loaded, error: loadError, retry: retryLoad } = useProjectLoad(projectId);
+
+  // Autosave. It must come AFTER the loader: it takes the load state so that
+  // opening a project is never mistaken for an edit (see autosave-engine.ts).
+  useAutosave(projectId, { loaded, loadError });
 
   const handleAudioUploaded = useCallback(
     (url: string, fileName: string, analysis: AudioAnalysis | null) => {

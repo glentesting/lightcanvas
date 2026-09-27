@@ -28,7 +28,7 @@ function TimelineContent() {
   const saveStatus = useEditorStore((s) => s.saveStatus);
 
   // Autosave + keyboard shortcuts
-  useAutosave(projectId ?? "");
+  useAutosave(projectId ?? "", { loaded, loadError });
   useTimelineShortcuts();
 
   // If the project is already loaded in the store (navigated from Designer), skip fetch

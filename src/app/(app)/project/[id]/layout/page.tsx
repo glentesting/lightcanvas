@@ -37,7 +37,7 @@ export default function LayoutPage() {
     return { needsPlacement, total, placed, readiness };
   }, [fixtures]);
 
-  useAutosave(projectId);
+  useAutosave(projectId, { loaded, loadError });
   useUndoShortcuts();
   const { canUndo, canRedo, undo, redo } = useUndoRedo();
 

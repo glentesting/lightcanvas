@@ -24,8 +24,10 @@ export interface EditorState {
   selectedFixtureIds: string[];
   hoveredBlockId: string | null;
 
-  // Save status
-  saveStatus: "idle" | "saving" | "saved" | "error";
+  // Save status. "refused" means autosave deliberately did NOT write —
+  // see autosave-engine.ts. `saveMessage` carries the plain-English reason.
+  saveStatus: "idle" | "saving" | "saved" | "error" | "refused";
+  saveMessage: string | null;
 
   // Actions
   loadProject: (project: Project) => void;
@@ -63,7 +65,7 @@ export interface EditorState {
 
   setSelection: (ids: string[], mode?: "replace" | "add" | "toggle") => void;
   clearSelection: () => void;
-  setSaveStatus: (status: EditorState["saveStatus"]) => void;
+  setSaveStatus: (status: EditorState["saveStatus"], message?: string | null) => void;
 }
 
 export const useEditorStore = create<EditorState>()(
@@ -86,6 +88,7 @@ export const useEditorStore = create<EditorState>()(
         selectedFixtureIds: [],
         hoveredBlockId: null,
         saveStatus: "idle" as const,
+        saveMessage: null,
 
         loadProject: (project: Project) =>
           set((state) => {
@@ -302,9 +305,10 @@ export const useEditorStore = create<EditorState>()(
             state.selectedFixtureIds = [];
           }),
 
-        setSaveStatus: (status) =>
+        setSaveStatus: (status, message = null) =>
           set((state) => {
             state.saveStatus = status;
+            state.saveMessage = message;
           }),
       })),
       {
