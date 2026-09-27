@@ -456,6 +456,11 @@ Ordered by risk.
    off; ideally have someone comfortable with mains fit it with a cord and
    plug so it can be tested like the Pixie boxes. Nothing needs to be
    connected to its AC outputs just to read its ID.
+   **Strengthened 27 Sept 2026:** the SD card that ran this house addresses
+   the AC props at `Regular, 01`, and names them for real house features
+   (RoofCaps, Kitchen Window, GarageWindow1/2, String 001 — five circuits,
+   not sixteen). Still not a reading off the board, but now documentary
+   evidence from a working season rather than inference from behaviour.
 3. **The ELOR network setting.** The Control Panel's Networks screen had
    **"Use Enhanced LOR (ELOR)" switched on** when first opened, with the
    Regular network on COM3 at 500K. ELOR is a faster protocol only some
@@ -465,18 +470,35 @@ Ordered by risk.
    support ELOR and set it deliberately** — a controller that does not
    support it simply goes quiet, which looks identical to dead hardware.
    Genuinely untested, by anyone.
+   **Narrowed 27 Sept 2026:** the SD card proves the two networks ran with
+   *different* protocol and speed settings — port 1 (`Regular`)
+   `NetType=1 Speed=2`, port 2 (`Aux A`, the Pixie16 box) `NetType=8
+   Speed=4`. LOR's mapping from those enum values to protocol and baud is
+   not documented on this machine and was deliberately not guessed at. The
+   remaining step is small: open one of those shows in LOR's Network
+   Configuration screen and read what it shows per port.
 4. **The Director and the FM transmitter — Glen has not powered them up.**
    They ran the show last season, so they are not suspect equipment; he has
    simply not driven them himself yet. The 12 Sept bench test covered the two
    Pixie16 boards and the USB adapter only.
-5. **Whether the Director's SD card still holds last season's show** — an
-   unopened question, not a doubt about the card working. Glen is checking
-   this himself with a card reader; see "Reading the Director's SD card"
-   below for what he was told to look for and what still needs confirming.
+5. ~~**Whether the Director's SD card still holds last season's show**~~ —
+   **ANSWERED 27 Sept 2026: yes, and more than expected.** The card holds
+   four complete shows, the most recent built 2024-12-16 with 14 songs.
+   Backed up and verified; full findings in "Reading the Director's SD card"
+   below. What it did *not* answer: the play schedule, which is not on the
+   card in any readable form.
 6. **Which numbered dongle drives which physical prop** — *low priority*: the
    dongles are already band-labelled, so this is a job for deployment day in
    the yard, not the bench (§5).
-7. **AC circuit naming mismatch** (§5).
+7. ~~**AC circuit naming mismatch**~~ (§5) — **EXPLAINED 27 Sept 2026.** The
+   house's own preview names the five live AC circuits RoofCaps, Kitchen
+   Window, GarageWindow2, GarageWindow1 and String 001. The "AC Top Window /
+   Columns / Railing" names come from the RGBPlus template, not this house.
+   Nothing is wrong; the names simply belong to different documents.
+8. **The Director's play schedule** — *new, 27 Sept 2026.* Not stored in any
+   readable part of the card (see below). If the Director shows "Wait" with
+   this card in, the schedule is the reason, and it must be read off the
+   Director itself.
 
 Settled by the 12 Sept 2026 bench test and no longer open: both power halves
 run off the single internal supply; colour order on both boards; and the face
@@ -486,35 +508,144 @@ season. What Glen settled was that he can bring it up himself.
 
 ### Reading the Director's SD card
 
-❓ **The card's exact layout is unconfirmed.** Nothing on this machine
-documents it — not the repo, not the LOR install (no Director tool ships in
-`C:\Program Files (x86)\Light-O-Rama`; only the Sequencer, SuperStar editor,
-Assistant and diagnostics). **Do not write a card layout into this doc from
-memory.** The next person to actually look at the card fills this in.
+✅ **READ 27 SEPTEMBER 2026. The layout below is off the real card, not from
+memory.** The card came out of Glen's Director, is physically labelled
+Trans-Siberian Orchestra, and was inspected through a USB reader.
 
-✅ **What is safe to say regardless:**
+**Backup:** `C:\dev\Director SD Card Backup\TSO card as found September 27 2026`
+— the whole card, hidden and system files included: **220 files,
+263,479,726 bytes, every file SHA-256 verified against the card.** Nothing was
+ever written to the card. All analysis below was done on the backup copy.
 
-- **Copy the whole card to the PC before changing anything on it.** That is
-  the entire safety story. With a copy, nothing that follows can lose last
-  season's show.
-- **If Windows offers to format the card, say no.** That prompt means
-  Windows cannot read it — which is information, not an instruction.
-- **Nothing on the card should be deleted** until we know what it is. LOR's
-  director files are opaque binaries with unhelpful names; "looks like
-  junk" is not evidence.
+**The card itself:** drive `D:`, label `LIGHT-ORAMA`, FAT32, MBR, USB,
+28.867 GB total, **253 MB used** — it is 99% empty. Note Windows reported the
+disk as `IsReadOnly: False` even with the lock tab set; most USB readers do
+not pass the tab through, so do not rely on that flag as proof of protection.
 
-📖 **What a loaded card should broadly contain** (general LOR knowledge, to
-be confirmed against the real card): audio — one MP3 per song, which is the
-bulk of the used space — plus compiled show/sequence files in LOR's own
-binary format, and usually a small schedule or show-list file the director
-reads first. A card holding a real season's show is **hundreds of megabytes**
-because of the audio. A few kilobytes of files means essentially nothing is
-on it.
+#### It is NOT a store card
 
-**What to bring back from the inspection** (this is what turns ❓ into ✅):
-the full file and folder listing including hidden files, the total used
-space, and the file dates. Dates from last season are the strongest single
-signal that the show is intact.
+It is a **custom card built by the person who ran this display**. Every
+`FilePath` in it reads `C:\Users\Dante\Documents\Light-O-Rama\Sequences`.
+It holds a mix of Trans-Siberian Orchestra sequences and **the same eight
+sequences Glen owns**, plus a house preview file that is not a Director file
+at all.
+
+#### Four shows, all complete
+
+Each show is `SnCONFIG.CFG` plus, per song, `SnFILEnn.MP3` + `.SEQ` +
+compiled `.EX2` (show 1 uses the older `.SE2`). Every song in every show has
+all three files — nothing is half-written, nothing is orphaned.
+
+| Show | Created | Songs | Notes |
+|---|---|---|---|
+| S1 | 2023-11-18 | 1 | Universal Fanfare (YCM/Traditional), older `.SE2` format |
+| S2 | **2024-12-16** | 14 | the most recent — almost certainly last season's show |
+| S3 | 2023-11-19 | 15 | has a **StartFile**: the YCM Universal Fanfare as an intro |
+| S4 | 2023-11-19 | 15 | same 15 songs as S3, no StartFile |
+
+**S2's 14 songs (2024):** Universal Fanfare · A Mad Russians Christmas · The
+Chipmunk Song · Boughs Of Holly · We Don't Talk About Bruno · Christmas Canon ·
+Light Of Christmas · Christmas Sarajevo 12-24 · Carol Of The Bells · March Of
+The Kings · Mistletoe · Siberian Sleigh Ride · Mary Did You Know · Wizards In
+Winter. **Seven of those are sequences Glen owns**; the other seven are TSO
+titles he does not have the sequences for.
+
+All sequences are the **`-LOR-RGBPlus`** variants — the RGBPlus version, not
+Traditional. The one exception is the YCM/Traditional Universal Fanfare used
+as the S1 show and the S3 intro.
+
+#### Audio format — confirms the CBR-128 rule
+
+Every show MP3 on the card is **constant bitrate 128 kbps, 44.1 kHz**. That is
+the format LOR recommends for a Director and it is what actually ran this
+house. (The two YCM intro files are the exception at ~245 kbps VBR.) Glen's
+own Audio folder was re-encoded to match on 22 September 2026.
+
+**One real catch:** the card's `Mary Did You Know` is **203.49 s**, exactly the
+sequence length. Glen's own copy in `C:\dev\light-o-rama\Audio` is **203.08 s**
+— 0.41 s short. The card holds the correct recording and his download does
+not. Every other song matches within 0.01 s. His own song, *Wreaths Like
+Horseshoes*, is not on this card at all (nearest is Wish Liszt at 222.3 s).
+
+#### The wiring map, straight off the card
+
+`Falcon Dr #2.lorprev` (444 KB, 2024-12-09) is a **real house preview named
+"Falcon Dr"** — 125 props, 156 named elements. It is not a Director file;
+someone copied it onto the card. It carries the addressing this display
+actually ran with, and it **matches §4 and §5 exactly**:
+
+| Network | Units | Props |
+|---|---|---|
+| `Aux A` | `09`–`10` | Mini Trees 01–08 (base + star per unit) |
+| `Aux A` | `11`–`14` | Arches 01–08 (two per unit) |
+| `Aux A` | `15`–`18` | Pixel Stakes 01–40 (ten per unit) |
+| `Regular` | `01` | the AC controller — **5 circuits only** |
+| `Regular` | `30`,`31`,`32`,`34`,`36` | the four singing faces + sub-props |
+
+Two things fall out of this:
+
+- **The CTB16's unit ID really is `01`.** §9 lists it as never read back by
+  anyone, and that is still literally true — nobody has read it off the board.
+  But the card that ran this house for a season addresses the AC props at
+  `Regular, 01`. That is documentary evidence, not a reading, and it is much
+  stronger than the old "fair assumption".
+- **The AC naming mismatch is explained.** The real circuits are named
+  `RoofCaps` (1), `Kitchen Window` (2), `GarageWindow2` (3), `GarageWindow1`
+  (4), `String 001` (5) — real house features, and only **five** of the
+  sixteen are used. The RGBPlus template's "AC Top Window / Columns /
+  Railing" names are the template's, not this house's (§5).
+
+❓ One small conflict with §5: the preview uses unit `31` (one prop,
+"FaceV2-Elden Eyes Closed"), whereas §5 says face IDs skip `31`/`33`/`35`/`37`
+as second halves. Worth a look next time the faces are on the bench.
+
+#### Director port assignment — and what it says about ELOR
+
+Every show config carries a `<Ports Qty="4">` block. S2, S3 and S4 all read:
+
+| Port | `NetType` | `NetID` | `Speed` | Reading |
+|---|---|---|---|---|
+| 1 | `1` | `0` | `2` | the `Regular` network |
+| 2 | `8` | `1` | `4` | the `Aux A` network |
+| 3 | `-1` | `0` | `1` | unused |
+| 4 | `-1` | `0` | `1` | unused |
+
+S1 (18 Nov 2023, the single-song YCM show) has port 2 as `NetType="1"
+Speed="2"` — the same as port 1. By 19 Nov 2023 (S3/S4) port 2 had become
+`NetType="8" Speed="4"`, and it stayed that way through 2024.
+
+**This confirms the jack assignment**: `Regular` out of port 1, `Aux A` out of
+port 2, ports 3 and 4 unused — exactly what §4 predicted from LOR's
+priority-order rule.
+
+❓ **It does not, on its own, settle ELOR.** `NetType` 1 vs 8 and `Speed` 2 vs
+4 are raw enum values; LOR's mapping from those numbers to protocol and baud
+is not documented anywhere on this machine, and guessing it would be exactly
+the kind of invention these docs forbid. What the card *does* prove is that
+**the two networks ran with different protocol and speed settings, and the
+pixel network (Aux A, the Pixie16 box) used the higher of each** — which is
+consistent with ELOR being on for the Pixie box and off for the older CTB16
+on Regular. To turn this ❓ into ✅, open one of these shows in LOR's own
+Network Configuration screen and read what it displays for each port.
+
+#### Schedule — not readable from the card
+
+Each `SnCONFIG.CFG` is a **512-byte binary header followed by plain XML**. The
+XML carries the song list, the start/filler files and the port block — **no
+schedule, no days, no times**. There is no separate schedule file anywhere on
+the card. The binary header's structure is undocumented and was not guessed
+at; for the record S2/S3/S4 begin `25 01 01 02 42 00 03 00` then nine repeats
+of `17 00 22 00`, and S1 begins `25 01 03 02 22 00 03 00`. If the Director
+shows "Wait" with this card in, the schedule is either inside that header or
+held on the Director itself — **this inspection cannot tell which.**
+
+#### Odds and ends
+
+- `.Spotlight-V100` (2024-11-23) — a **macOS** Spotlight index. A Mac has had
+  this card in it. Harmless.
+- `System Volume Information` — ordinary Windows metadata.
+- No clock-setting file, no stray sequences, **no files dated in the future**,
+  nothing nearly-full. File dates run 2023-11-18 → 2024-12-16.
 
 ### Glen's first bench test — RUN 12 SEPTEMBER 2026, BOTH PIXIE BOARDS PASSED
 

@@ -241,6 +241,64 @@ passed — 1,706 lighting moves generated from my actual song, exported to a
 before anything else, and make the key from inside a workspace, not at the
 org level.
 
+## What was actually on the Director's SD card (Sept 27, 2026)
+
+I pulled the card out of the Director and it got read properly for the first
+time. It's labelled Trans-Siberian Orchestra, so I assumed it was one of
+LOR's pre-made TSO cards. **It isn't.**
+
+It's a card somebody built by hand — every path on it reads
+`C:\Users\Dante\Documents\Light-O-Rama\Sequences`. That's the person who set
+my display up and ran it. It holds **four complete shows**, the newest built
+**December 16, 2024**, which is last season's.
+
+**That newest show has 14 songs, and seven of them are sequences I already
+own** — Universal Fanfare, Chipmunk Song, We Don't Talk About Bruno, Light Of
+Christmas, Carol Of The Bells, Mistletoe, Mary Did You Know. The other seven
+are Trans-Siberian Orchestra songs I don't have the sequences for. So my
+fallback show isn't a guess any more: those eight sequences I bought are
+literally what ran on this house.
+
+**The whole card is backed up** to
+`C:\dev\Director SD Card Backup\TSO card as found September 27 2026` — 220
+files, every one checked byte for byte against the card. Nothing was ever
+written to the card.
+
+**Three things it settled that had been open for weeks:**
+
+1. **The AC controller really is unit 01.** Nobody has read that number off
+   the board and that's still true — but the card that ran my house for a
+   season sends the AC lights to `Regular, 01`. That's a lot better than a
+   guess.
+2. **The AC naming mismatch was never a problem.** My real circuits are
+   called RoofCaps, Kitchen Window, GarageWindow1 and 2, and String 001 —
+   and only five of the sixteen are even used. The "AC Top Window / Columns /
+   Railing" names come from the RGBPlus template, not from my house.
+3. **Which network goes out which Director jack.** Port 1 is Regular, port 2
+   is Aux A, ports 3 and 4 unused. Exactly what the hardware doc worked out
+   on paper.
+
+**What it did NOT settle:**
+
+- **The ELOR question, not quite.** The card proves my two networks ran with
+  different protocol and speed settings, and the pixel box got the faster
+  one. But the card stores those as bare numbers, and nobody has written
+  down what LOR's numbers mean, so guessing would have been inventing. One
+  step left: open one of those shows in LOR's Network Configuration screen
+  and read what it says.
+- **The schedule.** It's not on the card in any readable form. If my Director
+  sits on "Wait" with this card in, the schedule is why, and it's held on the
+  Director itself.
+
+**One thing I need to fix.** My copy of *Mary Did You Know* is 0.41 seconds
+shorter than the one on the card, and the card's copy is exactly the length
+the sequence expects. The card has the right recording and my download
+doesn't. Worth swapping before the Director test — it's the only one of the
+nine that was off.
+
+Also: a Mac has had this card in it at some point (there's a Spotlight index
+on it from Nov 2024). Harmless, just noting it.
+
 ## Open items, roughly in priority order
 
 1. **Box 3, the AC controller.** The last box I have not powered up myself. The
@@ -258,12 +316,19 @@ org level.
 2. **Decide the ELOR network setting.** "Use Enhanced LOR" was switched on
    in the Control Panel. It didn't matter at the bench, but it matters when
    the house is wired — a controller that doesn't support it just goes
-   quiet, which looks exactly like dead hardware.
+   quiet, which looks exactly like dead hardware. **Nearly closed:** the SD
+   card shows my two networks ran with different protocol and speed
+   settings, the pixel box on the faster one. What's left is reading LOR's
+   Network Configuration screen for one of those shows to see what the
+   numbers actually mean.
 3. ~~**Close the curtain-grammar gap**~~ — **done 27 Sept 2026.**
    `Curtain Test.loredit` opened clean in S6 v6.6.12 Pro with all five
    curtain blocks where they belonged. What is left is watching one actually
    move, which happens at the Director table test on a real mini tree.
-4. Buy the 8 MP3s for the purchased sequences (fallback show).
+4. ~~Buy the 8 MP3s for the purchased sequences (fallback show).~~ **Done
+   — and the SD card confirmed those eight are exactly what ran on this
+   house.** One correction outstanding: my *Mary Did You Know* MP3 is 0.41 s
+   short of the one on the card; the card's copy is the right length.
 5. **Get a LightCanvas show onto the SD card and run it on the house.** This
    is the one that actually matters — it's never been done with a file my
    app made. The Director and FM transmitter did this all last season, so
